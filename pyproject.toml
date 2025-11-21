@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sceneflow"
+version = "0.1.0"
+description = ""
+dynamic = ["dependencies"]
+
+# [project.optional-dependencies]
+# dev = [
+#     "pytest>=7.0",
+#     "black>=23.0",
+# ]
+# clip = [
+#     "git+https://github.com/openai/CLIP.git",
+# ]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+packages = { find = { where = ["src"] } }
+
+[tool.setuptools.dynamic]
+dependencies = { file = ["requirements.txt"] }

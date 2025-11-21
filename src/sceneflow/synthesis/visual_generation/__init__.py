@@ -1,0 +1,1 @@
+from .hunyuan_world_voyager.hunyuan_video_synthesis import HunyuanVideoSynthesis
