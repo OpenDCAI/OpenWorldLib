@@ -1,14 +1,14 @@
 import os
 import torch
 from omegaconf import OmegaConf
-from ....base_synthesis import BaseSynthesis
-from .pipeline import CausalInferencePipeline, CausalInferenceStreamingPipeline
-from .wan.vae.wanx_vae import get_wanx_vae_wrapper
-from .demo_utils.vae_block3 import VAEDecoderWrapper
-from .utils.visualize import process_video
-from .utils.misc import set_seed
-from .utils.conditions import *
-from .utils.wan_wrapper import WanDiffusionWrapper
+from ...base_synthesis import BaseSynthesis
+from .matrix_game_2.pipeline import CausalInferencePipeline, CausalInferenceStreamingPipeline
+from .matrix_game_2.wan.vae.wanx_vae import get_wanx_vae_wrapper
+from .matrix_game_2.demo_utils.vae_block3 import VAEDecoderWrapper
+from .matrix_game_2.utils.visualize import process_video
+from .matrix_game_2.utils.misc import set_seed
+from .matrix_game_2.utils.conditions import *
+from .matrix_game_2.utils.wan_wrapper import WanDiffusionWrapper
 from safetensors.torch import load_file
 
 
