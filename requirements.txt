@@ -38,3 +38,5 @@ pycuda
 flask
 flask-socketio
 torchao
+gradio_imageslider
+gradio==4.14.0
