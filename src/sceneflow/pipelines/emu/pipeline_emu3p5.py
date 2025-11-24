@@ -6,7 +6,7 @@ from typing import Optional, Any, Union, Dict, List
 from pathlib import Path
 
 from ...operators.emu3p5_operator import Emu3p5Operator
-from ...synthesis.visual_generation.emu.emu3p5.emu3p5_synthesis import Emu3p5Synthesis, load_models
+from ...synthesis.visual_generation.emu.emu3p5_synthesis import Emu3p5Synthesis, load_models
 
 
 class Args:

@@ -97,14 +97,15 @@ class Emu3p5Operator(BaseOperator):
     
     def check_interaction(self, interaction):
         """检查交互类型是否有效"""
-        if interaction not in self.interaction_template:
-            raise ValueError(f"Interaction {interaction} not in interaction_template")
+        if not isinstance(interaction, str):
+            raise TypeError(f"Invalid interaction")
         return True
     
+
     def get_interaction(self, interaction):
         """获取交互类型"""
         if self.check_interaction(interaction):
-            self.current_interaction.append(interaction)
+            self.current_interaction= interaction
     
     def process_image(self, image_input: Union[str, Image.Image]) -> Image.Image:
         """
@@ -256,8 +257,9 @@ class Emu3p5Operator(BaseOperator):
                 - processed_image: 处理后的图像（如果有）
                 - prompt: 原始 prompt
         """
+        self.get_interaction(prompt)
         result: dict[str, str | None] = {
-            "prompt": prompt,
+            "prompt": self.current_interaction,
             "processed_image": None
         }
         
@@ -267,7 +269,7 @@ class Emu3p5Operator(BaseOperator):
         
         # 构建输入 IDs
         if self.tokenizer is not None:
-            result["input_ids"] = self.build_input_ids(prompt, reference_image)
+            result["input_ids"] = self.build_input_ids(self.current_interaction, reference_image)
             result["unconditional_ids"] = self.build_unconditional_ids(reference_image)
         
         return result
