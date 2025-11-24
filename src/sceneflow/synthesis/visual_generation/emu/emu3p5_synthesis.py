@@ -12,9 +12,9 @@ from transformers.generation import LogitsProcessorList
 from PIL import Image
 import numpy as np
 import torchvision.transforms as T
-from .utils.model_utils import build_emu3p5
-from .utils.input_utils import build_image, smart_resize
-from .utils.generation_utils import non_streaming_generate, build_logits_processor, multimodal_decode
+from .utils.emu3p5.model_utils import build_emu3p5
+from .utils.emu3p5.input_utils import build_image, smart_resize
+from .utils.emu3p5.generation_utils import non_streaming_generate, build_logits_processor, multimodal_decode
 
 
 def load_models(args, device, logger_obj, pretrained_model_path):
