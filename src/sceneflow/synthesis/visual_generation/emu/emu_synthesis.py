@@ -12,10 +12,9 @@ from transformers.generation import LogitsProcessorList
 from PIL import Image
 import numpy as np
 import torchvision.transforms as T
-
-from emu.utils.model_utils import build_emu3p5
-from emu.utils.input_utils import build_image, smart_resize
-from emu.utils.generation_utils import non_streaming_generate, build_logits_processor, multimodal_decode
+from .utils.model_utils import build_emu3p5
+from .utils.input_utils import build_image, smart_resize
+from .utils.generation_utils import non_streaming_generate, build_logits_processor, multimodal_decode
 
 
 def load_models(args, device, logger_obj, pretrained_model_path):
@@ -108,14 +107,12 @@ class Emu3Synthesis(object):
         self.parallel_args = parallel_args or {}
         
         # 配置参数
-        self.task_type = getattr(args, 'task_type', 'story')
+        self.task_type = getattr(args, 'task_type', 't2i')
         self.use_image = getattr(args, 'use_image', True)
         self.image_area = getattr(args, 'image_area', 518400)
         self.classifier_free_guidance = getattr(args, 'classifier_free_guidance', 3.0)
         self.unconditional_type = getattr(args, 'unconditional_type', 'no_text')
         
-        # 构建 prompt template
-        self._build_prompt_template()
         
         # 配置采样参数
         self._setup_sampling_params()
@@ -125,16 +122,7 @@ class Emu3Synthesis(object):
         
         self.model.eval()
     
-    def _build_prompt_template(self):
-        """构建 prompt template 和 unconditional prompt"""
-        task_str = self.task_type.lower()
-        if self.use_image:
-            self.unconditional_prompt = "<|extra_203|>You are a helpful assistant. USER: <|IMAGE|> ASSISTANT: <|extra_100|>"
-            self.template = f"<|extra_203|>You are a helpful assistant for {task_str} task. USER: {{question}}<|IMAGE|> ASSISTANT: <|extra_100|>"
-        else:
-            self.unconditional_prompt = "<|extra_203|>You are a helpful assistant. USER:  ASSISTANT: <|extra_100|>"
-            self.template = f"<|extra_203|>You are a helpful assistant for {task_str} task. USER: {{question}} ASSISTANT: <|extra_100|>"
-    
+
     def _setup_sampling_params(self):
         """设置采样参数"""
         self.sampling_params = dict(
@@ -142,7 +130,7 @@ class Emu3Synthesis(object):
             text_top_k=getattr(self.args, 'text_top_k', 1024),
             text_top_p=getattr(self.args, 'text_top_p', 0.9),
             text_temperature=getattr(self.args, 'text_temperature', 1.0),
-            image_top_k=getattr(self.args, 'image_top_k', 10240),
+            image_top_k=getattr(self.args, 'image_top_k', 5120),
             image_top_p=getattr(self.args, 'image_top_p', 1.0),
             image_temperature=getattr(self.args, 'image_temperature', 1.0),
             top_k=getattr(self.args, 'top_k', 131072),
@@ -158,14 +146,46 @@ class Emu3Synthesis(object):
         self.sampling_params["do_sample"] = self.sampling_params["num_beam_groups"] <= 1
         self.sampling_params["num_beams"] = self.sampling_params["num_beams_per_group"] * self.sampling_params["num_beam_groups"]
     
+    # def _setup_special_tokens(self):
+    #     """设置特殊 token IDs"""
+    #     self.special_token_ids = {
+    #         "BOS": self.tokenizer.convert_tokens_to_ids(self.tokenizer.bos_token) if hasattr(self.tokenizer, 'bos_token') else None,
+    #         "EOS": self.tokenizer.convert_tokens_to_ids(self.tokenizer.eos_token) if hasattr(self.tokenizer, 'eos_token') else None,
+    #         "PAD": self.tokenizer.convert_tokens_to_ids(self.tokenizer.pad_token) if hasattr(self.tokenizer, 'pad_token') else None,
+    #     }
     def _setup_special_tokens(self):
         """设置特殊 token IDs"""
-        self.special_token_ids = {
-            "BOS": self.tokenizer.convert_tokens_to_ids(self.tokenizer.bos_token) if hasattr(self.tokenizer, 'bos_token') else None,
-            "EOS": self.tokenizer.convert_tokens_to_ids(self.tokenizer.eos_token) if hasattr(self.tokenizer, 'eos_token') else None,
-            "PAD": self.tokenizer.convert_tokens_to_ids(self.tokenizer.pad_token) if hasattr(self.tokenizer, 'pad_token') else None,
+        # 尝试从 tokenizer 属性获取，如果没有则使用默认值
+        special_tokens_map = {
+            # 标准 token
+            "BOS": getattr(self.tokenizer, 'bos_token', "<|extra_203|>"),
+            "EOS": getattr(self.tokenizer, 'eos_token', "<|extra_204|>"),
+            "PAD": getattr(self.tokenizer, 'pad_token', "<|endoftext|>"),
+            "EOL": getattr(self.tokenizer, 'eol_token', "<|extra_200|>"),
+            "EOF": getattr(self.tokenizer, 'eof_token', "<|extra_201|>"),
+            "TMS": getattr(self.tokenizer, 'tms_token', "<|extra_202|>"),
+            "IMG": getattr(self.tokenizer, 'img_token', "<|image token|>"),
+            "BOI": getattr(self.tokenizer, 'boi_token', "<|image start|>"),
+            "EOI": getattr(self.tokenizer, 'eoi_token', "<|image end|>"),
+            "BSS": getattr(self.tokenizer, 'bss_token', "<|extra_100|>"),
+            "ESS": getattr(self.tokenizer, 'ess_token', "<|extra_101|>"),
+            "BOG": getattr(self.tokenizer, 'bog_token', "<|extra_60|>"),
+            "EOG": getattr(self.tokenizer, 'eog_token', "<|extra_61|>"),
+            "BOC": getattr(self.tokenizer, 'boc_token', "<|extra_50|>"),
+            "EOC": getattr(self.tokenizer, 'eoc_token', "<|extra_51|>"),
         }
-    
+        
+        # 转换为 token IDs
+        self.special_token_ids = {}
+        for key, token in special_tokens_map.items():
+            if token is not None:
+                try:
+                    token_id = self.tokenizer.convert_tokens_to_ids(token)
+                    self.special_token_ids[key] = token_id
+                except:
+                    self.special_token_ids[key] = None
+            else:
+                self.special_token_ids[key] = None
     @classmethod
     def from_pretrained(cls, pretrained_model_path, args, device=None, logger=None, **kwargs):
         """
@@ -202,129 +222,10 @@ class Emu3Synthesis(object):
             logger=logger_inst,
         )
     
-    def process(self, pil_img):
-        """
-        处理 PIL 图像，转换为模型所需的格式
-        
-        参考 HunyuanVideoSynthesis.process 方法
-        
-        Args:
-            pil_img: PIL Image
-            
-        Returns:
-            处理后的 torch.Tensor
-        """
-        if pil_img.mode == 'L':
-            pil_img = pil_img.convert('RGB')
-        image = np.asarray(pil_img, dtype=np.float32) / 255.
-        image = image[:, :, :3]
-        image = torch.from_numpy(image).permute(2, 0, 1).contiguous().float()
-        image = T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True)(image)
-        return image
-    
-    def load_image(self, path, image_size=None):
-        """
-        加载图像，参考 HunyuanVideoSynthesis.load_image 方法
-        
-        Args:
-            path: 图像路径或 PIL Image
-            image_size: 目标尺寸 (width, height)，如果为 None 则使用智能调整
-            
-        Returns:
-            处理后的 PIL Image
-        """
-        if isinstance(path, tuple):
-            # 处理多图像输入（如果支持）
-            return [self.load_image(p, image_size) for p in path]
-        
-        if isinstance(path, str):
-            pil_img = Image.open(path)
-        else:
-            pil_img = path
-        
-        if pil_img.mode != 'RGB':
-            pil_img = pil_img.convert('RGB')
-        
-        if image_size is not None:
-            pil_img = pil_img.resize((image_size[1], image_size[0]), Image.BICUBIC)
-        else:
-            # 使用智能调整
-            pil_img = smart_resize(pil_img, area=self.image_area, ds_factor=16)
-        
-        return pil_img
-    
-    def process_image(self, image_path: Union[str, Image.Image]) -> Image.Image:
-        """
-        处理图像，调整为合适的尺寸
-        
-        Args:
-            image_path: 图像路径或 PIL Image
-            
-        Returns:
-            处理后的 PIL Image
-        """
-        return self.load_image(image_path)
-    
-    def build_input_ids(
-        self,
-        prompt: str,
-        reference_image: Optional[Union[str, Image.Image]] = None,
-    ) -> torch.LongTensor:
-        """
-        构建输入 token IDs
-        
-        Args:
-            prompt: 文本提示
-            reference_image: 参考图像（可选）
-            
-        Returns:
-            input_ids: [1, seq_len]
-        """
-        # 构建完整的 prompt
-        if self.use_image and reference_image is not None:
-            # 处理参考图像（已经在 process_image 中调整了尺寸）
-            image = self.process_image(reference_image)
-            # 创建简单的配置对象用于 build_image
-            class ImageConfig:
-                image_area = self.image_area
-            img_cfg = ImageConfig()
-            # 编码图像为字符串
-            image_string = build_image(image, img_cfg, self.tokenizer, self.vq_model)
-            # 替换模板中的 <|IMAGE|>
-            full_prompt = self.template.format(question=prompt).replace("<|IMAGE|>", image_string)
-        else:
-            # 无图像情况
-            full_prompt = self.template.format(question=prompt).replace("<|IMAGE|>", "")
-        
-        # Tokenize
-        input_ids = self.tokenizer.encode(full_prompt, return_tensors="pt")
-        
-        return input_ids
-    
-    def build_unconditional_ids(self) -> torch.LongTensor:
-        """
-        构建无条件输入的 token IDs
-        
-        Returns:
-            unconditional_ids: [1, seq_len]
-        """
-        if self.use_image:
-            # 对于有图像的情况，需要构建一个空的图像占位符
-            # 这里使用一个小的占位图像字符串
-            image_string = self.tokenizer.boi_token + "1*1" + self.tokenizer.img_token + self.tokenizer.eoi_token
-            full_prompt = self.unconditional_prompt.replace("<|IMAGE|>", image_string)
-        else:
-            full_prompt = self.unconditional_prompt
-        
-        unconditional_ids = self.tokenizer.encode(full_prompt, return_tensors="pt")
-        
-        return unconditional_ids
-    
     @torch.no_grad()
     def predict(
         self,
-        prompt: str,
-        reference_image: Optional[Union[str, Image.Image]] = None,
+        processed_data: dict[str, str | None],
         seed: Optional[Union[int, List[int]]] = None,
         batch_size: int = 1,
         num_images_per_prompt: int = 1,
@@ -334,19 +235,6 @@ class Emu3Synthesis(object):
     ) -> Dict:
         """
         生成预测结果
-        
-        参考 HunyuanVideoSynthesis.predict 方法的接口风格
-        
-        Args:
-            prompt: 文本提示
-            reference_image: 参考图像路径或 PIL Image（可选）
-            seed: 随机种子，可以是 int、list[int] 或 None
-            batch_size: 批次大小
-            num_images_per_prompt: 每个 prompt 生成的图像数量
-            max_new_tokens: 最大生成 token 数
-            guidance_scale: CFG 引导尺度（等同于 classifier_free_guidance）
-            **kwargs: 其他参数
-            
         Returns:
             Dict 包含生成的结果：
                 - samples: 生成的多模态输出列表
@@ -389,7 +277,7 @@ class Emu3Synthesis(object):
             )
         
         out_dict["seeds"] = seeds
-        out_dict["prompts"] = [prompt] * batch_size if isinstance(prompt, str) else prompt
+        out_dict["prompts"] = [processed_data['prompt']] * batch_size if isinstance(processed_data['prompt'], str) else prompt
         
         # 设置随机种子（使用第一个种子）
         if seeds:
@@ -397,10 +285,9 @@ class Emu3Synthesis(object):
             torch.manual_seed(seeds[0])
             if torch.cuda.is_available():
                 torch.cuda.manual_seed_all(seeds[0])
-        
         # 构建输入
-        input_ids = self.build_input_ids(prompt, reference_image)
-        unconditional_ids = self.build_unconditional_ids()
+        input_ids = processed_data["input_ids"]
+        unconditional_ids = processed_data["unconditional_ids"]
         
         # 移动到设备
         device = next(self.model.parameters()).device
@@ -424,10 +311,6 @@ class Emu3Synthesis(object):
             'image_area': self.image_area,
             'streaming': getattr(self.args, 'streaming', False),
         })()
-        
-        # 生成
-        start_time = time.time()
-        
         # 使用 generation_utils 中的函数
         gen_token_ids = non_streaming_generate(
             cfg=cfg,
@@ -437,10 +320,10 @@ class Emu3Synthesis(object):
             unconditional_ids=unconditional_ids,
             force_same_image_size=True,
         )
-        
+
         # 解码生成的 tokens
         gen_tokens_str = self.tokenizer.decode(gen_token_ids, skip_special_tokens=False)
-        
+        start_time = time.time()
         # 多模态解码
         multimodal_outputs = multimodal_decode(
             outputs=gen_tokens_str,

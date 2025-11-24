@@ -12,7 +12,7 @@ tokenizer_path = "./src/tokenizer_emu3_ibq"
 vq_type = "ibq"
 
 # task_type in {"t2i", "x2i", "howto", "story", "explore", "vla"}
-task_type = "story"
+task_type = "t2i"
 # whether prompts include an input image token and provide reference_image paths
 use_image = True
 
