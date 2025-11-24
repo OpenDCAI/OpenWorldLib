@@ -48,7 +48,7 @@ def build_image(image, cfg, tokenizer, vq_model):
     token = token[-1].view(h // 16, w // 16)
     return format_image_string(tokenizer, token)
 
-class EmuOperator(BaseOperator):
+class Emu3p5Operator(BaseOperator):
     
     def __init__(
         self,
@@ -70,7 +70,7 @@ class EmuOperator(BaseOperator):
             image_area: 图像区域大小，默认为 518400
             operation_types: 操作类型列表
         """
-        super(EmuOperator, self).__init__(operation_types)
+        super(Emu3p5Operator, self).__init__(operation_types)
         
         self.tokenizer = tokenizer
         self.vq_model = vq_model
