@@ -5,8 +5,8 @@ from PIL import Image
 from typing import Optional, Any, Union, Dict, List
 from pathlib import Path
 
-from ...operators.emu_operator import EmuOperator
-from ...synthesis.visual_generation.emu.emu_synthesis import Emu3Synthesis, load_models
+from ...operators.emu3p5_operator import Emu3p5Operator
+from ...synthesis.visual_generation.emu.emu3p5.emu3p5_synthesis import Emu3p5Synthesis, load_models
 
 
 class Args:
@@ -33,7 +33,7 @@ class Args:
 
 args = Args()
 
-class EmuPipeline:
+class Emu3p5Pipeline:
     """
     
     将输入通过 operator 处理后再传给模型进行推理，
@@ -42,8 +42,8 @@ class EmuPipeline:
     
     def __init__(
         self,
-        operator: Optional[EmuOperator] = None,
-        synthesis_model: Optional[Emu3Synthesis] = None,
+        operator: Optional[Emu3p5Operator] = None,
+        synthesis_model: Optional[Emu3p5Synthesis] = None,
         synthesis_args=None,
         device: str = 'cuda'
     ):
@@ -94,7 +94,7 @@ class EmuPipeline:
         if logger:
             logger.info("Loading EMU synthesis model...")
         
-        synthesis_model = Emu3Synthesis.from_pretrained(
+        synthesis_model = Emu3p5Synthesis.from_pretrained(
             pretrained_model_path=pretrained_model_path,
             args=synthesis_args,
             device=device,
@@ -106,7 +106,7 @@ class EmuPipeline:
         if logger:
             logger.info("Initializing EMU operator...")
         
-        operator = EmuOperator(
+        operator = Emu3p5Operator(
             tokenizer=synthesis_model.tokenizer,
             vq_model=synthesis_model.vq_model,
             task_type=task_type,
@@ -220,8 +220,6 @@ class EmuPipeline:
         # 保存 synthesis 模型（如果有的话）
         if self.synthesis_model:
             synthesis_dir = os.path.join(save_directory, "synthesis_model")
-            # 注意：这里需要根据 Emu3Synthesis 的实际保存方法进行调整
-            # 目前 Emu3Synthesis 可能没有 save_pretrained 方法
             os.makedirs(synthesis_dir, exist_ok=True)
         
         # 保存 operator 配置
@@ -253,10 +251,10 @@ class EmuPipeline:
         if self.operator:
             self.operator.update_config(**kwargs)
     
-    def get_operator(self) -> Optional[EmuOperator]:
+    def get_operator(self) -> Optional[Emu3p5Operator]:
         """获取 operator 实例"""
         return self.operator
     
-    def get_synthesis_model(self) -> Optional[Emu3Synthesis]:
+    def get_synthesis_model(self) -> Optional[Emu3p5Synthesis]:
         """获取 synthesis 模型实例"""
         return self.synthesis_model

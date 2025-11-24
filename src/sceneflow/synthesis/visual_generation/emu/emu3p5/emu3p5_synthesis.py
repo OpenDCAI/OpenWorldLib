@@ -60,7 +60,7 @@ def load_models(args, device, logger_obj, pretrained_model_path):
     return model, tokenizer, vq_model
 
 
-class Emu3Synthesis(object):
+class Emu3p5Synthesis(object):
     """
     Emu3.5 生成合成类，提供统一的接口用于图像和文本生成
     
