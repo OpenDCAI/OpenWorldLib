@@ -9,7 +9,7 @@ test_prompt = "Translate this house into a school."
 
 pipeline = Emu3p5Pipeline.from_pretrained(
     pretrained_model_path=model_path,
-    use_image=True,
+    use_image=True
 )
 
-pipeline(prompt=test_prompt, reference_image=image_path)
+pipeline(prompt=test_prompt, reference_image=image_path,save_content=True)
