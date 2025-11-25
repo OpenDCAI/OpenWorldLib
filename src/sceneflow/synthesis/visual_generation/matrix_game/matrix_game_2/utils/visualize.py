@@ -185,3 +185,4 @@ def process_video(input_video, output_video, config, mouse_icon_path, mouse_scal
         print(f"Processing frame {frame_idx}/{frame_count}", end="\r")
     export_to_video(out_video, output_video, fps=fps)
     print("\nProcessing complete!")
+    return output_video

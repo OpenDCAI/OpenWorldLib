@@ -33,6 +33,7 @@ sentencepiece
 pydantic
 scikit-image
 huggingface_hub[cli]
+clip @ git+https://github.com/openai/CLIP.git
 dominate
 pycuda
 flask
