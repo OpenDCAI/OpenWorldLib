@@ -166,6 +166,7 @@ class Emu3p5Pipeline:
         max_new_tokens: Optional[int] = None,
         guidance_scale: Optional[float] = None,
         use_operator: bool = True,
+        save_content= True,
         **kwargs
     ) -> Dict:
         """
@@ -199,12 +200,13 @@ class Emu3p5Pipeline:
             guidance_scale=guidance_scale,
             **kwargs
         )
-        for idx, (item_type, content) in enumerate(result["samples"]):
-            if item_type == "image":
-                content.save(f"output_image_{idx}.png")
-                print(f"Saved image: output_image_{idx}.png")
-            elif item_type == "text":
-                print(f"Generated text: {content}")
+        if save_content:
+            for idx, (item_type, content) in enumerate(result["samples"]):
+                if item_type == "image":
+                    content.save(f"output_image_{idx}.png")
+                    print(f"Saved image: output_image_{idx}.png")
+                elif item_type == "text":
+                    print(f"Generated text: {content}")
         
         return result
     
