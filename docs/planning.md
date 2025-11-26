@@ -4,11 +4,9 @@
 
 后续所有的输入都要进过pipeline的operators来输入给pipeline，operators记录所有未处理的输入
 
-hunyuan_world_voyager下的config.py、constants.py以及hunyuan_video_sampler.py都需要修改
-constants.py的Model_base输入方式需要修改
-hunyuan_world_voyager 在路径./src/sceneflow/synthesis/visual_generation/hunyuan_world_voyager/text_encoder下，适配旧版本的LlavaForConditionalGeneration
+hunyuan_world_voyager需要修改输出
 
-需要设计operators，representation，synthesis中元素具体的模版
+需要设计operators，representation，synthesis中元素具体的模版，整套设计流程具体规范需要向所有人说明
 
 reasoning应该针对的是空间理解模型，例如：
 - MindJourney: https://arxiv.org/pdf/2507.12508
@@ -17,6 +15,8 @@ reasoning应该针对的是空间理解模型，例如：
 - cambrian-S: https://arxiv.org/pdf/2511.04670
 
 representation注意depthanything系列的工作
+
+src/sceneflow/representations/models/utils3d need to rename as src/sceneflow/representations/models/EasternJournalist_utils3d/..
 
 ## Student update
 亦凡：Emu3.5的环境我已经测试好了，高版本的Transformers库可以正常运行（测试了4.49.0、4.50.1、4.51.0） 但是最新的4.57.1目前还存在一点问题
