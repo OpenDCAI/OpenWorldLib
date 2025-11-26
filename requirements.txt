@@ -38,4 +38,3 @@ dominate
 pycuda
 flask
 flask-socketio
-torchao

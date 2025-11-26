@@ -38,16 +38,19 @@ class MatrixGame2Synthesis(BaseSynthesis):
                         device=None,
                         weight_dtype = torch.bfloat16,
                         **kwargs):
+        script_dir = os.path.dirname(os.path.abspath(__file__))
         if mode not in ['universal', 'gta_drive', 'templerun']:
             raise NotImplementedError("mode should be one of ['universal', 'gta_drive', 'templerun']")
         if mode == 'universal':
-            config_path = f"./configs/inference_yaml/inference_universal.yaml"
+            config_path = os.path.join(script_dir, f"./matrix_game_2/configs/inference_yaml/inference_universal.yaml")
         elif mode == 'gta_drive':
-            config_path = f"./configs/inference_yaml/inference_gta_drive.yaml"
+            config_path = os.path.join(script_dir, f"./matrix_game_2/configs/inference_yaml/inference_gta_drive.yaml")
         elif mode == 'templerun':
-            config_path = f"./configs/inference_yaml/inference_templerun.yaml"
+            config_path = os.path.join(script_dir, f"./matrix_game_2/configs/inference_yaml/inference_templerun.yaml")
         
         config = OmegaConf.load(config_path)
+        config["model_kwargs"]['model_config'] = os.path.join(os.path.join(script_dir, "./matrix_game_2/"), 
+                                                              config["model_kwargs"]['model_config'])
 
         if os.path.isdir(pretrained_model_path):
             model_root = pretrained_model_path
@@ -96,7 +99,7 @@ class MatrixGame2Synthesis(BaseSynthesis):
                 num_output_frames,
                 operation_visualization=True):
         sampled_noise = torch.randn(
-            [1, 16,num_output_frames, 44, 80], device=self.device, dtype=self.weight_dtype
+            [1, 16,num_output_frames, cond_concat.size(-2), cond_concat.size(-1)], device=self.device, dtype=self.weight_dtype
         )
 
         conditional_dict = {
@@ -125,7 +128,8 @@ class MatrixGame2Synthesis(BaseSynthesis):
         videos = ((videos.float() + 1) * 127.5).clip(0, 255).cpu().numpy().astype(np.uint8)[0]
         video = np.ascontiguousarray(videos)
 
-        mouse_icon = 'assets/images/mouse.png'
+        # mouse_icon = 'file path to mouse.png'
+        mouse_icon = None
         if self.mode != 'templerun':
             config = (
                 keyboard_condition[0].float().cpu().numpy(),
@@ -136,7 +140,6 @@ class MatrixGame2Synthesis(BaseSynthesis):
                 keyboard_condition[0].float().cpu().numpy()
             )
         output_video = process_video(video.astype(np.uint8),
-                                    self.args.output_folder+f'/demo.mp4',
                                     config, mouse_icon, mouse_scale=0.1,
                                     process_icon=operation_visualization,
                                     mode=self.mode)

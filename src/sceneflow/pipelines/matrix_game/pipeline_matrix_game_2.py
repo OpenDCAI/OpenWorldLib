@@ -85,7 +85,7 @@ class MatrixGame2Pipeline:
 
         padding_video = torch.zeros_like(image).repeat(1, 1, 4 * (num_output_frames - 1), 1, 1)
         img_cond = torch.concat([image, padding_video], dim=2)
-        tiler_kwargs={"tiled": True, "tile_size": [44, 80], "tile_stride": [23, 38]}
+        tiler_kwargs={"tiled": True, "tile_size": [resize_H//8, resize_W//8], "tile_stride": [resize_H//16+1, resize_W//16-2]}
         img_cond = self.synthesis_model.vae.encode(img_cond, device=self.device, **tiler_kwargs).to(self.device)
         mask_cond = torch.ones_like(img_cond)
         mask_cond[:, :, 1:] = 0
@@ -120,6 +120,7 @@ class MatrixGame2Pipeline:
                  **kwds):
         output_dict = self.process(
             input_image=input_image,
+            num_output_frames=num_output_frames,
             resize_H=resize_H,
             resize_W=resize_W,
             interaction_signal=interaction_signal

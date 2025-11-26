@@ -219,6 +219,12 @@ def encode_actions(action_list, mode):
         CAM_MAP = {"camera_l":[0,-0.1], "camera_r":[0,0.1]}
         keyboard_dim = 4
         mouse = True
+        COMBINATION_MAP = {
+            "forward_left": ["forward", "left"],
+            "forward_right": ["forward", "right"],
+            "back_left": ["back", "left"], 
+            "back_right": ["back", "right"]
+        }
     elif mode == "gta_drive":
         KEYBOARD_IDX = {"forward":0, "back":1}
         CAM_MAP = {"camera_l":[0,-0.1], "camera_r":[0,0.1]}
@@ -239,6 +245,10 @@ def encode_actions(action_list, mode):
         mouse_value = torch.zeros(2)
 
     for act in action_list:
+        if act in COMBINATION_MAP:
+            for sub_act in COMBINATION_MAP[act]:
+                if sub_act in KEYBOARD_IDX:
+                    keyboard[KEYBOARD_IDX[sub_act]] = 1
         if act in KEYBOARD_IDX:
             keyboard[KEYBOARD_IDX[act]] = 1
         if mouse and act in CAM_MAP:
@@ -279,43 +289,47 @@ class MatrixGame2Operator(BaseOperator):
             self.check_interaction(act)
         self.current_interaction.append(interaction_list)
 
-    def _build_sequence(self, num_frames):
-        """
-        根据用户输入的顺序组合成时间序列，不使用随机，不使用 bench。
-        """
+    def _build_sequence(self, num_frames, frames_per_action=4):
         if len(self.current_interaction) == 0:
             raise RuntimeError("No interaction registered")
 
         cur_interaction = self.current_interaction[-1]
-        seq_len = len(cur_interaction)
 
-        # 若用户输入动作数 < num_frames，则重复最后一个动作补全
-        idx = torch.linspace(0, seq_len - 1, steps=num_frames).round().long()
-        padded = [cur_interaction[i] for i in idx]
+        total_actions = len(cur_interaction)
+        available_frames = num_frames
+        frames_per_action = max(frames_per_action, available_frames // total_actions)
+        
+        if frames_per_action < 1:
+            frames_per_action = 1
 
-        # 按顺序编码
+        padded_actions = []
+        for action in cur_interaction:
+            padded_actions.extend([action] * frames_per_action)
+
+        while len(padded_actions) < num_frames:
+            padded_actions.append(padded_actions[-1])
+
+        padded_actions = padded_actions[:num_frames]
+
         keyboard_list = []
         mouse_list = []
-
         mouse_enabled = (self.mode != "templerun")
-
-        for act_list in padded:
-            kb, ms = encode_actions(act_list, self.mode)
+        
+        for action in padded_actions:
+            kb, ms = encode_actions([action], self.mode)
             keyboard_list.append(kb)
             if mouse_enabled:
                 mouse_list.append(ms)
-
-        keyboard_tensor = torch.stack(keyboard_list)  # [T, K]
+        
+        keyboard_tensor = torch.stack(keyboard_list)
         if mouse_enabled:
-            mouse_tensor = torch.stack(mouse_list)  # [T, 2]
+            mouse_tensor = torch.stack(mouse_list)
             return {
                 "keyboard_condition": keyboard_tensor,
                 "mouse_condition": mouse_tensor
             }
-
-        return {
-            "keyboard_condition": keyboard_tensor
-        }
+        
+        return {"keyboard_condition": keyboard_tensor}
 
     # 3 个 process_action_* 变成调用统一逻辑
     def process_action_universal(self, num_frames):
