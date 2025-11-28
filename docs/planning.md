@@ -18,6 +18,8 @@ representation注意depthanything系列的工作
 
 src/sceneflow/representations/models/utils3d need to rename as src/sceneflow/representations/models/EasternJournalist_utils3d/..
 
+wan的一些通用block要进行统一，recammaster和matrix-game都用到了
+
 ## Student update
 亦凡：Emu3.5的环境我已经测试好了，高版本的Transformers库可以正常运行（测试了4.49.0、4.50.1、4.51.0） 但是最新的4.57.1目前还存在一点问题
 但是使用大于等于4.49.0的transformers时需要对代码中的函数做一点小修改：
