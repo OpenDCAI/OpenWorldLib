@@ -6,7 +6,7 @@ from einops import rearrange
 from huggingface_hub import snapshot_download, hf_hub_download
 from ...base_synthesis import BaseSynthesis
 from .matrix_game_2.pipeline import CausalInferencePipeline, CausalInferenceStreamingPipeline
-from .matrix_game_2.wan.vae.wanx_vae import get_wanx_vae_wrapper
+from .matrix_game_2.extension_modules.wanx_vae import get_wanx_vae_wrapper
 from .matrix_game_2.demo_utils.vae_block3 import VAEDecoderWrapper
 from .matrix_game_2.utils.visualize import process_video
 from .matrix_game_2.utils.misc import set_seed
