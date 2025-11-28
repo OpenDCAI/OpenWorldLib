@@ -4,8 +4,8 @@ import tensorrt as trt
 import torch
 import torch.nn as nn
 
-from demo_utils.constant import ALL_INPUTS_NAMES, ZERO_VAE_CACHE
-from wan.modules.vae import AttentionBlock, CausalConv3d, RMS_norm, Upsample
+from .constant import ALL_INPUTS_NAMES, ZERO_VAE_CACHE
+from ....wan.wan_2p1.modules.vae import AttentionBlock, CausalConv3d, RMS_norm, Upsample
 
 CACHE_T = 2
 
