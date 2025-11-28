@@ -1,6 +1,3 @@
-"""
-DepthAnything Pipeline for depth estimation from images and videos.
-"""
 import os
 from pathlib import Path
 from typing import Iterable, List, Optional, Union
@@ -33,8 +30,6 @@ class DepthAnythingPipeline:
         data_type: str = "image",
     ) -> None:
         """
-        Initialize DepthAnything pipeline.
-        
         Args:
             model: Pre-loaded DepthAnything model (optional)
             operator: DepthAnythingOperator instance (optional)
@@ -86,17 +81,12 @@ class DepthAnythingPipeline:
         **kwargs
     ) -> 'DepthAnythingPipeline':
         """
-        Load pipeline from pretrained model.
-        
         Args:
             pretrained_model_path: Path to local checkpoint or HuggingFace repo ID
             encoder: Encoder type ('vits', 'vitb', 'vitl')
             device: Device to run on
             data_type: Type of data to process ('image' or 'video')
             **kwargs: Additional arguments
-            
-        Returns:
-            Initialized DepthAnythingPipeline instance
         """
         device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         
@@ -121,21 +111,18 @@ class DepthAnythingPipeline:
         encoder: str,
         device: str
     ) -> DepthAnything:
-        """Load model from local checkpoint file."""
         import warnings
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=FutureWarning, message=".*weights_only.*")
             checkpoint = torch.load(pretrained_model_path, map_location='cpu', weights_only=False)
-        
-        # Extract state_dict
+
         if 'model' in checkpoint:
             state_dict = checkpoint['model']
         elif 'state_dict' in checkpoint:
             state_dict = checkpoint['state_dict']
         else:
             state_dict = checkpoint
-        
-        # Infer encoder type from checkpoint dimensions
+
         detected_encoder = encoder
         if 'pretrained.cls_token' in state_dict:
             embed_dim = state_dict['pretrained.cls_token'].shape[-1]
@@ -154,7 +141,6 @@ class DepthAnythingPipeline:
             elif embed_dim == 1024:
                 detected_encoder = 'vitl'
         
-        # Infer out_channels from checkpoint
         detected_out_channels = None
         if 'depth_head.projects.0.weight' in state_dict:
             detected_out_channels = [
@@ -214,63 +200,42 @@ class DepthAnythingPipeline:
         model_source = pretrained_model_path or f"LiheYoung/depth_anything_{encoder}14"
         return DepthAnything.from_pretrained(model_source)
     
-    def process_image(
+    def process(
         self,
-        image_path: Union[str, np.ndarray],
+        input_image: Union[str, np.ndarray, torch.Tensor],
+        return_visualization: bool = False,
         grayscale: bool = False,
-    ) -> np.ndarray:
+    ) -> Union[torch.Tensor, np.ndarray]:
         """
-        Process a single image and return depth map.
+        Process input image and return depth map.
         
         Args:
-            image_path: Path to image file or numpy array
-            grayscale: If True, return grayscale depth, else color map
+            input_image: Image path, numpy array, or torch tensor
+            return_visualization: If True, return visualized depth (uint8), else return raw depth tensor
+            grayscale: For visualization, whether to use grayscale (ignored if return_visualization=False)
             
         Returns:
-            Depth visualization as numpy array
+            Depth map as tensor (if return_visualization=False) or visualized array (if return_visualization=True)
         """
-        if isinstance(image_path, np.ndarray):
-            image_rgb = image_path / 255.0 if image_path.max() > 1.0 else image_path
-        else:
-            raw_image = cv2.imread(image_path)
-            if raw_image is None:
-                raise ValueError(f"Could not read image from {image_path}")
-            image_rgb = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0
-        
+        # Load and preprocess image using operator
+        image_rgb = self.operator.load_and_preprocess_image(input_image)
         h, w = image_rgb.shape[:2]
         
+        # Prepare tensor and run inference
         tensor = self._prepare_tensor(image_rgb)
         with torch.no_grad():
             depth = self.model(tensor)
         
+        # Interpolate to original size
         depth = self.operator.interpolate_depth(depth, (h, w))
-        depth_norm = self.operator.normalize_depth(depth)
-        depth_vis = self.operator.prepare_depth_visualization(depth_norm, grayscale)
         
-        return depth_vis
-    
-    def process_video_frame(self, frame: np.ndarray) -> np.ndarray:
-        """
-        Process a single video frame and return depth map.
-        
-        Args:
-            frame: Video frame as numpy array (BGR format)
-            
-        Returns:
-            Depth visualization as numpy array
-        """
-        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) / 255.0
-        h, w = frame_rgb.shape[:2]
-        
-        tensor = self._prepare_tensor(frame_rgb)
-        with torch.no_grad():
-            depth = self.model(tensor)
-        
-        depth = self.operator.interpolate_depth(depth, (h, w))
-        depth_norm = self.operator.normalize_depth(depth)
-        depth_color = cv2.applyColorMap(depth_norm, cv2.COLORMAP_INFERNO)
-        
-        return depth_color
+        # Return raw depth tensor or visualization
+        if return_visualization:
+            depth_norm = self.operator.normalize_depth(depth)
+            depth_vis = self.operator.prepare_depth_visualization(depth_norm, grayscale)
+            return depth_vis
+        else:
+            return depth
     
     def run_image(
         self,
@@ -294,7 +259,7 @@ class DepthAnythingPipeline:
         
         for filename in tqdm(self.operator.collect_paths(img_path), desc="DepthAnything-Image"):
             try:
-                depth_vis = self.process_image(filename, grayscale)
+                depth_vis = self.process(filename, return_visualization=True, grayscale=grayscale)
                 
                 basename = os.path.basename(filename)
                 stem = basename[:basename.rfind(".")] if "." in basename else basename
@@ -350,7 +315,7 @@ class DepthAnythingPipeline:
                     if not ret:
                         break
                     
-                    depth_color = self.process_video_frame(raw_frame)
+                    depth_color = self.process(raw_frame, return_visualization=True, grayscale=False)
                     writer.write(depth_color)
                     pbar.update(1)
             

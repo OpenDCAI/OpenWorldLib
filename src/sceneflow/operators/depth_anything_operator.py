@@ -12,8 +12,8 @@ from .base_operator import BaseOperator
 class DepthAnythingOperator(BaseOperator):
     """Operator for DepthAnything pipeline utilities."""
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, operation_types=[]):
+        super(DepthAnythingOperator, self).__init__(operation_types=operation_types)
     
     def collect_paths(self, path: Union[str, Path]) -> List[str]:
         """
@@ -94,4 +94,40 @@ class DepthAnythingOperator(BaseOperator):
         return F.interpolate(
             depth[None], target_size, mode="bilinear", align_corners=False
         )[0, 0]
+    
+    def load_and_preprocess_image(
+        self,
+        input_image: Union[str, np.ndarray, torch.Tensor]
+    ) -> np.ndarray:
+        """
+        Load and preprocess image from various input types.
+        
+        Args:
+            input_image: Image path, numpy array, or torch tensor
+            
+        Returns:
+            Preprocessed RGB image array (normalized to [0, 1])
+        """
+        if isinstance(input_image, torch.Tensor):
+            # Assume tensor is in CHW format, convert to numpy
+            if input_image.dim() == 3:
+                image_rgb = input_image.permute(1, 2, 0).cpu().numpy()
+            else:
+                image_rgb = input_image[0].permute(1, 2, 0).cpu().numpy()
+            if image_rgb.max() > 1.0:
+                image_rgb = image_rgb / 255.0
+        elif isinstance(input_image, np.ndarray):
+            image_rgb = input_image / 255.0 if input_image.max() > 1.0 else input_image
+            # Convert BGR to RGB if needed (heuristic: if first channel mean > last channel mean)
+            if len(image_rgb.shape) == 3 and image_rgb.shape[2] == 3:
+                if image_rgb[..., 0].mean() > image_rgb[..., 2].mean():
+                    image_rgb = image_rgb[..., ::-1]
+        else:
+            # Assume it's a file path
+            raw_image = cv2.imread(input_image)
+            if raw_image is None:
+                raise ValueError(f"Could not read image from {input_image}")
+            image_rgb = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0
+        
+        return image_rgb
 
