@@ -10,7 +10,7 @@ from typing import Dict, Union
 from .base_representation import BaseRepresentation
 # import the corresponding depth model
 from .models.moge.model.v1 import MoGeModel
-from .models.depthanything.pipeline_depthanything import DepthAnythingPipeline
+from ...pipelines.depth_anything.pipeline_depth_anything import DepthAnythingPipeline
 
 """
 # Use DepthAnything as the depth model
