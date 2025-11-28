@@ -4,11 +4,11 @@ import torch
 from torch import nn
 from einops import rearrange
 from .scheduler import SchedulerInterface, FlowMatchScheduler
-from ..wan.modules.tokenizers import HuggingfaceTokenizer
-from ..wan.modules.model import WanModel #, RegisterTokens, GanAttentionBlock
-from ..wan.modules.vae import _video_vae
-# from ..wan.modules.t5 import umt5_xxl
-from ..wan.modules.causal_model import CausalWanModel
+from ....wan.wan_2p1.modules.tokenizers import HuggingfaceTokenizer
+from ....wan.wan_2p1.modules.model import WanModel #, RegisterTokens, GanAttentionBlock
+from ....wan.wan_2p1.modules.vae import _video_vae
+from ....wan.wan_2p1.modules.t5 import umt5_xxl
+from ..extension_modules.matrix_game_2_modules.causal_model import CausalWanModel
 
 
 class WanVAEWrapper(torch.nn.Module): # todo
