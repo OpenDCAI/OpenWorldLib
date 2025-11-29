@@ -69,7 +69,7 @@ output_dir = "./output/wan25"
 
 wan25_pipeline = Wan25Pipeline.from_pretrained(
     base_url="https://dashscope.aliyuncs.com/api/v1", 
-    api_key="sk-12e34772c20c43929cf13d9bcd9e0359"
+    api_key="api_key"
 )
 
 result = wan25_pipeline(
