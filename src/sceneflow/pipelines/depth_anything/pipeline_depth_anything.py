@@ -1,6 +1,6 @@
 import os
 from pathlib import Path
-from typing import Iterable, List, Optional, Union
+from typing import Iterable, List, Optional, Union, Dict
 
 import cv2
 import numpy as np
@@ -16,6 +16,67 @@ from ...representations.models.depth_anything.util.transform import (
     PrepareForNet,
     Resize,
 )
+
+
+class DepthResult:
+    """Container class for depth estimation results."""
+    
+    def __init__(self, results: List[Dict], data_type: str):
+        """
+        Initialize depth result container.
+        
+        Args:
+            results: List of dictionaries containing:
+                - For images: {'image': np.ndarray, 'filename': str, 'stem': str}
+                - For videos: {'frames': List[np.ndarray], 'filename': str, 'stem': str, 
+                              'frame_rate': float, 'frame_width': int, 'frame_height': int}
+            data_type: Type of data ('image' or 'video')
+        """
+        self.results = results
+        self.data_type = data_type
+    
+    def save(self, output_dir: Optional[str] = None) -> List[str]:
+        """
+        Save depth results to files.
+        
+        Args:
+            output_dir: Output directory. If None, uses default based on data_type.
+            
+        Returns:
+            List of saved file paths
+        """
+        if output_dir is None:
+            output_dir = "./vis_depth" if self.data_type == "image" else "./vis_video_depth"
+        
+        os.makedirs(output_dir, exist_ok=True)
+        saved_files: List[str] = []
+        
+        if self.data_type == "image":
+            for result in self.results:
+                output_path = os.path.join(output_dir, f"{result['stem']}_depth.png")
+                cv2.imwrite(output_path, result['image'])
+                saved_files.append(output_path)
+        else:  # video
+            for result in self.results:
+                output_path = os.path.join(output_dir, f"{result['stem']}_depth.mp4")
+                writer = cv2.VideoWriter(
+                    output_path,
+                    cv2.VideoWriter_fourcc(*"mp4v"),
+                    result['frame_rate'],
+                    (result['frame_width'], result['frame_height']),
+                )
+                for frame in result['frames']:
+                    writer.write(frame)
+                writer.release()
+                saved_files.append(output_path)
+        
+        return saved_files
+    
+    def __len__(self):
+        return len(self.results)
+    
+    def __getitem__(self, idx):
+        return self.results[idx]
 
 
 class DepthAnythingPipeline:
@@ -240,22 +301,19 @@ class DepthAnythingPipeline:
     def run_image(
         self,
         img_path: str,
-        outdir: str = "./vis_depth",
         grayscale: bool = False,
-    ) -> Iterable[str]:
+    ) -> DepthResult:
         """
-        Process images and save depth maps.
+        Process images and return depth maps.
         
         Args:
             img_path: Image file, directory, or txt file with paths
-            outdir: Output directory
-            grayscale: If True, save grayscale depth, else color map
+            grayscale: If True, return grayscale depth, else color map
             
         Returns:
-            List of generated file paths
+            DepthResult object containing processed depth images
         """
-        os.makedirs(outdir, exist_ok=True)
-        generated_files: List[str] = []
+        results: List[Dict] = []
         
         for filename in tqdm(self.operator.collect_paths(img_path), desc="DepthAnything-Image"):
             try:
@@ -263,32 +321,32 @@ class DepthAnythingPipeline:
                 
                 basename = os.path.basename(filename)
                 stem = basename[:basename.rfind(".")] if "." in basename else basename
-                output_path = os.path.join(outdir, f"{stem}_depth.png")
-                cv2.imwrite(output_path, depth_vis)
-                generated_files.append(output_path)
+                
+                results.append({
+                    'image': depth_vis,
+                    'filename': filename,
+                    'stem': stem,
+                })
             except Exception as e:
                 print(f"Error processing {filename}: {e}")
                 continue
         
-        return generated_files
+        return DepthResult(results, data_type="image")
     
     def run_video(
         self,
         video_path: str,
-        outdir: str = "./vis_video_depth",
-    ) -> Iterable[str]:
+    ) -> DepthResult:
         """
-        Process videos and save depth videos.
+        Process videos and return depth video frames.
         
         Args:
             video_path: Video file, directory, or txt file with paths
-            outdir: Output directory
             
         Returns:
-            List of generated file paths
+            DepthResult object containing processed depth video frames
         """
-        os.makedirs(outdir, exist_ok=True)
-        generated_files: List[str] = []
+        results: List[Dict] = []
         
         for k, filename in enumerate(self.operator.collect_paths(video_path), start=1):
             raw_video = cv2.VideoCapture(filename)
@@ -301,14 +359,8 @@ class DepthAnythingPipeline:
             
             basename = os.path.basename(filename)
             stem = basename[:basename.rfind(".")] if "." in basename else basename
-            output_path = os.path.join(outdir, f"{stem}_depth.mp4")
-            writer = cv2.VideoWriter(
-                output_path,
-                cv2.VideoWriter_fourcc(*"mp4v"),
-                frame_rate,
-                (frame_width, frame_height),
-            )
             
+            frames: List[np.ndarray] = []
             with tqdm(total=raw_video.get(cv2.CAP_PROP_FRAME_COUNT) or 0, desc=f"Video {k}", unit="frame") as pbar:
                 while raw_video.isOpened():
                     ret, raw_frame = raw_video.read()
@@ -316,41 +368,44 @@ class DepthAnythingPipeline:
                         break
                     
                     depth_color = self.process(raw_frame, return_visualization=True, grayscale=False)
-                    writer.write(depth_color)
+                    frames.append(depth_color)
                     pbar.update(1)
             
             raw_video.release()
-            writer.release()
-            generated_files.append(output_path)
+            
+            results.append({
+                'frames': frames,
+                'filename': filename,
+                'stem': stem,
+                'frame_rate': frame_rate,
+                'frame_width': frame_width,
+                'frame_height': frame_height,
+            })
         
-        return generated_files
+        return DepthResult(results, data_type="video")
     
     def __call__(
         self,
         data_path: str,
-        outdir: Optional[str] = None,
         grayscale: bool = False,
         **kwargs
-    ) -> Iterable[str]:
+    ) -> DepthResult:
         """
         Main call interface for the pipeline.
         
         Args:
             data_path: Path to image/video file, directory, or txt file
-            outdir: Output directory (default based on data_type)
             grayscale: For image mode, whether to use grayscale (ignored for video)
-            **kwargs: Additional arguments
+            **kwargs: Additional arguments (ignored for now)
             
         Returns:
-            List of generated file paths
+            DepthResult object containing processed depth results
         """
         if self.data_type == "image":
-            target_dir = outdir or "./vis_depth"
-            return self.run_image(data_path, outdir=target_dir, grayscale=grayscale)
+            return self.run_image(data_path, grayscale=grayscale)
         else:
-            target_dir = outdir or "./vis_video_depth"
-            return self.run_video(data_path, outdir=target_dir)
+            return self.run_video(data_path)
 
 
-__all__ = ["DepthAnythingPipeline"]
+__all__ = ["DepthAnythingPipeline", "DepthResult"]
 
