@@ -8,7 +8,7 @@ from src.sceneflow.pipelines.depth_anything.pipeline_depth_anything_v1 import (
 
 # Configure before running
 DATA_TYPE = "image"  # or "video"
-DATA_PATH = "/data/zhukaixin/SceneFlow/data/test_case1"#"/YOUR/IMAGE/OR/VIDEO/PATH"
+DATA_PATH = "/YOUR/IMAGE/OR/VIDEO/PATH"
 MODEL_PATH = "LiheYoung/depth_anything_vitl14"
 
 ENCODER = "vitl"  # 'vits', 'vitb', or 'vitl'
