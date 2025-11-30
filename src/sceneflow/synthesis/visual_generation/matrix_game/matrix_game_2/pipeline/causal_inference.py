@@ -5,10 +5,10 @@ import time
 import copy
 
 from einops import rearrange
-from utils.wan_wrapper import WanDiffusionWrapper, WanVAEWrapper
-from utils.visualize import process_video
+from ..utils.wan_wrapper import WanDiffusionWrapper, WanVAEWrapper
+from ..utils.visualize import process_video
 import torch.nn.functional as F
-from demo_utils.constant import ZERO_VAE_CACHE
+from ..demo_utils.constant import ZERO_VAE_CACHE
 from tqdm import tqdm
 
 def get_current_action(mode="universal"):
@@ -660,7 +660,7 @@ class CausalInferenceStreamingPipeline(torch.nn.Module):
                 config = (
                     conditional_dict["keyboard_cond"][0, : 1 + 4 * (current_start_frame + self.num_frame_per_block-1)].float().cpu().numpy()
                 )
-            process_video(video.astype(np.uint8), output_folder+f'/{name}_current.mp4', config, mouse_icon, mouse_scale=0.1, process_icon=False, mode=mode)
+            process_video(video.astype(np.uint8), config, mouse_icon, mouse_scale=0.1, process_icon=False, mode=mode)
             current_start_frame += current_num_frames
 
             if input("Continue? (Press `n` to break)").strip() == "n":
@@ -680,8 +680,8 @@ class CausalInferenceStreamingPipeline(torch.nn.Module):
             config = (
                 conditional_dict["keyboard_cond"][0, : 1 + 4 * (current_start_frame + self.num_frame_per_block-1)].float().cpu().numpy()
             )
-        process_video(video.astype(np.uint8), output_folder+f'/{name}_icon.mp4', config, mouse_icon, mouse_scale=0.1, mode=mode)
-        process_video(video.astype(np.uint8), output_folder+f'/{name}.mp4', config, mouse_icon, mouse_scale=0.1, process_icon=False, mode=mode)
+        process_video(video.astype(np.uint8), config, mouse_icon, mouse_scale=0.1, mode=mode)
+        process_video(video.astype(np.uint8), config, mouse_icon, mouse_scale=0.1, process_icon=False, mode=mode)
 
         if return_latents:
             return output

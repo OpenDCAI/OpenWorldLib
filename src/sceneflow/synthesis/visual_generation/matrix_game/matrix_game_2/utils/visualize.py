@@ -162,14 +162,15 @@ def overlay_icon(frame, icon, position, scale=1.0, rotation=0):
 
 
 # 处理视频
-def process_video(input_video, output_video, config, mouse_icon_path, mouse_scale=1.0, mouse_rotation=0, process_icon=True, mode='universal'):
+def process_video(input_video, config, mouse_icon_path, mouse_scale=1.0, mouse_rotation=0, process_icon=True, mode='universal'):
     key_data, mouse_data = parse_config(config, mode=mode)
     fps = 12
     frame_width = input_video[0].shape[1]
     frame_height = input_video[0].shape[0]
     frame_count = len(input_video)
 
-    mouse_icon = cv2.imread(mouse_icon_path, cv2.IMREAD_UNCHANGED)
+    if mouse_icon_path is not None:
+        mouse_icon = cv2.imread(mouse_icon_path, cv2.IMREAD_UNCHANGED)
     
     out_video = []
     frame_idx = 0
@@ -179,9 +180,11 @@ def process_video(input_video, output_video, config, mouse_icon_path, mouse_scal
             draw_keys_on_frame(frame, keys, key_size=(50, 50), spacing=10, bottom_margin=20, mode=mode)
             if mode == 'universal':
                 mouse_position = mouse_data.get(frame_idx, (frame_width // 2, frame_height // 2))
-                overlay_icon(frame, mouse_icon, mouse_position, scale=mouse_scale, rotation=mouse_rotation)
+                if mouse_icon_path is not None:
+                    overlay_icon(frame, mouse_icon, mouse_position, scale=mouse_scale, rotation=mouse_rotation)
         out_video.append(frame / 255)
         frame_idx += 1
         print(f"Processing frame {frame_idx}/{frame_count}", end="\r")
-    export_to_video(out_video, output_video, fps=fps)
+    # export_to_video(out_video, output_video, fps=fps)
     print("\nProcessing complete!")
+    return out_video
