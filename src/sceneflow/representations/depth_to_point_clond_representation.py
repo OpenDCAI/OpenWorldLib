@@ -11,7 +11,7 @@ from .base_representation import BaseRepresentation
 # import the corresponding depth model
 from .models.moge.model.v1 import MoGeModel
 from .models.depth_anything.depth_anything_v1.adapter import DepthAnythingAdapter
-from ...pipelines.depth_anything.pipeline_depth_anything import DepthAnythingPipeline
+from ...pipelines.depth_anything.pipeline_depth_anything_v1 import DepthAnythingPipeline
 
 """
 # Use DepthAnything as the depth model
