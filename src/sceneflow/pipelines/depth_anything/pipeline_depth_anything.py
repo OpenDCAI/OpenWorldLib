@@ -10,8 +10,8 @@ from torchvision.transforms import Compose
 from tqdm import tqdm
 
 from ...operators.depth_anything_operator import DepthAnythingOperator
-from ...representations.models.depth_anything.dpt import DepthAnything
-from ...representations.models.depth_anything.util.transform import (
+from ...representations.models.depth_anything.depth_anything_v1.dpt import DepthAnything
+from ...representations.models.depth_anything.depth_anything_v1.util.transform import (
     NormalizeImage,
     PrepareForNet,
     Resize,
