@@ -5,14 +5,28 @@ import cv2
 import json
 import imageio
 import pyexr
+from typing import Dict, Union
 
 from .base_representation import BaseRepresentation
 # import the corresponding depth model
 from .models.moge.model.v1 import MoGeModel
+from .models.depth_anything.depth_anything_v1.adapter import DepthAnythingAdapter
+from ...pipelines.depth_anything.pipeline_depth_anything_v1 import DepthAnythingPipeline
+
+"""
+# Use DepthAnything as the depth model
+representation = Depth2PointCloudRepresentation.from_pretrained(
+    pretrained_model_path="/path/to/depth_anything_vitl14.pth",  # or HuggingFace repo ID
+    device="cuda",
+    depth_model_name='depthanything',
+    encoder='vitl',  # optional: 'vits', 'vitb', 'vitl'
+)
+"""
 
 
 DEPTH_MODEL_DICT = {
     'moge_v1': MoGeModel,
+    'depthanything': DepthAnythingAdapter,
 }
 
 
@@ -234,16 +248,33 @@ class Depth2PointCloudRepresentation(BaseRepresentation):
                         **kwargs):
         depth_model_name = depth_model_name
         if depth_model_name not in DEPTH_MODEL_DICT:
-            raise ValueError(f"Unsupported depth model: {depth_model_name}")
+            raise ValueError(f"Unsupported depth model: {depth_model_name}. "
+                           f"Available models: {list(DEPTH_MODEL_DICT.keys())}")
+        
         if depth_model_name == 'moge_v1':
             pretrained_model_path = os.path.join(pretrained_model_path, 'model.pt')
-        depth_model_class = DEPTH_MODEL_DICT[depth_model_name]
-        depth_model = depth_model_class.from_pretrained(
-            pretrained_model_path, 
-            local_files_only=kwargs.get('local_files_only', False),
-            # torch_dtype=kwargs.get('torch_dtype', torch.float32),
-            # device_map=kwargs.get('device_map', None)
-        ).to(device)
+            depth_model_class = DEPTH_MODEL_DICT[depth_model_name]
+            depth_model = depth_model_class.from_pretrained(
+                pretrained_model_path, 
+                local_files_only=kwargs.get('local_files_only', False),
+            ).to(device)
+        elif depth_model_name == 'depthanything':
+            # Initialize DepthAnything pipeline
+            encoder = kwargs.get('encoder', 'vitl')
+            pipeline = DepthAnythingPipeline.from_pretrained(
+                pretrained_model_path=pretrained_model_path,
+                encoder=encoder,
+                device=device,
+                data_type='image',
+            )
+            # Wrap pipeline in adapter
+            depth_model = DepthAnythingAdapter(pipeline)
+        else:
+            depth_model_class = DEPTH_MODEL_DICT[depth_model_name]
+            depth_model = depth_model_class.from_pretrained(
+                pretrained_model_path, 
+                local_files_only=kwargs.get('local_files_only', False),
+            ).to(device)
 
         instance = cls(depth_model=depth_model)
         return instance
