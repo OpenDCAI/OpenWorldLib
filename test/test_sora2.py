@@ -89,13 +89,11 @@ def wait_and_download_video(openai_client, video, output_dir="./output/sora2", f
     if status_lower not in [s.lower() for s in completed_statuses]:
         print(f"Video status is abnormal: {video.status}, trying to download...")
 
-    print(f"Video generation completed: {video.id}")
 
     # 创建输出目录
     os.makedirs(output_dir, exist_ok=True)
 
     # 下载视频内容（重试机制）
-    print("Downloading video content...")
     max_download_retries = 5
     for attempt in range(max_download_retries):
         try:
@@ -133,8 +131,8 @@ output_dir = "./output/sora2"
 
 # 初始化 pipeline
 sora2_pipeline = Sora2Pipeline.from_pretrained(
-    base_url="https://sg.uiuiapi.com/v1", 
-    api_key="sk-PDZWiPJbKEyVf6VwBRxVklZ6um9a7cmizbvF7QoQ5E7QcyCn"
+    base_url="https://api.openai.com/v1", 
+    api_key="your api key"
 )
 
 # 使用 __call__ 方法（推荐，统一接口）
