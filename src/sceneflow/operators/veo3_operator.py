@@ -123,10 +123,6 @@ class Veo3Operator(BaseOperator):
             "fps": fps,
         }
 
-        # I2V 特有字段（仅在 I2V 时设置）
-        if is_i2v:
-            metadata["has_last_frame"] = last_frame is not None
-            metadata["reference_image_count"] = len(reference_images) if reference_images else 0
 
         content: List[Dict[str, Any]] = [
             {
@@ -151,11 +147,6 @@ class Veo3Operator(BaseOperator):
 
             if last_frame is not None:
                 content.append(to_data_url(last_frame))
-
-        # # 调试
-        # with open('./test/content.json', 'w', encoding='utf-8') as f:
-        #     json.dump(content, f, ensure_ascii=False, indent=4)
-        # print('-------------content saved to content.json-------------')
 
         return content
         
