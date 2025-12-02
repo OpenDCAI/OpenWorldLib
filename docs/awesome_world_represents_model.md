@@ -4,6 +4,7 @@
 
 * `2025.11.24` - Begin linking to papers and github
 * `2025.11.28` - update a new model
+* `2025.12.02` - update some new models
 
 ---
 
@@ -46,6 +47,7 @@
 - **π3** · [[Paper]](https://arxiv.org/pdf/2507.13347) [[Code]](https://github.com/yyfz/Pi3) · citation: 4 · github star: 1391
 - **DA2** · [[Paper]](https://arxiv.org/pdf/2509.26618) [[Code]](https://github.com/EnVision-Research/DA-2) · citation: 1 · github star: 201
 - **EvoWorld** · [[Paper]](https://arxiv.org/pdf/2510.01183) [[Code]](https://github.com/JiahaoPlus/EvoWorld) · citation: 0 · github star: 49
+- **omniVGGT** · [[Paper]](https://arxiv.org/pdf/2511.10560) [[Code]](https://github.com/livioni/omnivggt-offcial) · citation: 0 · github star: 173
 
 </details>
 
@@ -119,7 +121,6 @@
 
 - **GalaxyWalker** · [[Paper]](https://openaccess.thecvf.com/content/CVPR2025/papers/Chen_Galaxy_Walker_Geometry-aware_VLMs_For_Galaxy-scale_Understanding_CVPR_2025_paper.pdf) [[Code]](#) · citation: 0 · github star: 0
 - **BEVWorld** · [[Paper]](https://arxiv.org/pdf/2407.05679) [[Code]](#) · citation: 10 · github star: 0
-
 - **UnO** · [[Paper]](https://arxiv.org/pdf/2406.08691) [[Code]](#) · citation: 28 · github star: 0
 
 </details>
@@ -151,14 +152,72 @@
 ## 理解侧 (Understanding)
 
 <details>
-<summary><h3 style="display:inline;">3D + Multi-view Images</h3></summary><br>
+<summary><h3 style="display:inline;">Reasoning</h3></summary><br>
 
-- **Denseworld** · [[Paper]](https://arxiv.org/pdf/2506.24102) [[Code]](https://github.com/lxtGH/DenseWorld-1M) · citation: 5 · github star: 114
-- **MindJourney** · [[Paper]](https://arxiv.org/pdf/2507.12508) [[Code]](https://github.com/UMass-Embodied-AGI/MindJourney) · citation: 3 · github star: 98
-- **Think with 3D** · [[Paper]](https://arxiv.org/pdf/2510.18632) [[Code]](https://github.com/zhangquanchen/3DThinker) · citation: 2 · github star: 47
-- **Positional Encoding Field** · [[Paper]](https://arxiv.org/pdf/2510.20385) [[Code]](https://github.com/MTLab/PE-Field) · citation: 1 · github star: 242
-- **cambrian-S** · [[Paper]](https://arxiv.org/pdf/2511.04670) [[Code]](https://github.com/cambrian-mllm/cambrian-s) · citation: 3 · github star: 375
-- **Factored Interactive Object-Centric World Model** · [[Paper]](https://arxiv.org/pdf/2511.02225) [[Code]](#) · citation: 0 · github star: 0
+* **DenseWorld** · [[Paper]](https://arxiv.org/pdf/2506.24102) [[Code]](https://github.com/lxtGH/DenseWorld-1M) · citation: – · github star: 116
+* **MindJourney** · [[Paper]](https://arxiv.org/pdf/2507.12508) [[Code]](https://github.com/UMass-Embodied-AGI/MindJourney) · citation: – · github star: 101
+* **Think with 3D** · [[Paper]](https://arxiv.org/pdf/2510.18632) [[Code]](https://github.com/zhangquanchen/3DThinker) · citation: – · github star: 78
+* **Positional Encoding Field** · [[Paper]](https://arxiv.org/abs/2510.20385) [[Code]](https://github.com/MTLab/PE-Field) · citation: – · github star: 252
+* **Cambrian-S** · [[Paper]](https://arxiv.org/pdf/2511.04670) [[Code]](https://github.com/cambrian-mllm/cambrian-s) · citation: – · github star: 404
+* **Factored Interactive Object-Centric World Model** · [[Paper]](https://arxiv.org/pdf/2511.02225) [[Code]](#) · citation: –
+* **3D-Aware Vision-Language Models Fine-Tuning with Geometric Distillation** · [[Paper]](https://arxiv.org/pdf/2506.09883) [[Code]](https://github.com/kaist-cvml/3d-vlm-gd) · citation: – · github star: 27
+* **VIRAL: Visual Representation Alignment for MLLMs** · [[Paper]](https://arxiv.org/abs/2509.07979) [[Code]](https://github.com/cvlab-kaist/VIRAL) · citation: – · github star: 136
+* **VLM-3R: Vision-Language Models Augmented with Instruction-Aligned 3D Reconstruction** · [[Paper]](#) [[Code]](https://github.com/VITA-Group/VLM-3R) · citation: – · github star: 297
+* **MLLMs Need 3D-Aware Representation Supervision for Scene Understanding (3DRS)** · [[Paper]](https://arxiv.org/abs/2506.01946) [[Code]](https://github.com/Visual-AI/3DRS) · citation: – · github star: 122
+* **Diffusion Feedback Helps CLIP See Better (DIVA)** · [[Paper]](https://openreview.net/forum?id=tLFWU6izoA) [[Code]](https://github.com/baaivision/DIVA) · citation: – · github star: 295
+* **Learning from Videos for 3D World: Enhancing MLLMs with 3D Vision Geometry Priors** · [[Paper]](https://arxiv.org/pdf/2505.24625) [[Code]](https://github.com/LaVi-Lab/VG-LLM) · citation: – · github star: 172
+* **Continuous 3D Perception Model with Persistent State (CUT3R)** · [[Paper]](https://arxiv.org/pdf/2501.12387) [[Code]](https://github.com/CUT3R/CUT3R) · citation: – · github star: 1.2k
+
+#### 世界建模，可控生成
+
+* **Cambrian-S** · [[Paper]](https://arxiv.org/pdf/2511.04670) [[Code]](https://github.com/cambrian-mllm/cambrian-s) · citation: – · github star: 404
+
+</details>
+
+<details>
+<summary><h3 style="display:inline;">spatial reasoning</h3></summary><br>
+
+* **Spatial-MLLM: Boosting MLLM Capabilities in Visual-based Spatial Intelligence** · [[Paper]](https://arxiv.org/abs/2505.23747) [[Code]](https://github.com/diankun-wu/Spatial-MLLM) · citation: – · github star: 391
+* **SpatialPIN: Enhancing Spatial Reasoning Capabilities of Vision-Language Models through Prompting and Interacting 3D Priors** · [[Paper]](https://arxiv.org/abs/2403.13438) [[Code]](https://github.com/dannymcy/zeroshot_task_hallucination_code) · citation: – · github star: 9
+* **SpatialBot: Precise Spatial Understanding with Vision Language Models** · [[Paper]](https://arxiv.org/abs/2406.13642) [[Code]](https://github.com/BAAI-DCAI/SpatialBot) · citation: – · github star: 318
+* **Multi-SpatialMLLM: Multi-Frame Spatial Understanding with Multi-Modal Large Language Models** · [[Paper]](https://arxiv.org/abs/2505.17015) [[Code]](https://github.com/facebookresearch/Multi-SpatialMLLM) · citation: – · github star: 161
+* **SpatialCoT: Advancing Spatial Reasoning through Coordinate Alignment and Chain-of-Thought for Embodied Task Planning** · [[Paper]](https://arxiv.org/abs/2501.10074) [[Code]](#) · citation: – · github star: –
+* **SpatialVLM: Endowing Vision-Language Models with Spatial Reasoning Capabilities** · [[Paper]](https://arxiv.org/abs/2401.12168) [[Code]](https://github.com/remyxai/VQASynth) · citation: – · github star: 515
+* **SpatialLLM: A Compound 3D-Informed Design towards Spatially-Intelligent Large Multimodal Models** · [[Paper]](https://arxiv.org/abs/2505.00788) [[Code]](https://github.com/johnson111788/SpatialReasoner) · citation: – · github star: 23
+* **SpatialReasoner: Towards Explicit and Generalizable 3D Spatial Reasoning** · [[Paper]](https://arxiv.org/abs/2504.20024) [[Code]](#) · citation: – · github star: –
+* **Is A Picture Worth A Thousand Words? Delving Into Spatial Reasoning for Vision Language Models** · [[Paper]](https://arxiv.org/abs/2406.14852) [[Code]](https://github.com/jiayuww/SpatialEval) · citation: – · github star: 4
+* **LEO-VL: Efficient Scene Representation for Scalable 3D Vision-Language Learning** · [[Paper]](https://arxiv.org/pdf/2506.09935) [[Code]](#) · citation: – · github star: –
+* **SD-VLM: Spatial Measuring and Understanding with Depth-Encoded Vision-Language Models** · [[Paper]](https://arxiv.org/abs/2509.17664) [[Code]](https://github.com/cpystan/SD-VLM) · citation: – · github star: 5
+* **SpaceVista: All-Scale Visual Spatial Reasoning from mm to km** · [[Paper]](https://arxiv.org/abs/2510.09606) [[Code]](https://github.com/PeiwenSun2000/SpaceVista) · citation: – · github star: 2
+* **Grounded Reinforcement Learning for Visual Reasoning** · [[Paper]](https://arxiv.org/pdf/2505.23678) [[Code]](https://github.com/Gabesarch/grounded-rl) · citation: – · github star: 7
+* **SSR: Enhancing Depth Perception in Vision-Language Models via Rationale-Guided Spatial Reasoning** · [[Paper]](https://arxiv.org/pdf/2505.12448) [[Code]](https://github.com/yliu-cs/SSR) · citation: – · github star: 3
+* **3D Aware Region Prompted Vision Language Model** · [[Paper]](https://arxiv.org/abs/2506.09883) [[Code]](https://arxiv.org/abs/2506.09883) · citation: – · github star: –
+* **3D‑R1: Enhancing Reasoning in 3D VLMs for Unified Scene Understanding** · [[Paper]](https://arxiv.org/pdf/2507.23478) [[Code]](https://arxiv.org/pdf/2507.23478) · citation: – · github star: –
+* **RoboSpatial: Teaching Spatial Understanding to 2D and 3D Vision-Language Models for Robotics** · [[Paper]](https://arxiv.org/pdf/2411.16537) [[Code]](https://github.com/NVlabs/RoboSpatial) · citation: – · github star: 12
+* **VLM-3R: Vision-Language Models Augmented with Instruction-Aligned 3D Reconstruction** · [[Paper]](https://arxiv.org/abs/2505.20279) [[Code]](https://github.com/VITA-Group/VLM-3R) · citation: – · github star: 297
+* **Continuous 3D Perception Model with Persistent State** · [[Paper]](https://arxiv.org/pdf/2501.12387) [[Code]](https://github.com/CUT3R/CUT3R) · citation: – · github star: 1.2k
+* **VIRAL: Visual Representation Alignment for Multimodal Large Language Models** · [[Paper]](https://arxiv.org/pdf/2509.07979) [[Code]](https://github.com/cvlab-kaist/VIRAL) · citation: – · github star: 136
+* **Grasp Any Region: Towards Precise, Contextual Pixel Understanding for Multimodal LLMs** · [[Paper]](https://arxiv.org/pdf/2510.18876) [[Code]](https://github.com/Haochen-Wang409/Grasp-Any-Region) · citation: – · github star: 10
+* **Learning from Videos for 3D World: Enhancing MLLMs with 3D Vision Geometry Priors** · [[Paper]](https://github.org/LaVi-Lab/VG-LLM) [[Code]](https://github.com/LaVi-Lab/VG-LLM) · citation: – · github star: 172
+* **RL makes MLLMs see better than SFT** · [[Paper]](https://arxiv.org/pdf/2510.16333) [[Code]](#) · citation: – · github star: –
+* **Identifying and Mitigating Position Bias of Multi-image Vision-Language Models** · [[Paper]](https://arxiv.org/pdf/2503.13792) [[Code]](#) · citation: – · github star: –
+* **Thinking in Space: How Multimodal Large Language Models See, Remember, and Recall Spaces** · [[Paper]](https://arxiv.org/pdf/2412.14171) [[Code]](https://github.org/visual‑AI/3DRS) · citation: – · github star: 122
+* **Spatial Reasoning with Vision-Language Models in Ego-Centric Multi-View Scenes** · [[Paper]](https://arxiv.org/abs/2509.06266) [[Code]](https://github.com/vbdi/Ego3D-Bench) · citation: – · github star: 24
+* **COARSE CORRESPONDENCES Boost Spatial-Temporal Reasoning in Multimodal Language Model** · [[Paper]](https://arxiv.org/abs/2408.00754) [[Code]](#) · citation:  · github star: 0
+* **Molmo and PixMo: Open Weights and Open Data for State-of-the-Art Vision-Language Models** · [[Paper]](https://arxiv.org/pdf/2409.17146) [[Code]](https://github.com/allenai/molmo) · citation: – · github star: 815
+
+</details>
+
+<details>
+<summary><h3 style="display:inline;">物理一致性</h3></summary><br>
+
+* **DiT-Mem** · [[Paper]](https://arxiv.org/pdf/2511.19229) [[Code]](https://github.com/Thrcle421/DiT-Mem) · citation: – · github star: 4
+
+</details>
+<details>
+<summary><h3 style="display:inline;">3D +multi-view images</h3></summary><br>
+
+* **GS-reasoner** · [[Paper]](https://arxiv.org/pdf/2510.13800) [[Code]](https://github.com/WU-CVGL/GS-Reasoner) · citation: – · github star: 35
 
 </details>
 
@@ -249,7 +308,12 @@
 </details>
 
 <details>
-<summary><h3 style="display:inline;">Dataset</h3></summary><br>
+<summary><h3 style="display:inline;">Datasets</h3></summary><br>
+- **Lumine** · [[Paper]](https://arxiv.org/pdf/2511.08892) [[Code]](#) · citation: 0 · github star: 0
+</details>
+
+<details>
+<summary><h3 style="display:inline;">Datasets</h3></summary><br>
 
 - **OmniWorld-Game** · [[Paper]](https://arxiv.org/pdf/2509.12201) [[Code]](https://github.com/yangzhou24/OmniWorld)citation: 0 · github star: 390access: https://huggingface.co/datasets/InternRobotics/OmniWorld
 - **AgiBot** · [[Paper]](https://arxiv.org/pdf/2503.06669) [[Code]](https://github.com/OpenDriveLab/AgiBot-World)citation: 140 · github star: 2618access: https://huggingface.co/agibot-world  （填写信息后可下载）
@@ -264,13 +328,18 @@
 - **CityWalk** · [[Paper]](https://arxiv.org/pdf/2411.17820)
   citation: 14 · github star: 0
   access: https://huggingface.co/datasets/ai4ce/CityWalker
+- **GameFactory-Dataset** · [[Paper]](#)
+  citation: 0 · github star: 0
+  access: https://huggingface.co/datasets/KlingTeam/GameFactory-Dataset（从huggingface进行下载）
+- **Look and Tell** · [[Paper]](https://arxiv.org/pdf/2510.22672)
+  citation: 0 · github star: 0
+  access: https://huggingface.co/datasets/annadeichler/KTH-ARIA-referential（从huggingface进行下载）
+- **Unlocking Exocentric Video-Language Data for Egocentric Video Representation Learning** · [[Paper]](#)
 
 </details>
 
 <details>
 <summary><h3 style="display:inline;">Benchmark</h3></summary><br>
-
-主要针对 MLLM 的六大能力维度进行评估，包括 Representation、Space、Memory、Dynamics、Actionability、Spatial Intelligence，此外还额外添加了physical reasoning方面的benchmark
 
 #### Representation
 
@@ -282,6 +351,11 @@
 
 - **FavorBench** · [[Paper]](https://arxiv.org/html/2503.14935) [[Code]](https://github.com/FAVOR-Bench/FAVOR-Bench) · citation: 0 · github star: 25
 - **Videoverse** · [[Paper]](https://arxiv.org/pdf/2510.08398) [[Code]](https://github.com/Zeqing-Wang/VideoVerse) · citation: 1 · github star: 14
+
+#### 3/4D bench
+
+- **4D-Bench** · [[Paper]](https://arxiv.org/pdf/2503.17827) [[Code]](https://github.com/WenxuanZhu1103/4D-Bench) · citation: 0 · github star: 7
+- **4DWorldBench** · [[Paper]](https://arxiv.org/pdf/2511.19836v1) [[Code]](#) · citation: 0 · github star: 0
 
 #### space
 
@@ -329,11 +403,21 @@
 * **CoreCognition** · [[Paper]](https://arxiv.org/pdf/2410.10855) [[Code]](#) · citation: 16 · github star: 0
 * **SpatialViz-Bench** · [[Paper]](https://arxiv.org/pdf/2507.07610v2) [[Code]](https://github.com/wangst0181/Spatial-Visualization-Benchmark) · citation: 1 · github star: 10
 * **EASI** · [[Paper]](https://arxiv.org/pdf/2508.13142v3) [[Code]](https://github.com/EvolvingLMMs-Lab/EASI/) · citation: 0 · github star: 41
+* **DSI-BENCH: A Benchmark for Dynamic Spatial Intelligence** · [[Paper]](https://arxiv.org/abs/2510.18873) [[Code]](https://github.com/SpatialVision/dsibench) · citation: 0 · github star: 12
+* **Spatial Reasoning with Vision-Language Models in Ego-Centric Multi-View Scenes** · [[Paper]](https://arxiv.org/abs/2509.06266) [[Code]](https://github.com/vbdi/Ego3D-Bench) · citation: – · github star: 24
+* **SEEING ACROSS VIEWS: Benchmarking Spatial Reasoning of Vision-Language Models in Robotic Scenes** · [[Paper]](https://arxiv.org/pdf/2510.19400) [[Code]](https://github.com/microsoft/MV-RoboBench) · citation: 0 · github star: 6
+* **Mind the Gap: Benchmarking Spatial Reasoning in Vision-Language Models** · [[Paper]](https://arxiv.org/pdf/2503.19707) [[Code]](https://github.com/stogiannidis/srbench) · citation: 12 · github star: 16
+* **VisualTrans: A Benchmark for Real-World Visual Transformation Reasoning** · [[Paper]](https://arxiv.org/abs/2508.04043) [[Code]](#) · citation: 0 · github star: 0
+* **From Flatland to Space: Teaching Vision-Language Models to Perceive and Reason in 3D** · [[Paper]](https://arxiv.org/abs/2503.22976) [[Code]](https://github.com/LogosRoboticsGroup/SPAR) · citation: – · github star: 64
 
 #### physics
 
 * **Phyx** · [[Paper]](https://arxiv.org/pdf/2505.15929) [[Code]](https://github.com/killthefullmoon/PhyX) · citation: 13 · github star: 49
 * **Seephys** · [[Paper]](https://arxiv.org/pdf/2505.19099) [[Code]](https://github.com/AI4Phys/SeePhys) · citation: 8 · github star: 47
+
+#### Multimodal / Human‑Centric Reasoning Benchmark
+
+* **Human-MME: A Holistic Evaluation Benchmark for Human-Centric Multimodal Large Language Models** · [[Paper]](https://arxiv.org/abs/2509.26165) [[Code]](https://github.com/Yuan-Hou/Human-MME)
 
 </details>
 
@@ -392,4 +476,12 @@
 - **Advances in Feed-Forward 3D Reconstruction and View Synthesis: A Survey：** · [[Paper]](https://arxiv.org/pdf/2507.14501) [[Code]](#) · citation: 3 · github star: 0
 - **Awesome-World-Models** · [[Paper]](#) [[Code]](https://github.com/knightnemo/Awesome-World-Models) · citation: 0 · github star: 837
 
+</details>
+
+## World Model Training
+
+<details>
+<summary><h3 style="display:inline;">train</h3></summary><br>
+
+- **RLVR-World** · [[Paper]](https://arxiv.org/pdf/2505.13934) [[Code]](https://github.com/thuml/RLVR-World) · citation: 0 · github star: 149
 </details>
