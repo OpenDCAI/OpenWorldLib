@@ -18,9 +18,7 @@
 <details>
 <summary>Benchmarks</summary>
 
-* **[WorldScore](https://arxiv.org/pdf/2504.00983)** · [[Code]](https://github.com/haoyi-duan/WorldScore)核心评测重点：综合评估生成质量、可控性、动态一致性；不涉及物理推演合理性
-* **[WideRange4D](https://arxiv.org/pdf/2503.13435)** · [[Code]](https://github.com/Gen-Verse/WideRange4D)核心评测重点：4D动态生成；跨时间与跨视角几何一致性
-* **[CameraBench](https://arxiv.org/pdf/2504.15376)** · [[Code]](https://github.com/sy77777en/CameraBench)核心评测重点：相机运动生成与运动语义控制能力，一致性与几何合理性
+* **[WorldScore](https://arxiv.org/pdf/2504.00983)** · [[Code]](https://github.com/haoyi-duan/WorldScore)核心评测重点：综合评估生成质量、可控性、动态一致性；不涉及物理推演合理
 
 </details>
 
@@ -72,6 +70,18 @@
 <summary>Benchmarks</summary>
 
 * **[WoWbench](https://arxiv.org/pdf/2509.22642)** · [[Code]](https://github.com/wow-world-model/wow-world-model)核心评测重点：行动生成 × 物理推理 × 执行验证，覆盖 VLA 全流程
+
+</details>
+
+---
+
+## 6 4D benchmark
+
+<details>
+<summary>Benchmarks</summary>
+
+* **[4d-bench](https://arxiv.org/pdf/2503.17827)** · [[Code]](https://github.com/WenxuanZhu1103/4D-Bench)核心评测重点：评估多模态大语言模型（MLLMs）在4D对象理解方面的能力
+* **[4dworldbench](https://arxiv.org/pdf/2511.19836v1)** · [[Code]](#)核心评测重点：评估生成的 3D/4D 世界的真实性、动态性、物理一致性和指令控制能力
 
 </details>
 
