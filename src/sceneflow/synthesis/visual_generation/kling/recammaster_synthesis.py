@@ -15,13 +15,13 @@ from .recammaster.model_manager import ModelManager
 from .recammaster.pipelines.wan_video_recammaster import WanVideoReCamMasterPipeline
 
 
-class RecamMasterSynthesis(BaseSynthesis):
+class ReCamMasterSynthesis(BaseSynthesis):
     def __init__(self,
                  pipeline,
                  height=480,
                  width=832,
                  device="cuda"):
-        super(RecamMasterSynthesis, self).__init__()
+        super(ReCamMasterSynthesis, self).__init__()
         self.pipeline = pipeline
         self.device = device
 
