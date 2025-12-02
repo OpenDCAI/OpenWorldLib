@@ -1,0 +1,88 @@
+_target_: training.wrapper.WorldMirrorWrapper
+
+pretrained: null
+resume: ${ckpt_path} # if ckpt_path is not None, resume training from checkpoint and ignore the pretrained weights
+enable_cond: false
+
+model:
+  _target_: src.models.models.worldmirror.WorldMirror
+  img_size: 518
+  patch_size: 14
+  embed_dim: 1024
+  gs_dim: 256
+  enable_cam: true
+  enable_pts: true
+  enable_depth: true
+  enable_norm: true
+  enable_gs: false
+  enable_cond: ${wrapper.enable_cond}
+
+optimizer:
+  type: AdamW
+  betas: [0.9, 0.95]
+  eps: 1e-8
+  param_groups:
+    pretrained:
+      lr: 2e-5
+      weight_decay: 0.1
+    backbone:
+      lr: 1e-4
+      weight_decay: 0.1
+    new:
+      lr: 2e-4
+      weight_decay: 0.1
+  pretrained_params: ['visual_geometry_transformer.patch_embed']
+  new_params: ['normal_head', 'gs_head', 'gs_renderer', 'depth_embed', 'rays_embed', 'camera_embed']
+
+scheduler:
+  type: WarmupCosineAnnealingLR
+  eta_min_ratio: 0.1
+  warmup_steps: 0
+  max_steps: ${trainer.max_steps}
+  max_epochs: ${trainer.max_epochs}
+
+train_criterion:
+  _target_: training.losses.container.LossContainer
+  enable_cam: ${wrapper.model.enable_cam}
+  enable_pts: ${wrapper.model.enable_pts}
+  enable_depth: ${wrapper.model.enable_depth}
+  enable_norm: ${wrapper.model.enable_norm}
+  enable_gs: ${wrapper.model.enable_gs}
+  losses:
+    - _target_: training.losses.camera.CameraLoss
+    - _target_: training.losses.point.PointLoss
+      gamma: 1.0
+      alpha: 0.2
+      gradient_loss_fn: normal
+      valid_range: 0.98
+    - _target_: training.losses.depth.DepthLoss
+      gamma: 1.0
+      alpha: 0.2
+      gradient_loss_fn: grad
+      valid_range: 0.98
+    - _target_: training.losses.normal.NormalLoss
+      loss_type: AL
+      real_weight: 1.0
+      pseudo_weight: 1.0
+      ignore_datasets: []
+    - _target_: training.losses.render.GSDepthLoss
+      gamma: 1.0
+      alpha: 0.2
+      gradient_loss_fn: grad
+      valid_range: 0.98
+    - _target_: training.losses.render.RenderMSELoss
+      mask_mode:  novel_mask
+    - _target_: training.losses.render.RenderPerceptualLoss
+      mask_mode:  novel_mask
+    - _target_: training.losses.render.RenderDepthLoss
+      depth_head_sup: true
+      depth_conf_mask: true
+      gamma: 1.0
+      alpha: 0.2
+      gradient_loss_fn: grad
+      valid_range: 0.98
+      mask_mode: source_mask + novel_mask 
+  weights: [5.0, 1.0, 1.0, 1.0, 0.1, 1.0, 0.05, 0.1]
+
+# log
+vis_log_dir: ${paths.vis_log_dir}

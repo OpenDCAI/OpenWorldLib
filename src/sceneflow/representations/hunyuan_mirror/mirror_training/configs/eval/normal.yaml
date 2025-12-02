@@ -1,0 +1,27 @@
+# @package _global_
+
+task_name: eval_normal
+tags: ["eval", "eval_normal"]
+
+wrapper:
+  eval_modalities: ["normal"]
+  enable_cond: true
+  model:
+    enable_cam: false
+    enable_pts: false
+    enable_depth: false
+    enable_norm: true
+    enable_gs: false
+
+paths:
+  run_folder_name: ${task_name}
+  
+
+data:
+  pin_memory: true
+  num_workers: 4
+  num_workers_val: 1
+  validation_datasets:
+    - Ibims(split='test', resolution=(630, 476), ROOT='${paths.ibims_normal_dir}')
+    - Nyuv2(split='test', resolution=(630, 476), ROOT='${paths.nyuv2_normal_dir}')
+    - ScanNetNormal(split='test', resolution=(630, 476), ROOT='${paths.scannet_normal_dir}') 

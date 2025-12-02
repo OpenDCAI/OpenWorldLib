@@ -1,0 +1,27 @@
+# @package _global_
+
+task_name: eval_depthmap
+tags: ["eval", "eval_depthmap"]
+
+wrapper:
+  eval_modalities: ["depth_map"]
+  enable_cond: true
+  model:
+    enable_cam: false
+    enable_pts: false
+    enable_depth: true
+    enable_norm: false
+    enable_gs: false
+
+paths:
+  run_folder_name: ${task_name}
+  
+data:
+  pin_memory: true
+  num_workers: 4
+  num_workers_val: 1
+  validation_datasets:
+    - Nyuv2_MonoDepth(split='test', ROOT='${paths.nyuv2_depth_dir}', target_width=518)
+    - Sintel_VideoDepth(split='test', type='mono', ROOT='${paths.sintel_depth_dir}', target_width=518)
+    - Sintel_VideoDepth(split='test', type='video', ROOT='${paths.sintel_depth_dir}', target_width=518)
+    - Kitti_VideoDepth(split='test', ROOT='${paths.kitti_depth_dir}', target_width=518)

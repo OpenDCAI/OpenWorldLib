@@ -1,0 +1,9 @@
+_target_: training.data.datamodule.WorldMirrorDataModule
+max_images_per_gpu: 24
+min_num_of_views: 2
+num_workers: 4
+pin_memory: True
+aspect_ratios: [0.5, 2.0]
+num_pixels_range: [100000, 250000]
+train_datasets: null
+validation_datasets: null

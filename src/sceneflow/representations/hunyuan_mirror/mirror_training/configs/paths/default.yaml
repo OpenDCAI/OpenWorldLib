@@ -1,0 +1,30 @@
+# point map estimation
+dtu_dir: path/to/dtu
+nrgbd_dir: path/to/nrgbd
+sevenscenes_dir: path/to/7scenes
+
+# camera pose estimation
+re10k_pose_dir: path/to/re10k
+
+# depth map estimation
+nyuv2_depth_dir: path/to/nyuv2
+sintel_depth_dir: path/to/sintel
+kitti_depth_dir: path/to/kitti
+
+# novel view synthesis
+re10k_nvs_dir: path/to/re10k
+dl3dv_nvs_dir: path/to/dl3dv
+
+# surface normal estimation
+ibims_normal_dir: path/to/ibims
+nyuv2_normal_dir: path/to/nyuv2
+scannet_normal_dir: path/to/scannet
+
+# traning datasets
+hypersim_dir: path/to/hypersim
+
+# logging directories
+root_dir: . # logging root directory
+log_dir: "${paths.root_dir}/logs/${task_name}"
+ckpt_dir: "${paths.log_dir}/checkpoints"
+vis_log_dir: "${paths.log_dir}/vis_logs" 

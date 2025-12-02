@@ -1,0 +1,54 @@
+# @package _global_
+
+task_name: stage2_wgs
+tags: ["train", "stage2_wgs"]
+slurm_job_id: 99999 # must set in the command line
+
+wrapper:
+  eval_modalities: ["nvs"]
+  enable_cond: true
+  model:
+    enable_cam: true
+    enable_pts: true
+    enable_depth: true
+    enable_norm: true
+    enable_gs: true
+  optimizer:
+    freeze_params: ["visual_geometry_transformer", "cam_head", "pts_head", "depth_head", "norm_head"]
+  train_criterion:
+    losses:
+      - _target_: training.losses.render.GSDepthLoss
+        gamma: 1.0
+        alpha: 0.2
+        gradient_loss_fn: grad
+        valid_range: 0.98
+      - _target_: training.losses.render.RenderMSELoss
+        mask_mode:  novel_mask
+      - _target_: training.losses.render.RenderPerceptualLoss
+        mask_mode:  novel_mask
+      - _target_: training.losses.render.RenderDepthLoss
+        depth_head_sup: true
+        depth_conf_mask: true
+        gamma: 1.0
+        alpha: 0.2
+        gradient_loss_fn: grad
+        valid_range: 0.98
+        mask_mode: source_mask + novel_mask 
+    weights: [0.1, 1.0, 0.05, 0.1]
+
+data:
+  max_images_per_gpu: 24
+  min_num_of_views: 2
+  num_workers: 4
+  num_workers_val: 2
+  pin_memory: true
+  transform: "ImageAugmentation(apply_aug=True, color_jitter={'brightness': 0.5, 'contrast': 0.5, 'saturation': 0.5, 'hue': 0.1, 'p': 0.9}, gray_scale=True, gau_blur=False)"
+  aspect_ratios: [0.5, 2.0]
+  num_pixels_range: [100000, 250000]
+  train_datasets:
+    - 400 @ HyperSim_Multi(split='train', num_views=${data.max_images_per_gpu}, aug_crop=0.77, transform=${data.transform}, ROOT='${paths.hypersim_dir}')
+  validation_datasets:
+    - 32 @ HyperSim_Multi(split='test', num_views=10, ROOT='${paths.hypersim_dir}', resolution=(518, 378), seed=777)
+    - 32 @ Re10K_NVStest(split='test', num_views=2, ROOT='${paths.re10k_nvs_dir}', resolution=(518, 378), seed=777)
+    - 32 @ DL3DV_NVStest(split='test', num_views=8, ROOT='${paths.dl3dv_nvs_dir}', resolution=(518, 378), seed=777)
+

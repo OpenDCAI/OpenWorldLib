@@ -1,0 +1,41 @@
+# @package _global_
+
+task_name: eval_pointmap
+tags: ["eval", "eval_pointmap"]
+
+wrapper:
+  eval_modalities: ["point_map"]
+  enable_cond: true
+  model:
+    enable_cam: false
+    enable_pts: true
+    enable_depth: false
+    enable_norm: false
+    enable_gs: false
+
+paths:
+  run_folder_name: ${task_name}
+  
+data:
+  pin_memory: true
+  num_workers: 4
+  num_workers_val: 1
+  validation_datasets:
+    - NRGBD(
+        split='test',
+        map_path='training/assets/seq-id-maps/NRGBD_mv-recon_seq-id-map-kf500.json',
+        ROOT='${paths.nrgbd_dir}',
+        resolution=(518, 378)
+      )
+    - DTU(
+        split='test',
+        map_path='training/assets/seq-id-maps/DTU_mv-recon_seq-id-map-kf5.json',
+        ROOT='${paths.dtu_dir}',
+        resolution=(518, 378)
+      )
+    - SevenScenes(
+        split='test',
+        map_path='training/assets/seq-id-maps/7scenes_mv-recon_seq-id-map-kf200.json',
+        ROOT='${paths.sevenscenes_dir}',
+        resolution=(518, 378)
+      )

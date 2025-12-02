@@ -1,0 +1,25 @@
+# @package _global_
+
+task_name: eval_nvs
+tags: ["eval", "eval_nvs"]
+
+wrapper:
+  eval_modalities: ["nvs"]
+  enable_cond: true
+  model:
+    enable_cam: true
+    enable_pts: false
+    enable_depth: false
+    enable_norm: false
+    enable_gs: true
+
+paths:
+  run_folder_name: ${task_name}
+
+data:
+  pin_memory: true
+  num_workers: 6
+  num_workers_val: 1
+  validation_datasets:
+    - Re10K_NVStest(split='test', num_views=2, ROOT='${paths.re10k_nvs_dir}', resolution=(518, 378), seed=777)
+    - DL3DV_NVStest(split='test', num_views=8, ROOT='${paths.dl3dv_nvs_dir}', resolution=(518, 378), seed=777)

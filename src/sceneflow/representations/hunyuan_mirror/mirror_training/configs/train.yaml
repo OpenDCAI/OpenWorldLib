@@ -1,0 +1,71 @@
+# @package _global_
+
+# specify here default configuration
+# order of defaults determines the order in which configs override each other
+defaults:
+  - _self_
+  - wrapper: worldmirror
+  - data: default
+  - paths: default
+  - optional train: null
+  
+task_name: "train"
+tags: ["train"]
+seed: 42
+ckpt_path: null # path to checkpoint to resume training
+
+# Configure Hydra to save logs to configured log_dir
+hydra:
+  run:
+    dir: ${paths.log_dir}
+  sweep:
+    dir: ${paths.log_dir}
+    subdir: ${hydra.job.num}
+
+trainer:
+  _target_: lightning.pytorch.trainer.Trainer
+  default_root_dir: ${paths.log_dir}
+  check_val_every_n_epoch: null
+  val_check_interval: 1000
+  deterministic: False
+  num_nodes: 1
+  sync_batchnorm: true
+  devices: auto
+  max_epochs: null
+  max_steps: 100000
+  num_sanity_val_steps: 8
+  strategy:
+    _target_: lightning.pytorch.strategies.DDPStrategy
+    timeout: 
+      _target_: datetime.timedelta
+      minutes: 60000
+    find_unused_parameters: true
+  use_distributed_sampler: false
+  precision: bf16
+
+logger:
+  - _target_: lightning.pytorch.loggers.tensorboard.TensorBoardLogger
+    save_dir: "${paths.log_dir}"
+    name: "tensorboard"
+    log_graph: False
+    default_hp_metric: True
+    prefix: ""
+  - _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
+    save_dir: "${paths.log_dir}"
+    name: "csv"
+
+callbacks:
+  - _target_: training.utils.callbacks.StepBasedProgressBar
+    refresh_rate: 1
+    process_position: 0
+  - _target_: lightning.pytorch.callbacks.ModelCheckpoint
+    monitor: null
+    mode: min
+    save_top_k: 1
+    save_last: True
+    dirpath: "${paths.ckpt_dir}/"
+    filename: "{epoch}-{step}"
+    save_on_train_epoch_end: False
+    every_n_train_steps: 1000
+
+

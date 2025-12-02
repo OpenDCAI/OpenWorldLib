@@ -1,0 +1,44 @@
+# @package _global_
+
+# specify here default configuration
+# order of defaults determines the order in which configs override each other
+defaults:
+  - _self_
+  - wrapper: worldmirror
+  - data: default
+  - paths: default
+  - optional eval: null
+
+task_name: "eval"
+tags: ["eval"]
+seed: 42
+ckpt_path: null # not resume
+
+# Configure Hydra to save logs to configured log_dir
+hydra:
+  run:
+    dir: ${paths.log_dir}
+  sweep:
+    dir: ${paths.log_dir}
+    subdir: ${hydra.job.num}
+
+wrapper:
+  eval_modalities: [] # ["point_map", "camera_pose", "normal"]
+  pretrained: null # .ckpt or .safetensors for loading weights
+
+trainer:
+  _target_: lightning.pytorch.trainer.Trainer
+  default_root_dir: ${paths.log_dir}
+  check_val_every_n_epoch: null
+  deterministic: False
+  num_nodes: 1
+  sync_batchnorm: false
+  accelerator: gpu
+  devices: auto
+  max_epochs: null
+  max_steps: 100000
+  strategy: ddp_find_unused_parameters_true
+
+logger: null
+
+callbacks: null

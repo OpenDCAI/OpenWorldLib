@@ -1,0 +1,64 @@
+# @package _global_
+
+task_name: all_wgs
+tags: ["train", "all_wgs"]
+slurm_job_id: 99999 # must set in the command line
+
+wrapper:
+  eval_modalities: ["point_map", "camera_pose", "normal", "depth_map", "nvs"]
+  enable_cond: true
+  model:
+    enable_cam: true
+    enable_pts: true
+    enable_depth: true
+    enable_norm: true
+    enable_gs: true
+
+data:
+  max_images_per_gpu: 10
+  min_num_of_views: 2
+  num_workers: 4
+  num_workers_val: 2
+  pin_memory: true
+  transform: "ImageAugmentation(apply_aug=True, color_jitter={'brightness': 0.5, 'contrast': 0.5, 'saturation': 0.5, 'hue': 0.1, 'p': 0.9}, gray_scale=True, gau_blur=False)"
+  aspect_ratios: [0.5, 2.0]
+  num_pixels_range: [100000, 250000]
+  train_datasets:
+    - 400 @ HyperSim_Multi(split='train', num_views=${data.max_images_per_gpu}, aug_crop=0.77, transform=${data.transform}, ROOT='${paths.hypersim_dir}')
+  validation_datasets:
+    - NRGBD(
+      split='test',
+      map_path='training/assets/seq-id-maps/NRGBD_mv-recon_seq-id-map-kf500.json',
+      ROOT='${paths.nrgbd_dir}',
+      resolution=(518, 378)
+      )
+    - DTU(
+        split='test',
+        map_path='training/assets/seq-id-maps/DTU_mv-recon_seq-id-map-kf5.json',
+        ROOT='${paths.dtu_dir}',
+        resolution=(518, 378)
+      )
+    - SevenScenes(
+        split='test',
+        map_path='training/assets/seq-id-maps/7scenes_mv-recon_seq-id-map-kf200.json',
+        ROOT='${paths.sevenscenes_dir}',
+        resolution=(518, 378)
+      )
+    - 32 @ Re10K_Pose(
+        split='test',
+        resolution=(518, 378),
+        map_path='training/assets/seq-id-maps/Re10K_relpose_seq-id-map_seed42.json',
+        ROOT='${paths.re10k_pose_dir}',
+      )
+    - 32 @ Ibims(split='test', resolution=(630, 476), ROOT='${paths.ibims_normal_dir}')
+    - 32 @ Nyuv2(split='test', resolution=(630, 476), ROOT='${paths.nyuv2_normal_dir}')
+    - 32 @ ScanNetNormal(split='test', resolution=(630, 476), ROOT='${paths.scannet_normal_dir}') 
+    - 32 @ Nyuv2_MonoDepth(split='test', ROOT='${paths.nyuv2_depth_dir}', target_width=518)
+    - Sintel_VideoDepth(split='test', type='mono', ROOT='${paths.sintel_depth_dir}', target_width=518)
+    - Sintel_VideoDepth(split='test', type='video', ROOT='${paths.sintel_depth_dir}', target_width=518)
+    - Kitti_VideoDepth(split='test', ROOT='${paths.kitti_depth_dir}', target_width=518)
+    - 32 @ HyperSim_Multi(split='test', num_views=10, ROOT='${paths.hypersim_dir}', resolution=(518, 378), seed=777)
+    - 32 @ Re10K_NVStest(split='test', num_views=2, ROOT='${paths.re10k_nvs_dir}', resolution=(518, 378), seed=777)
+    - 32 @ DL3DV_NVStest(split='test', num_views=8, ROOT='${paths.dl3dv_nvs_dir}', resolution=(518, 378), seed=777)
+
+
