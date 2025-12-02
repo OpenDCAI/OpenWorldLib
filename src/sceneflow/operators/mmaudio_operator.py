@@ -247,7 +247,43 @@ class MMAudioOperator(BaseOperator):
         prompts = [prompt] if isinstance(prompt, str) else prompt
         neg_prompts = [negative_prompt] if isinstance(negative_prompt, str) else negative_prompt
         return prompts, neg_prompts
-        
+
+    def get_interaction(
+        self,
+        video: Optional[Union[str, Path]] = None,
+        prompt: str = "",
+        negative_prompt: str = "",
+        duration: float = 8.0,
+        mask_away_clip: bool = False,
+        load_all_frames: bool = True,
+        **kwargs
+    ):
+        """
+        将一次交互（视频 + 文本 + 其他控制参数）写入 current_interaction。
+
+        与其它 Operator 保持一致的交互获取逻辑：
+        - 先通过 check_interaction 做合法性检查；
+        - 再把本次交互保存到 self.current_interaction 中，供 process_interaction 使用。
+        """
+        # 先做合法性检查
+        self.check_interaction(video, prompt, negative_prompt, duration, **kwargs)
+
+        # 规范化 video 路径，避免后续重复判断
+        if video is not None and isinstance(video, str):
+            video = Path(video)
+
+        interaction: Dict[str, Any] = {
+            "video": video,
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+            "duration": duration,
+            "mask_away_clip": mask_away_clip,
+            "load_all_frames": load_all_frames,
+            "extra_kwargs": kwargs,
+        }
+
+        self.current_interaction.append(interaction)
+    
     def process_interaction(
         self, 
         video: Optional[Union[str, Path]] = None,
@@ -259,8 +295,12 @@ class MMAudioOperator(BaseOperator):
         **kwargs
     ) -> Dict[str, Any]:
         """
-        处理交互输入，生成模型所需的输入格式
-        
+        处理交互输入，生成模型所需的输入格式。
+
+        支持两种使用方式：
+        1）外部直接传入 video / prompt 等参数，本函数内部会调用 get_interaction 记录本次交互；
+        2）外部先多次调用 get_interaction 手动累积交互，这里不再显式传参，直接处理 current_interaction 中最后一条。
+
         Args:
             video: 视频文件路径（可选）
             prompt: 文本提示
@@ -279,10 +319,36 @@ class MMAudioOperator(BaseOperator):
                 - duration: 实际音频时长
                 - video_info: VideoInfo 对象（如果有视频）
         """
-        # 1. 验证输入
-        self.check_interaction(video, prompt, negative_prompt, duration, **kwargs)
-        
-        # 2. 处理视频（如果有）
+        # 如果显式传入了参数，则先登记本次交互
+        if any([video is not None, bool(prompt), bool(negative_prompt), bool(kwargs)]):
+            self.get_interaction(
+                video=video,
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                duration=duration,
+                mask_away_clip=mask_away_clip,
+                load_all_frames=load_all_frames,
+                **kwargs,
+            )
+
+        # 保证当前至少有一条待处理交互
+        if not self.current_interaction:
+            raise ValueError("No interaction to process, please call get_interaction first.")
+
+        # 取出最近一次交互并记录到历史
+        interaction = self.current_interaction[-1]
+        self.interaction_history.append(interaction)
+
+        # 从交互中解包参数
+        video = interaction["video"]
+        prompt = interaction["prompt"]
+        negative_prompt = interaction["negative_prompt"]
+        duration = interaction["duration"]
+        mask_away_clip = interaction["mask_away_clip"]
+        load_all_frames = interaction["load_all_frames"]
+        extra_kwargs = interaction.get("extra_kwargs", {}) or {}
+
+        # 处理视频（如果有）
         video_info = None
         if video is not None:
             log.info(f"Loading video from {video}")
@@ -303,10 +369,10 @@ class MMAudioOperator(BaseOperator):
             clip_frames = None
             sync_frames = None
         
-        # 3. 处理文本
+        # 处理文本
         prompts, neg_prompts = self.process_text(prompt, negative_prompt)
         
-        # 4. 构建返回数据
+        # 构建返回数据
         processed_data = {
             "clip_frames": clip_frames,
             "sync_frames": sync_frames,
@@ -315,5 +381,7 @@ class MMAudioOperator(BaseOperator):
             "duration": duration,
             "video_info": video_info,  # 保存以便后续视频合成
         }
-        
+
+        processed_data.update(extra_kwargs)
+
         return processed_data
