@@ -16,7 +16,7 @@ pretrained_model_path = "Wan-AI/Wan2.1-T2V-1.3B"
 recammaster_ckpt_path = "KlingTeam/ReCamMaster-Wan2.1"
 
 video_path = "./data/test_video_case1/talking_man.mp4"
-interaction = [100, 0, 0, 30, 0]
+interaction = [0, 0, 0, 30, 0]
 textual_prompt = """
 A man in a black suit and a green shirt is standing in a kitchen, engaging in a conversation. 
 He appears to be expressing himself with hand gestures, possibly emphasizing a point or 
@@ -33,4 +33,4 @@ his right hand and changing his facial expressions. The background remains stati
 pipeline = ReCamMasterPipeline.from_pretrained(pretrained_model_path, recammaster_ckpt_path)
 
 output_video = pipeline(interaction, video_path, textual_prompt)
-save_video(output_video, ".recammaster_output.mp4", fps=30, quality=5)
+save_video(output_video, "./recammaster_output.mp4", fps=30, quality=5)

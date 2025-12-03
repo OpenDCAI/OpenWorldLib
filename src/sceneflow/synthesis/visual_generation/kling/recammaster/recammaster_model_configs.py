@@ -1,4 +1,4 @@
-from ....visual_generation.wan.wan_2p1.modules.model import WanModel
+from .models.wan_model import WanModel
 from .models.wan_video_text_encoder import WanTextEncoder
 from .models.wan_video_image_encoder import WanImageEncoder
 from ...matrix_game.matrix_game_2.extension_modules.wanx_vae.wanx_vae import WanVAE as WanVideoVAE
