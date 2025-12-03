@@ -3,9 +3,9 @@ from ....wan.wan_2p1.modules.model import WanModel
 from ..models.wan_video_text_encoder import WanTextEncoder
 from ....matrix_game.matrix_game_2.extension_modules.wanx_vae.wanx_vae import WanVAE as WanVideoVAE
 from ..models.wan_video_image_encoder import WanImageEncoder
-from ....matrix_game.matrix_game_2.utils.scheduler import FlowMatchScheduler
+from .flow_matching_schedular import FlowMatchScheduler
 from .base import BasePipeline
-from ..prompters import WanPrompter
+from ..prompters.wan_prompter import WanPrompter
 import torch, os
 from einops import rearrange
 import numpy as np

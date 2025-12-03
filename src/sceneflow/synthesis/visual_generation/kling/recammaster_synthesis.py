@@ -6,11 +6,6 @@ from torchvision.transforms import v2
 from huggingface_hub import snapshot_download
 from ...base_synthesis import BaseSynthesis
 
-from ...visual_generation.wan.wan_2p1.modules.model import WanModel
-from .recammaster.models.wan_video_text_encoder import WanTextEncoder
-from ...visual_generation.wan.wan_2p1.modules.t5 import T5RelativeEmbedding, T5LayerNorm
-from ...visual_generation.wan.wan_2p1.modules.model import WanRMSNorm, sinusoidal_embedding_1d
-from ...visual_generation.wan.wan_2p1.modules.vae import RMS_norm, CausalConv3d, Upsample
 from .recammaster.model_manager import ModelManager
 from .recammaster.pipelines.wan_video_recammaster import WanVideoReCamMasterPipeline
 
@@ -37,6 +32,7 @@ class ReCamMasterSynthesis(BaseSynthesis):
                         pretrained_model_path="Wan-AI/Wan2.1-T2V-1.3B",
                         recammaster_ckpt_path="KlingTeam/ReCamMaster-Wan2.1",
                         device="cuda",
+                        weight_dtype = torch.bfloat16,
                         **kwargs):
         if os.path.isdir(pretrained_model_path):
             model_root = pretrained_model_path
@@ -46,7 +42,7 @@ class ReCamMasterSynthesis(BaseSynthesis):
             model_root = snapshot_download(pretrained_model_path)
             print(f"Model downloaded to: {model_root}")
         
-        model_manager = ModelManager(torch_dtype=torch.bfloat16, device="cpu")
+        model_manager = ModelManager(torch_dtype=weight_dtype, device="cpu")
         model_manager.load_models([
             os.path.join(model_root, "diffusion_pytorch_model.safetensors"),
             os.path.join(model_root, "models_t5_umt5-xxl-enc-bf16.pth"),
@@ -65,10 +61,11 @@ class ReCamMasterSynthesis(BaseSynthesis):
             block.projector.bias = nn.Parameter(torch.zeros(dim))
 
         # Load ReCamMaster checkpoint
+        recammaster_ckpt_path = os.path.join(recammaster_ckpt_path, "step20000.ckpt")
         state_dict = torch.load(recammaster_ckpt_path, map_location="cpu")
         pipe.dit.load_state_dict(state_dict, strict=True)
         pipe.to(device)
-        pipe.to(dtype=torch.bfloat16)
+        pipe.to(dtype=weight_dtype)
         return cls(pipeline=pipe, device=device)
 
     @torch.no_grad()
@@ -76,6 +73,9 @@ class ReCamMasterSynthesis(BaseSynthesis):
                 input_text,
                 input_video,
                 camera_trajotry,
+                num_frames=81,
+                height=480,
+                width=832,
                 cfg_scale=5.0):
         video = self.pipeline(
             prompt=input_text,
@@ -83,6 +83,9 @@ class ReCamMasterSynthesis(BaseSynthesis):
             source_video=input_video,
             target_camera=camera_trajotry,
             cfg_scale=cfg_scale,
+            height=height,
+            width=width,
+            num_frames=num_frames,
             num_inference_steps=50,
             seed=0, tiled=True
         )

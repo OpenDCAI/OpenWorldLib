@@ -24,7 +24,8 @@ class ReCamMasterPipeline:
                         **kwargs):
         synthesis_model = ReCamMasterSynthesis.from_pretrained(pretrained_model_path=pretrained_model_path,
                                                          recammaster_ckpt_path=recammaster_ckpt_path,
-                                                         device=device)
+                                                         device=device,
+                                                         weight_dtype=weight_dtype)
         operator = ReCamMasterOperator()
         return cls(operator, synthesis_model, device, weight_dtype)
 
@@ -32,7 +33,7 @@ class ReCamMasterPipeline:
                 interaction,
                 video_path,
                 textual_prompt):
-        video = self.operator.process_perception(video_path)
+        video = self.operator.process_perception(video_path).to(self.weight_dtype)
 
         self.operator.get_interaction(interaction, textual_prompt)
         cam_trajectory_emb = self.operator.process_interaction().to(self.weight_dtype)
@@ -61,7 +62,11 @@ class ReCamMasterPipeline:
                                                                  video_path,
                                                                  textual_prompt)
         
-        output_video = self.synthesis_model(textual_prompt,
+        output_video = self.synthesis_model.predict(
+                                            textual_prompt,
                                             video,
-                                            cam_trajectory_emb)
+                                            cam_trajectory_emb,
+                                            num_frames=num_frames,
+                                            height=height,
+                                            width=width)
         return output_video

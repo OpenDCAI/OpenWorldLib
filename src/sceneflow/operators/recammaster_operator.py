@@ -1,8 +1,9 @@
 import torch
+from torchvision.transforms import v2
+import torchvision
 import imageio
 from PIL import Image
 import numpy as np
-from torchvision.transforms import v2
 from einops import rearrange
 from .base_operator import BaseOperator
 
@@ -53,6 +54,16 @@ class ReCamMasterOperator(BaseOperator):
             [dx, dy, dz, 1]
         ])
     
+    def crop_and_resize(self, image):
+        width, height = image.size
+        scale = max(self.width / width, self.height / height)
+        image = torchvision.transforms.functional.resize(
+            image,
+            (round(height*scale), round(width*scale)),
+            interpolation=torchvision.transforms.InterpolationMode.BILINEAR
+        )
+        return image
+    
     def load_frames_using_imageio(self,
                                   file_path,
                                   start_frame_id=0,):
@@ -79,7 +90,7 @@ class ReCamMasterOperator(BaseOperator):
 
         # if is_i2v:
         #     return frames, first_frame
-        return frames
+        return frames.unsqueeze(0)
     
     def get_relative_pose(self, cam_params):
         abs_w2cs = [cam_param.w2c_mat for cam_param in cam_params]
@@ -107,7 +118,7 @@ class ReCamMasterOperator(BaseOperator):
             raise ValueError("interaction need include camera_viewpoint.")
         if "textual_instruction" not in interaction.keys():
             raise ValueError("interaction need include textual instruction.")
-        if len(interaction["camera_viewpoint"]) is not 5:
+        if len(interaction["camera_viewpoint"]) != 5:
             raise ValueError("the length of interaction need include dx, dy, dz, theta_x, theta_z.")
         if type(interaction["textual_instruction"]) is not str:
             raise ValueError("the type of textual_instruction should be string.")
@@ -145,7 +156,7 @@ class ReCamMasterOperator(BaseOperator):
         num_frames = self.num_frames  # default = 81
 
         # construct num_frames linspace
-        t_vals = np.linspace(0, 1, num_frames)
+        t_vals = np.linspace(0, 1, num_frames)[::4]
 
         dx_steps = t_vals * target_dx
         dy_steps = t_vals * target_dy
@@ -157,7 +168,7 @@ class ReCamMasterOperator(BaseOperator):
         init_c2w = np.array(self.camera_init, dtype=np.float32).reshape(4, 4)
         
         all_c2ws = []
-        for i in range(num_frames):
+        for i in range(len(t_vals)):
             # translation matrix
             trans_mat = self.translation_matrix(dx_steps[i], dy_steps[i], dz_steps[i])
             # rotation matrix
@@ -187,8 +198,7 @@ class ReCamMasterOperator(BaseOperator):
             relative_pose = self.get_relative_pose([cam_params[0], cam_params[i]])
             relative_poses.append(torch.as_tensor(relative_pose)[:,:3,:][1])
 
-        pose_embedding = torch.stack(relative_poses, dim=0)  # shape: (81, 3, 4)
-        pose_embedding = rearrange(pose_embedding, 'b c d -> b (c d)')  # shape: (81, 12)
+        pose_embedding = torch.stack(relative_poses, dim=0)  # shape: (21, 3, 4)
+        pose_embedding = rearrange(pose_embedding, 'b c d -> b (c d)')  # shape: (21, 12)
 
-        return pose_embedding
-
+        return pose_embedding.unsqueeze(0)
