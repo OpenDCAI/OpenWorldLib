@@ -115,7 +115,9 @@ class FlowMatchScheduler():
         self.reverse_sigmas = reverse_sigmas
         self.set_timesteps(num_inference_steps)
 
-    def set_timesteps(self, num_inference_steps=100, denoising_strength=1.0, training=False):
+    def set_timesteps(self, num_inference_steps=100, denoising_strength=1.0, training=False, shift=None):
+        if shift is not None:
+            self.shift = shift
         sigma_start = self.sigma_min + \
             (self.sigma_max - self.sigma_min) * denoising_strength
         if self.extra_one_step:
