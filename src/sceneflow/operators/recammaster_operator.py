@@ -24,7 +24,7 @@ class ReCamMasterOperator(BaseOperator):
                  height=480,
                  width=832):
         super(ReCamMasterOperator, self).__init__(operation_types=operation_types)
-        self.camera_init = [[1,0,0,0], [0,1,0,0], [0,0,1,0], [3390,1380,240,1]]
+        self.camera_init = [[1,0,0,0], [0,1,0,0], [0,0,1,0], [0,0,0,1]]
         self.max_num_frames = max_num_frames
         self.frame_interval = frame_interval
         self.num_frames = num_frames
@@ -48,10 +48,10 @@ class ReCamMasterOperator(BaseOperator):
     
     def translation_matrix(self, dx: float, dy: float, dz: float) -> np.ndarray:
         return np.array([
-            [1, 0, 0, 0],
-            [0, 1, 0, 0],
-            [0, 0, 1, 0],
-            [dx, dy, dz, 1]
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [0, 0, 0, 0],
+            [dx+3390, dy+1380, dz+240, 0]
         ])
     
     def crop_and_resize(self, image):
@@ -176,10 +176,10 @@ class ReCamMasterOperator(BaseOperator):
             rot_x_mat = self.rotation_matrix_x(np.radians(theta_x_steps[i]))
 
             # composition matrix
-            incremental_transform = trans_mat @ rot_z_mat @ rot_x_mat
+            incremental_transform = rot_z_mat @ rot_x_mat
             
             # application to the camera view
-            current_c2w = init_c2w @ incremental_transform
+            current_c2w = init_c2w @ incremental_transform + trans_mat 
             all_c2ws.append(current_c2w)
 
         # reference to the recammaster code
