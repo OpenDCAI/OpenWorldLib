@@ -121,7 +121,7 @@ class MMAudioPipeline:
             raise ValueError("Operator is not initialized")
         
         # 通过 operator 处理输入
-        processed_data = self.operator.process_interaction(
+        processed_data = self.operator.process_perception(
             video=video,
             prompt=prompt,
             negative_prompt=negative_prompt,

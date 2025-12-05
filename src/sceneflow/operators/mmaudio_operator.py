@@ -284,7 +284,7 @@ class MMAudioOperator(BaseOperator):
 
         self.current_interaction.append(interaction)
     
-    def process_interaction(
+    def process_perception(
         self, 
         video: Optional[Union[str, Path]] = None,
         prompt: str = "",
@@ -295,7 +295,7 @@ class MMAudioOperator(BaseOperator):
         **kwargs
     ) -> Dict[str, Any]:
         """
-        处理交互输入，生成模型所需的输入格式。
+        处理感知输入，生成模型所需的输入格式。
 
         支持两种使用方式：
         1）外部直接传入 video / prompt 等参数，本函数内部会调用 get_interaction 记录本次交互；
