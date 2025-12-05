@@ -18,7 +18,13 @@ representation注意depthanything系列的工作
 
 src/sceneflow/representations/models/utils3d need to rename as src/sceneflow/representations/models/EasternJournalist_utils3d/..
 
-wan的一些通用block要进行统一，recammaster和matrix-game都用到了
+一些通用blocks需要统一，类似于matrix-game与recammaster都调用了wan
+
+另外加入memory部分，记录过程中的不同模态中间过程
+
+operator中除了process_interaction之外，类似于对于图片、视频的处理，应该改一个新的函数process_perception
+
+一些通用的函数，但不包含在具体的方法类别中的，例如FlowMatchScheduler，后续统一归并到一个大类里面，src/utils中
 
 ## Student update
 亦凡：Emu3.5的环境我已经测试好了，高版本的Transformers库可以正常运行（测试了4.49.0、4.50.1、4.51.0） 但是最新的4.57.1目前还存在一点问题
