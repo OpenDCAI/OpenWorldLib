@@ -146,7 +146,6 @@ class ThinkSoundPipeline:
         if self.synthesis_model is None:
             raise ValueError("Synthesis model is not initialized")
         
-        # 1. Operator 预处理
         processed_data = self.process(
             video_path=video_path,
             title=title,

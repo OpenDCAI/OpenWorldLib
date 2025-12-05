@@ -114,7 +114,6 @@ class ThinkSoundOperator(BaseOperator):
         result = subprocess.run(shlex.split(duration_cmd), capture_output=True, text=True, check=True)
         duration_sec = float(result.stdout.strip())
 
-        # 为了与 ThinkSound 原版推理完全对齐，时长相关的下游逻辑都使用「向下取整后的整数秒」
         # 原版脚本中 duration_sec 由 CLI 参数给定（如 8.0），不会携带小数尾巴。
         duration_sec_int = int(duration_sec)
         
@@ -156,8 +155,7 @@ class ThinkSoundOperator(BaseOperator):
             if isinstance(data[key], np.ndarray) and np.issubdtype(data[key].dtype, np.number):
                 data[key] = torch.from_numpy(data[key])
         
-        # 这里使用与模型配置中一致的公式；由于上游已对 duration 做过取整，
-        # 可以避免出现 172 vs 173 这类 off-by-one 的长度不一致问题。
+
         latent_length = round(44100/64/32 * duration)
         audio = torch.zeros((1, 64, latent_length), dtype=torch.float32)
         
