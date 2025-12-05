@@ -7,14 +7,15 @@ import numpy as np
 import os
 from PIL import Image
 from typing import Optional, Any
+from ..pipeline_utils import PipelineABC
 from ...operators.hunyuan_world_voager_operator import HunyuanWorldVoyagerOperator
 from ...representations.depth_to_point_clond_representation import Depth2PointCloudRepresentation
-from ...synthesis.visual_generation.hunyuan_world_voyager.hunyuan_video_synthesis import HunyuanVideoSynthesis
-from ...synthesis.visual_generation.hunyuan_world_voyager.config import parse_args
-from ...synthesis.visual_generation.hunyuan_world_voyager.utils.file_utils import save_videos_grid
+from ...synthesis.visual_generation.hunyuan_world.hunyuan_video_synthesis import HunyuanVideoSynthesis
+from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager.config import parse_args
+from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager.utils.file_utils import video_output
 
 
-class HunyuanWorldVoyagerPipeline:
+class HunyuanWorldVoyagerPipeline(PipelineABC):
     def __init__(self,
                  operators: Optional[HunyuanWorldVoyagerOperator] = None,
                  represent_model: Optional[Depth2PointCloudRepresentation] = None,
@@ -22,6 +23,7 @@ class HunyuanWorldVoyagerPipeline:
                  rendering_args = None,
                  save_representation_video = False,
                  device: str = 'cuda'):
+        super(HunyuanWorldVoyagerPipeline, self).__init__()
         self.operators = operators
         self.represent_model = represent_model
         self.rendering_model = rendering_model
@@ -40,18 +42,18 @@ class HunyuanWorldVoyagerPipeline:
                         device: str = "cuda",
                         **kwargs) -> 'HunyuanWorldVoyagerPipeline':
         """
-        从预训练模型加载完整的pipeline
+        Load the complete pipeline from a pretrained model
         
         Args:
-            pretrained_model_name_or_path: 主模型路径或名称
-            represent_model_path: 表示模型路径，如为None则使用默认路径
-            rendering_model_path: 渲染模型路径，如为None则使用默认路径
-            represent_render_dir: 渲染输出目录
-            device: 设备
-            **kwargs: 额外参数传递给子模型
+            pretrained_model_name_or_path: Path or name of the main model
+            represent_model_path: Path to the representation model; uses default path if None
+            rendering_model_path: Path to the rendering model; uses default path if None
+            represent_render_dir: Directory for rendering output
+            device: Device (e.g., 'cuda', 'cpu')
+            **kwargs: Additional parameters passed to sub-models
             
         Returns:
-            HunyuanWorldVoyagerPipeline: 初始化的pipeline实例
+            HunyuanWorldVoyagerPipeline: Initialized pipeline instance
         """
         # 设置默认路径
         if represent_model_path is None:
@@ -94,29 +96,6 @@ class HunyuanWorldVoyagerPipeline:
         )
         
         return pipeline
-    
-    @classmethod
-    def from_single_pretrained(cls,
-                             model_type: str = "representation",  # "representation" 或 "rendering"
-                             model_path: str = None,
-                             **kwargs) -> 'HunyuanWorldVoyagerPipeline':
-        """
-        仅加载单个组件的便捷方法
-        """
-        if model_type == "representation":
-            return cls.from_pretrained(
-                pretrained_model_name_or_path=model_path,
-                rendering_model_path=None,  # 不加载渲染模型
-                **kwargs
-            )
-        elif model_type == "rendering":
-            return cls.from_pretrained(
-                pretrained_model_name_or_path=model_path,
-                represent_model_path=None,  # 不加载表示模型
-                **kwargs
-            )
-        else:
-            raise ValueError(f"Unknown model type: {model_type}")
 
     def process(self, input_image, interaction_signal="forward"):
         """处理输入图像和交互信号，输出渲染视频"""
@@ -154,7 +133,7 @@ class HunyuanWorldVoyagerPipeline:
         )
         self.operators.delete_last_interaction()
         
-        # 渲染视频
+        # rendering the video
         render_list, mask_list, depth_list = self.represent_model.render_video(
             points, colors, extrinsics, intrinsics, height=Height//2, width=Width//2
         )
@@ -209,31 +188,13 @@ class HunyuanWorldVoyagerPipeline:
         # Save generated videos to disk
         # Only save on the main process in distributed settings
         if 'LOCAL_RANK' not in os.environ or int(os.environ['LOCAL_RANK']) == 0:
-            for i, sample in enumerate(samples):
-                sample = samples[i].unsqueeze(0)
-                cur_save_path = \
-                    f"{output_save_path}/seed{outputs['seeds'][i]}_{outputs['prompts'][i][:100].replace('/', '')}.mp4"
-                save_videos_grid(sample, cur_save_path, fps=24)
+            sample = samples[0].unsqueeze(0)
+            output_video = video_output(sample, fps=24)
+        return output_video
 
 
     def save_pretrained(self, save_directory: str):
-        os.makedirs(save_directory, exist_ok=True)
-        
-        # 保存表示模型
-        if self.represent_model:
-            represent_dir = os.path.join(save_directory, "representation_model")
-            self.represent_model.save_pretrained(represent_dir)
-        
-        # 保存渲染模型  
-        if self.rendering_model:
-            render_dir = os.path.join(save_directory, "rendering_model")
-            self.rendering_model.save_pretrained(render_dir)
-        
-        # 保存pipeline配置
-        config = {
-            'represent_render_dir': self.rendering_args.input_path,
-            'device': self.device
-        }
-        
-        torch.save(config, os.path.join(save_directory, "pipeline_config.pt"))
-        print(f"Pipeline saved to {save_directory}")
+        """
+        finish this part after the training pipeline is prepared.
+        """
+        pass
