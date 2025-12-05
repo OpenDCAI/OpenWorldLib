@@ -278,8 +278,8 @@ class DepthAnything1Pipeline:
         Returns:
             Depth map as tensor (if return_visualization=False) or visualized array (if return_visualization=True)
         """
-        # Load and preprocess image using operator
-        image_rgb = self.operator.load_and_preprocess_image(input_image)
+        # Load and preprocess image using operator's process_perception method
+        image_rgb = self.operator.process_perception(input_image)
         h, w = image_rgb.shape[:2]
         
         # Prepare tensor and run inference
