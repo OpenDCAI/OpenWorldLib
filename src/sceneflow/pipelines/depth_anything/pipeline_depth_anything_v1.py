@@ -79,7 +79,7 @@ class DepthResult:
         return self.results[idx]
 
 
-class DepthAnythingV1Pipeline:
+class DepthAnything1Pipeline:
     """Pipeline for Depth Anything (V1) depth estimation."""
     
     def __init__(
@@ -140,7 +140,7 @@ class DepthAnythingV1Pipeline:
         device: Optional[str] = None,
         data_type: str = "image",
         **kwargs
-    ) -> 'DepthAnythingV1Pipeline':
+    ) -> 'DepthAnything1Pipeline':
         """
         Args:
             pretrained_model_path: Path to local checkpoint or HuggingFace repo ID
@@ -407,5 +407,5 @@ class DepthAnythingV1Pipeline:
             return self.run_video(data_path)
 
 
-__all__ = ["DepthAnythingV1Pipeline", "DepthResult"]
+__all__ = ["DepthAnything1Pipeline", "DepthResult"]
 
