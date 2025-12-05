@@ -10,8 +10,8 @@ from torchvision.transforms import Compose
 from tqdm import tqdm
 
 from ...operators.depth_anything_operator import DepthAnythingOperator
-from ...representations.models.depth_anything.depth_anything_v1.dpt import DepthAnything
-from ...representations.models.depth_anything.depth_anything_v1.util.transform import (
+from ...representations.depth_generation.depth_anything.depth_anything_v1.dpt import DepthAnything
+from ...representations.depth_generation.depth_anything.depth_anything_v1.util.transform import (
     NormalizeImage,
     PrepareForNet,
     Resize,
@@ -79,8 +79,8 @@ class DepthResult:
         return self.results[idx]
 
 
-class DepthAnythingPipeline:
-    """Pipeline for Depth Anything depth estimation."""
+class DepthAnythingV1Pipeline:
+    """Pipeline for Depth Anything (V1) depth estimation."""
     
     def __init__(
         self,
@@ -140,7 +140,7 @@ class DepthAnythingPipeline:
         device: Optional[str] = None,
         data_type: str = "image",
         **kwargs
-    ) -> 'DepthAnythingPipeline':
+    ) -> 'DepthAnythingV1Pipeline':
         """
         Args:
             pretrained_model_path: Path to local checkpoint or HuggingFace repo ID
@@ -407,5 +407,5 @@ class DepthAnythingPipeline:
             return self.run_video(data_path)
 
 
-__all__ = ["DepthAnythingPipeline", "DepthResult"]
+__all__ = ["DepthAnythingV1Pipeline", "DepthResult"]
 
