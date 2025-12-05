@@ -167,14 +167,13 @@ def safe_file(path):
     return path
 
 
-def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=1, fps=24):
-    """save videos by video tensor
-    copy from: 
+def video_output(videos: torch.Tensor, rescale=False, n_rows=1, fps=24):
+    """output the video frame list for videos saving
+    refer to: 
     https://github.com/guoyww/AnimateDiff/blob/e92bd5671ba62c0d774a32951453e328018b7c5b/animatediff/utils/util.py#L61
 
     Args:
         videos (torch.Tensor): video tensor predicted by the model
-        path (str): path to save video
         rescale (bool, optional): rescale the video tensor from [-1, 1] to  . Defaults to False.
         n_rows (int, optional): Defaults to 1.
         fps (int, optional): video save fps. Defaults to 8.
@@ -189,6 +188,4 @@ def save_videos_grid(videos: torch.Tensor, path: str, rescale=False, n_rows=1, f
         x = torch.clamp(x, 0, 1)
         x = (x * 255).numpy().astype(np.uint8)
         outputs.append(x)
-
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    imageio.mimsave(path, outputs, fps=fps)
+    return outputs
