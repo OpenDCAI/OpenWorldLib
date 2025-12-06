@@ -1,20 +1,14 @@
 import os
-from pathlib import Path
-from typing import Iterable, List, Optional, Union, Dict
+from typing import List, Optional, Union, Dict
 
 import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
-from torchvision.transforms import Compose
 from tqdm import tqdm
 
 from ...operators.depth_anything_operator import DepthAnythingOperator
-from ...representations.depth_generation.depth_anything.depth_anything_v1.dpt import DepthAnything
-from ...representations.depth_generation.depth_anything.depth_anything_v1.util.transform import (
-    NormalizeImage,
-    PrepareForNet,
-    Resize,
+from ...representations.depth_generation.depth_anything.depth_anything_v1.depth_anything_v1_representation import (
+    DepthAnything1Representation,
 )
 
 
@@ -84,7 +78,7 @@ class DepthAnything1Pipeline:
     
     def __init__(
         self,
-        model: Optional[DepthAnything] = None,
+        representation: Optional[DepthAnything1Representation] = None,
         operator: Optional[DepthAnythingOperator] = None,
         encoder: str = "vitl",
         device: Optional[str] = None,
@@ -92,7 +86,7 @@ class DepthAnything1Pipeline:
     ) -> None:
         """
         Args:
-            model: Pre-loaded DepthAnything model (optional)
+            representation: Pre-loaded DepthAnything1Representation instance (optional)
             operator: DepthAnythingOperator instance (optional)
             encoder: Encoder type ('vits', 'vitb', 'vitl')
             device: Device to run on ('cuda' or 'cpu')
@@ -104,33 +98,8 @@ class DepthAnything1Pipeline:
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.encoder = encoder
         self.data_type = data_type
-        self.model = model
+        self.representation = representation
         self.operator = operator or DepthAnythingOperator()
-        
-        # Initialize transform if model is provided
-        if self.model is not None:
-            self._init_transform()
-    
-    def _init_transform(self):
-        """Initialize image transformation pipeline."""
-        self.transform = Compose([
-            Resize(
-                width=518,
-                height=518,
-                resize_target=False,
-                keep_aspect_ratio=True,
-                ensure_multiple_of=14,
-                resize_method="lower_bound",
-                image_interpolation_method=cv2.INTER_CUBIC,
-            ),
-            NormalizeImage(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            PrepareForNet(),
-        ])
-    
-    def _prepare_tensor(self, image: np.ndarray) -> torch.Tensor:
-        """Prepare image tensor for model inference."""
-        tensor = self.transform({"image": image})["image"]
-        return torch.from_numpy(tensor).unsqueeze(0).to(self.device)
     
     @classmethod
     def from_pretrained(
@@ -149,117 +118,20 @@ class DepthAnything1Pipeline:
             data_type: Type of data to process ('image' or 'video')
             **kwargs: Additional arguments
         """
-        device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        
-        # Load model from local path or HuggingFace repo
-        if pretrained_model_path and Path(pretrained_model_path).exists():
-            model = cls._load_from_local(pretrained_model_path, encoder, device)
-        else:
-            model = cls._load_from_huggingface(pretrained_model_path, encoder, device)
-        
-        model = model.to(device).eval()
+        # Load representation from pretrained model
+        representation = DepthAnything1Representation.from_pretrained(
+            pretrained_model_path=pretrained_model_path,
+            encoder=encoder,
+            device=device,
+            **kwargs
+        )
         
         return cls(
-            model=model,
+            representation=representation,
             encoder=encoder,
             device=device,
             data_type=data_type,
         )
-    
-    @staticmethod
-    def _load_from_local(
-        pretrained_model_path: str,
-        encoder: str,
-        device: str
-    ) -> DepthAnything:
-        import warnings
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=FutureWarning, message=".*weights_only.*")
-            checkpoint = torch.load(pretrained_model_path, map_location='cpu', weights_only=False)
-
-        if 'model' in checkpoint:
-            state_dict = checkpoint['model']
-        elif 'state_dict' in checkpoint:
-            state_dict = checkpoint['state_dict']
-        else:
-            state_dict = checkpoint
-
-        detected_encoder = encoder
-        if 'pretrained.cls_token' in state_dict:
-            embed_dim = state_dict['pretrained.cls_token'].shape[-1]
-            if embed_dim == 384:
-                detected_encoder = 'vits'
-            elif embed_dim == 768:
-                detected_encoder = 'vitb'
-            elif embed_dim == 1024:
-                detected_encoder = 'vitl'
-        elif 'pretrained.pos_embed' in state_dict:
-            embed_dim = state_dict['pretrained.pos_embed'].shape[-1]
-            if embed_dim == 384:
-                detected_encoder = 'vits'
-            elif embed_dim == 768:
-                detected_encoder = 'vitb'
-            elif embed_dim == 1024:
-                detected_encoder = 'vitl'
-        
-        detected_out_channels = None
-        if 'depth_head.projects.0.weight' in state_dict:
-            detected_out_channels = [
-                state_dict['depth_head.projects.0.weight'].shape[0],
-                state_dict['depth_head.projects.1.weight'].shape[0],
-                state_dict['depth_head.projects.2.weight'].shape[0],
-                state_dict['depth_head.projects.3.weight'].shape[0],
-            ]
-        
-        # Model configurations
-        encoder_configs = {
-            'vitl': {'features': 256, 'out_channels': [256, 512, 1024, 1024]},
-            'vitb': {'features': 128, 'out_channels': [96, 192, 384, 768]},
-            'vits': {'features': 64, 'out_channels': [48, 96, 192, 384]},
-        }
-        
-        if 'model_config' in checkpoint:
-            model_config = checkpoint['model_config']
-            if detected_encoder != encoder:
-                model_config['encoder'] = detected_encoder
-            if detected_out_channels:
-                model_config['out_channels'] = detected_out_channels
-                if detected_encoder in encoder_configs:
-                    model_config['features'] = encoder_configs[detected_encoder]['features']
-        else:
-            if detected_encoder in encoder_configs:
-                base_config = encoder_configs[detected_encoder].copy()
-                model_config = {
-                    'encoder': detected_encoder,
-                    'features': base_config['features'],
-                    'out_channels': detected_out_channels or base_config['out_channels'],
-                    'use_bn': False,
-                    'use_clstoken': False,
-                    'localhub': True,
-                }
-            else:
-                model_config = {
-                    'encoder': detected_encoder,
-                    'features': 256,
-                    'out_channels': detected_out_channels or [256, 512, 1024, 1024],
-                    'use_bn': False,
-                    'use_clstoken': False,
-                    'localhub': True,
-                }
-        
-        model = DepthAnything(model_config)
-        model.load_state_dict(state_dict, strict=False)
-        return model
-    
-    @staticmethod
-    def _load_from_huggingface(
-        pretrained_model_path: Optional[str],
-        encoder: str,
-        device: str
-    ) -> DepthAnything:
-        """Load model from HuggingFace repository."""
-        model_source = pretrained_model_path or f"LiheYoung/depth_anything_{encoder}14"
-        return DepthAnything.from_pretrained(model_source)
     
     def process(
         self,
@@ -278,25 +150,25 @@ class DepthAnything1Pipeline:
         Returns:
             Depth map as tensor (if return_visualization=False) or visualized array (if return_visualization=True)
         """
+        if self.representation is None:
+            raise RuntimeError("Representation not loaded. Use from_pretrained() first.")
+        
         # Load and preprocess image using operator's process_perception method
         image_rgb = self.operator.process_perception(input_image)
-        h, w = image_rgb.shape[:2]
         
-        # Prepare tensor and run inference
-        tensor = self._prepare_tensor(image_rgb)
-        with torch.no_grad():
-            depth = self.model(tensor)
+        # Get depth representation
+        data = {
+            'image': image_rgb,
+            'return_visualization': return_visualization,
+            'grayscale': grayscale,
+        }
+        result = self.representation.get_representation(data)
         
-        # Interpolate to original size
-        depth = self.operator.interpolate_depth(depth, (h, w))
-        
-        # Return raw depth tensor or visualization
+        # Return based on request
         if return_visualization:
-            depth_norm = self.operator.normalize_depth(depth)
-            depth_vis = self.operator.prepare_depth_visualization(depth_norm, grayscale)
-            return depth_vis
+            return result['depth_visualization']
         else:
-            return depth
+            return result['depth']
     
     def run_image(
         self,
