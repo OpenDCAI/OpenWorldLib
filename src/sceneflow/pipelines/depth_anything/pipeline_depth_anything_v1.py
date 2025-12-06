@@ -7,7 +7,7 @@ import torch
 from tqdm import tqdm
 
 from ...operators.depth_anything_operator import DepthAnythingOperator
-from ...representations.depth_generation.depth_anything.depth_anything_v1.depth_anything_v1_representation import (
+from ...representations.depth_generation.depth_anything.depth_anything_v1_representation import (
     DepthAnything1Representation,
 )
 

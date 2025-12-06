@@ -1,3 +1,5 @@
+import torch
+
 
 class BaseReasoning(object):
     def __init__(self):
