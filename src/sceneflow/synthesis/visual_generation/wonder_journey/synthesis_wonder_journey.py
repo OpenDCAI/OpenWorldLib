@@ -299,17 +299,22 @@ class WonderJourneySynthesis:
     def get_fragment_indices(self, camera, points_3d, colors):
         """
         渲染场景并返回 fragment_idx，供 Representation 计算遮挡关系。
+        完全还原原项目逻辑：使用固定半径，K=32。
         """
+        # 1. 坐标系转换 
         points_3d_render = points_3d.clone()
         points_3d_render[..., :2] = - points_3d_render[..., :2]
         
-        # 使用高精度设置进行遮挡检测 (K=32)
+        # 2. 设置光栅化参数
+        # 原项目逻辑：在 visibility_check 中，作者使用的是【固定半径】，而不是 render 函数中的动态半径。这是为了获得准确的几何遮挡关系。
         raster_settings = PointsRasterizationSettings(
             image_size=512,
-            radius = self.config['point_size'],
-            points_per_pixel = 32, # K=32
+            radius = self.config['point_size'], # 固定半径
+            points_per_pixel = 32, # K=32 (原项目写死的值)
         )
         
+        # 3. 初始化渲染器
+        # BG_COLOR 需要在文件头部定义 (通常是 (1, 0, 0))
         renderer = PointsRenderer(
             rasterizer=PointsRasterizer(cameras=camera, raster_settings=raster_settings),
             compositor=SoftmaxImportanceCompositor(background_color=BG_COLOR, softmax_scale=1.0)
@@ -317,8 +322,11 @@ class WonderJourneySynthesis:
         
         point_cloud = Pointclouds(points=[points_3d_render], features=[colors])
         
-        # 关键: return_fragment_idx=True
-        _, _, _, fragment_idx = renderer(point_cloud, return_fragment_idx=True)
+        # 4. 执行渲染
+        # 原项目逻辑只设置了 return_fragment_idx=True，其他默认为 False。
+        # 因此 renderer 只返回 [images, fragment_idx] 两个值。
+        # 如果用 _, _, _, fragment_idx 会报错 "not enough values to unpack"。
+        _, fragment_idx = renderer(point_cloud, return_fragment_idx=True)
         
         # fragment_idx: [B, H, W, K]
         return fragment_idx

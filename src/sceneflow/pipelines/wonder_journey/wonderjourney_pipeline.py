@@ -5,9 +5,10 @@ from PIL import Image
 from typing import List, Union, Dict, Any, Optional
 from torchvision.transforms import ToTensor, ToPILImage
 
-from operators import WonderJourneyOperator
-from representations import WonderJourneyRepresentation
-from synthesis import WonderJourneySynthesis
+from sceneflow.operators.wonder_journey_operator import WonderJourneyOperator
+from sceneflow.representations.models.wonder_journey.wonder_journey_representation import WonderJourneyRepresentation
+from sceneflow.synthesis.visual_generation.wonder_journey.synthesis_wonder_journey import WonderJourneySynthesis
+from sceneflow.memories.memory_wonder_journey import WonderJourneyMemory 
 
 class WonderJourneyPipeline:
     def __init__(
@@ -19,7 +20,7 @@ class WonderJourneyPipeline:
         self.operator = operator
         self.representation = representation
         self.synthesis = synthesis
-        
+        self.memory = WonderJourneyMemory(device=self.device)
         self.device = self.representation.device
 
     @classmethod
@@ -74,7 +75,17 @@ class WonderJourneyPipeline:
         
         self.operator.init_camera()
         
-        self.representation.reset_cloud()
+        # 清空 Memory
+        self.memory.reset()
+        
+        # 计算初始点并存入 Memory
+        new_pts, new_cols = self.representation.compute_new_points(
+            rendered_depth=depth, 
+            image=image_tensor, 
+            valid_mask=None, 
+            camera=self.operator.current_camera
+        )
+        self.memory.update_point_cloud(new_pts, new_cols) # 存入 Memory
 
         if enable_upsample:
              full_mask = torch.ones_like(depth)
@@ -93,8 +104,7 @@ class WonderJourneyPipeline:
         
         for i in tqdm.tqdm(range(num_frames)):
             next_camera = self.operator.process_interaction()
-            points_3d = self.representation.points_3d
-            colors = self.representation.colors
+            points_3d, colors = self.memory.get_point_cloud()
             
             rendered_image, rendered_depth, inpaint_mask = self.synthesis.render_scene(
                 camera=next_camera,
@@ -144,9 +154,9 @@ class WonderJourneyPipeline:
                 update_image, update_depth, update_mask, update_grid = self.representation.upsample_data(
                     inpainted_image, new_depth, inpaint_mask, coef=2
                 )
-            
-            # 更新点云
-            self.representation.update_cloud(
+
+           # 计算Candidate Points
+            new_pts, new_cols = self.representation.compute_new_points(
                 rendered_depth=update_depth,
                 image=update_image,
                 valid_mask=update_mask, 
@@ -154,21 +164,62 @@ class WonderJourneyPipeline:
                 points_2d=update_grid
             )
             
-            # 遮挡剔除 
-            if enable_visibility_check:
-                frag_idx = self.synthesis.get_fragment_indices(
+            # 获取当前的Base Points
+            old_pts, old_cols = self.memory.get_point_cloud()
+            
+            # Visibility Check
+            if enable_visibility_check and old_pts.shape[0] > 0:
+                # 第一次渲染：Base Render(不加新点的情况)
+                render_old, _, _ = self.synthesis.render_scene(
                     camera=next_camera,
-                    points_3d=self.representation.points_3d,
-                    colors=self.representation.colors
+                    points_3d=old_pts,
+                    colors=old_cols
                 )
                 
-                # 这里需要再改一下
-                # bad_indices = self.representation.calculate_inconsistent_points(frag_idx)
-                # self.representation.remove_occluded_points(bad_indices)
-                pass
+                # 第二次渲染：Combined Render
+                combined_pts = torch.cat([old_pts, new_pts], dim=0)
+                combined_cols = torch.cat([old_cols, new_cols], dim=0)
+                # 获取 Combined Render 的图像
+                render_combined, _, _ = self.synthesis.render_scene(
+                    camera=next_camera,
+                    points_3d=combined_pts,
+                    colors=combined_cols
+                )
+                
+                # 获取 Fragment Indices (用于深度排序分析)
+                fragment_idx = self.synthesis.get_fragment_indices(
+                    camera=next_camera,
+                    points_3d=combined_pts,
+                    colors=combined_cols
+                )
+                
+                # 找到"错误地遮挡了旧点"的新点索引
+                bad_indices = self.representation.compute_inconsistent_indices(
+                    render_old=render_old,
+                    render_combined=render_combined,
+                    fragment_idx=fragment_idx,
+                    num_old_points=old_pts.shape[0]
+                )
+                
+                # 剔除坏点
+                if len(bad_indices) > 0:
+                    # 创建保留 Mask
+                    keep_mask = torch.ones(new_pts.shape[0], dtype=torch.bool, device=self.device)
+                    # 确保索引不越界
+                    valid_bad_indices = bad_indices[bad_indices < new_pts.shape[0]]
+                    keep_mask[valid_bad_indices] = False
+                    
+                    new_pts = new_pts[keep_mask]
+                    new_cols = new_cols[keep_mask]
+                    # print(f"Visibility Check: Removed {len(valid_bad_indices)} occluded points.")
 
-            # 清理显存 
+            # 通过检查的点存入 Memory
+            self.memory.update_point_cloud(new_pts, new_cols)
+
+            current_image_tensor = inpainted_image        
+            # 显存清理
             if i % 5 == 0:
+                del render_old, render_combined, fragment_idx, combined_pts, combined_cols
                 torch.cuda.empty_cache()
 
         print("Generation finished.")

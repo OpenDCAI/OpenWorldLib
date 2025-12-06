@@ -29,12 +29,12 @@ class WonderJourneyRepresentation:
             'finetune_lr': 0.00001,
         }
         self.config.update(kwargs)
-        
         # 预留IO 路径
         self.run_dir = Path(kwargs.get('run_dir', './output_debug'))
 
-        self.points_3d = torch.tensor([], device=device)
-        self.colors = torch.tensor([], device=device)
+        # 为了memory，删除以下两行
+        # self.points_3d = torch.tensor([], device=device)
+        # self.colors = torch.tensor([], device=device)
         
         x = torch.arange(512).float() + 0.5
         y = torch.arange(512).float() + 0.5
@@ -232,7 +232,12 @@ class WonderJourneyRepresentation:
         return refined_depth, refined_disparity
 
     @torch.no_grad()
-    def update_cloud(self, rendered_depth, image, valid_mask=None, camera=None, points_2d=None):
+    def compute_new_points(self, rendered_depth, image, valid_mask=None, camera=None, points_2d=None):
+        """
+        计算需要新增的点云数据 (不再直接修改 self.points_3d)
+        Returns:
+            new_points (Tensor), new_colors (Tensor)
+        """
         """
          models.py KeyframeInterp.update_additional_point_cloud+convert_pytorch3d_kornia
         """
@@ -304,8 +309,10 @@ class WonderJourneyRepresentation:
         additional_points_3d = additional_points_3d[~backward_points]
         additional_colors = additional_colors[~backward_points]
 
-        self.points_3d = torch.cat([self.points_3d, additional_points_3d], dim=0)
-        self.colors = torch.cat([self.colors, additional_colors], dim=0)
+        # self.points_3d = torch.cat([self.points_3d, additional_points_3d], dim=0)
+        # self.colors = torch.cat([self.colors, additional_colors], dim=0)
+        return additional_points_3d, additional_colors
+
     def remove_occluded_points(self, inconsistent_indices):
         """
         根据 Synthesis 提供的索引，从点云中删除被遮挡的点。
@@ -321,6 +328,8 @@ class WonderJourneyRepresentation:
         
         self.points_3d = self.points_3d[keep_mask]
         self.colors = self.colors[keep_mask]
-    def reset_cloud(self):
-        self.points_3d = torch.tensor([], device=self.device)
-        self.colors = torch.tensor([], device=self.device)
+
+    # 为了memory删除
+    # def reset_cloud(self):
+    #     self.points_3d = torch.tensor([], device=self.device)
+    #     self.colors = torch.tensor([], device=self.device)
