@@ -10,8 +10,8 @@ from typing import Dict, Union
 from .base_representation import BaseRepresentation
 # import the corresponding depth model
 from .models.moge.model.v1 import MoGeModel
-from .models.depth_anything.depth_anything_v1.adapter import DepthAnythingAdapter
-from ...pipelines.depth_anything.pipeline_depth_anything_v1 import DepthAnythingPipeline
+from .depth_generation.depth_anything.depth_anything_v1.dpt import DepthAnything
+from .depth_generation.depth_anything.depth_anything_v1.adapter import DepthAnythingAdapter
 
 """
 # Use DepthAnything as the depth model
@@ -259,16 +259,11 @@ class Depth2PointCloudRepresentation(BaseRepresentation):
                 local_files_only=kwargs.get('local_files_only', False),
             ).to(device)
         elif depth_model_name == 'depthanything':
-            # Initialize DepthAnything pipeline
+            # Initialize DepthAnything model directly (HuggingFace or local repo id)
             encoder = kwargs.get('encoder', 'vitl')
-            pipeline = DepthAnythingPipeline.from_pretrained(
-                pretrained_model_path=pretrained_model_path,
-                encoder=encoder,
-                device=device,
-                data_type='image',
-            )
-            # Wrap pipeline in adapter
-            depth_model = DepthAnythingAdapter(pipeline)
+            model_id_or_path = pretrained_model_path or f"LiheYoung/depth_anything_{encoder}14"
+            depth_core = DepthAnything.from_pretrained(model_id_or_path)
+            depth_model = DepthAnythingAdapter(depth_core, device=device)
         else:
             depth_model_class = DEPTH_MODEL_DICT[depth_model_name]
             depth_model = depth_model_class.from_pretrained(
