@@ -1,5 +1,7 @@
+import torch
 
-class BaseRepresentation(object):
+
+class BaseReasoning(object):
     def __init__(self):
         pass
 
@@ -10,5 +12,6 @@ class BaseRepresentation(object):
     def api_init(self, api_key, endpoint):
         pass
 
-    def get_representation(self, data):
+    @torch.no_grad()
+    def inference(self):
         pass
