@@ -3,7 +3,7 @@ from pathlib import Path
 sys.path.append("..")
 
 from src.sceneflow.pipelines.depth_anything.pipeline_depth_anything_v1 import (  
-    DepthAnythingPipeline,
+    DepthAnything1Pipeline,
 )
 
 # Configure before running
@@ -16,7 +16,7 @@ OUTPUT_DIR = None
 GRAYSCALE = False  # True outputs grayscale image, False outputs color heat map (Only used for image mode)
 
 
-pipeline = DepthAnythingPipeline.from_pretrained(
+pipeline = DepthAnything1Pipeline.from_pretrained(
     pretrained_model_path=MODEL_PATH,
     encoder=ENCODER,
     data_type=DATA_TYPE,

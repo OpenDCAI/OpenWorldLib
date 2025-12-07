@@ -1,10 +1,12 @@
-from sceneflow.pipelines.hunyuan_world.pipeline_hunyuan_world_voyager import HunyuanWorldVoyagerPipeline
+# from diffusers.utils import export_to_video
+import imageio
 from PIL import Image
+from sceneflow.pipelines.hunyuan_world.pipeline_hunyuan_world_voyager import HunyuanWorldVoyagerPipeline
 
 
 image_path = "./data/test_case1/ref_image.png"
-moge_model_path = "/ytech_m2v5_hdd/CheckPoints/moge-vitl"
-hunyuan_world_voyager_model_path = "/ytech_m2v5_hdd/CheckPoints/HunyuanWorld-Voyager"
+moge_model_path = "Ruicheng/moge-vitl"
+hunyuan_world_voyager_model_path = "tencent/HunyuanWorld-Voyager"
 
 input_image = Image.open(image_path).convert('RGB')
 test_prompt = "An old-fashioned European village with thatched roofs on the houses."
@@ -15,4 +17,5 @@ pipeline = HunyuanWorldVoyagerPipeline.from_pretrained(
     save_representation_video=True
 )
 
-pipeline(input_image=input_image, interaction_text_prompt=test_prompt)
+output_video = pipeline(input_image=input_image, interaction_text_prompt=test_prompt)
+imageio.mimsave("hunyuan_world_voyager.mp4", output_video, fps=12)
