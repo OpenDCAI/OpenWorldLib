@@ -15,7 +15,7 @@ class Veo3Synthesis(object):
     
     def __init__(
         self,
-        base_url: str,
+        endpoint: str,
         api_key: str,
         logger=None,
     ):
@@ -23,16 +23,16 @@ class Veo3Synthesis(object):
         初始化 Veo3Synthesis
         
         Args:
-            base_url: API基础URL
+            endpoint: API基础URL
             api_key: API密钥
             logger: 日志记录器
         """
-        self.base_url = base_url
+        self.endpoint = endpoint
         self.api_key = api_key
         self.logger = logger
         
         # 设置API基础URL
-        self.client = OpenAI(api_key=self.api_key, base_url=self.base_url)
+        self.client = OpenAI(api_key=self.api_key, base_url=self.endpoint)
         
         # 设置日志记录器
         if logger is not None:
@@ -41,9 +41,9 @@ class Veo3Synthesis(object):
             self.logger = logging.getLogger(__name__)
     
     @classmethod
-    def from_pretrained(
+    def api_init(
         cls,
-        base_url: str,
+        endpoint: str,
         api_key: str,
         logger=None,
         **kwargs
@@ -52,7 +52,7 @@ class Veo3Synthesis(object):
         从配置加载完整的 Veo3Synthesis
         
         Args:
-            base_url: API基础URL
+            endpoint: API基础URL
             api_key: API密钥
             logger: 日志记录器
             **kwargs: 其他参数
@@ -61,7 +61,7 @@ class Veo3Synthesis(object):
             Veo3Synthesis 实例
         """
         return cls(
-            base_url=base_url,
+            endpoint=endpoint,
             api_key=api_key,
             logger=logger,
         )

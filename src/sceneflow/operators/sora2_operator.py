@@ -1,5 +1,6 @@
 from PIL import Image
 from typing import Union, Optional, Dict, Any, Tuple
+from pathlib import Path
 import mimetypes
 import io
 import os
@@ -67,17 +68,6 @@ class Sora2Operator(BaseOperator):
         self.interaction_template = ["text_prompt", "image_prompt", "multimodal_prompt"]
         self.interaction_template_init()
     
-    def check_interaction(self, interaction):
-        """检查交互类型是否有效"""
-        if not isinstance(interaction, str):
-            raise TypeError(f"Invalid interaction")
-        return True
-    
-    def get_interaction(self, interaction):
-        """获取交互类型"""
-        if self.check_interaction(interaction):
-            self.current_interaction = interaction
-
     def process_image(self, image_input: Union[str, Image.Image]) -> Tuple[str, bytes, str]:
         """
         处理图像，返回文件名、字节和mime类型（API所需格式）
@@ -91,7 +81,7 @@ class Sora2Operator(BaseOperator):
         image_bytes, mime_type, filename = image_to_bytes(image_input)
         return (filename, image_bytes, mime_type)
 
-    def process_interaction(
+    def process_perception(
         self,
         prompt: str,
         reference_image: Optional[Union[str, Image.Image]] = None,
@@ -111,15 +101,22 @@ class Sora2Operator(BaseOperator):
                 - encoded_image: 图像元组 (filename, bytes, mime_type)（如果有）
                 - reference_image: 原始参考图像（如果有）
         """
-        self.get_interaction(prompt)
+        # 简单检查 prompt 类型
+        if not isinstance(prompt, str):
+            raise TypeError(f"Prompt must be a string, got {type(prompt)}")
+        
         result: Dict[str, Any] = {
-            "prompt": self.current_interaction,
+            "prompt": prompt,
             "encoded_image": None,
             "reference_image": None
         }
         
-        # 处理图像（如果提供）
+        # 简单判断路径是否存在
         if reference_image is not None:
+            if isinstance(reference_image, str):
+                img_path = Path(reference_image)
+                if not img_path.exists():
+                    raise FileNotFoundError(f"Image file not found: {reference_image}")
             result["encoded_image"] = self.process_image(reference_image)
             result["reference_image"] = reference_image
         

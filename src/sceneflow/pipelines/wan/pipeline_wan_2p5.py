@@ -3,11 +3,11 @@ from PIL import Image
 from typing import Optional, Union, Dict, Any
 from pathlib import Path
 
-from ...operators.wan_2p5_operator import Wan25Operator
-from ...synthesis.visual_generation.wan.wan_2p5.wan_2p5_synthesis import Wan25Synthesis
+from ...operators.wan_2p5_operator import Wan2p5Operator
+from ...synthesis.visual_generation.wan.wan_2p5.wan_2p5_synthesis import Wan2p5Synthesis
 
 
-class Wan25Pipeline:
+class Wan2p5Pipeline:
     """
     将输入通过 operator 处理后再传给模型进行推理，
     实现数据预处理和模型推理的分离。
@@ -15,73 +15,73 @@ class Wan25Pipeline:
     
     def __init__(
         self,
-        operator: Optional[Wan25Operator] = None,
-        synthesis_model: Optional[Wan25Synthesis] = None,
-        base_url: str = "https://dashscope.aliyuncs.com/api/v1",
+        operator: Optional[Wan2p5Operator] = None,
+        synthesis_model: Optional[Wan2p5Synthesis] = None,
+        endpoint: str = "https://dashscope.aliyuncs.com/api/v1",
         api_key: str = "your_api_key",
     ):
         """
-        初始化 Wan25Pipeline
+        初始化 Wan2p5Pipeline
         
         Args:
-            operator: Wan25 operator 实例（如果为None则自动创建）
-            synthesis_model: Wan25 synthesis 模型实例（如果为None则自动创建）
-            base_url: API基础URL
+            operator: Wan2p5 operator 实例（如果为None则自动创建）
+            synthesis_model: Wan2p5 synthesis 模型实例（如果为None则自动创建）
+            endpoint: API基础URL
             api_key: API密钥
         """
-        self.base_url = base_url
+        self.endpoint = endpoint
         self.api_key = api_key
         self.operator = operator
         self.synthesis_model = synthesis_model
     
     @classmethod
-    def from_pretrained(
+    def api_init(
         cls,
-        base_url: str = "https://dashscope.aliyuncs.com/api/v1",
+        endpoint: str = "https://dashscope.aliyuncs.com/api/v1",
         api_key: str = "your_api_key",
         logger=None,
         **kwargs
-    ) -> 'Wan25Pipeline':
+    ) -> 'Wan2p5Pipeline':
         """
         从配置加载完整的 pipeline
         
         Args:
-            base_url: API基础URL
+            endpoint: API基础URL
             api_key: API密钥
             logger: 日志记录器
             **kwargs: 额外参数
             
         Returns:
-            Wan25Pipeline: 初始化的 pipeline 实例
+            Wan2p5Pipeline: 初始化的 pipeline 实例
         """
         if logger:
-            logger.info(f"Loading Wan25 pipeline with base_url: {base_url}")
+            logger.info(f"Loading Wan2p5 pipeline with endpoint: {endpoint}")
         
         # 加载 synthesis 模型
         if logger:
-            logger.info("Loading Wan25 synthesis model...")
+            logger.info("Loading Wan2p5 synthesis model...")
         
-        synthesis_model = Wan25Synthesis.from_pretrained(
-            base_url=base_url,
+        synthesis_model = Wan2p5Synthesis.api_init(
+            endpoint=endpoint,
             api_key=api_key,
             logger=logger,
             **kwargs
         )
         
         if logger:
-            logger.info("Initializing Wan25 operator...")
+            logger.info("Initializing Wan2p5 operator...")
         
-        operator = Wan25Operator()
+        operator = Wan2p5Operator()
         
         pipeline = cls(
             operator=operator,
             synthesis_model=synthesis_model,
-            base_url=base_url,
+            endpoint=endpoint,
             api_key=api_key
         )
         
         if logger:
-            logger.info("Wan25 pipeline loaded successfully")
+            logger.info("Wan2p5 pipeline loaded successfully")
         
         return pipeline
     
@@ -105,7 +105,7 @@ class Wan25Pipeline:
         if self.operator is None:
             raise ValueError("Operator is not initialized")
         
-        processed_data = self.operator.process_interaction(
+        processed_data = self.operator.process_perception(
             prompt=prompt,
             reference_image=reference_image,
             **kwargs
@@ -181,10 +181,10 @@ class Wan25Pipeline:
         
         return result
     
-    def get_operator(self) -> Optional[Wan25Operator]:
+    def get_operator(self) -> Optional[Wan2p5Operator]:
         """获取 operator 实例"""
         return self.operator
     
-    def get_synthesis_model(self) -> Optional[Wan25Synthesis]:
+    def get_synthesis_model(self) -> Optional[Wan2p5Synthesis]:
         """获取 synthesis 模型实例"""
         return self.synthesis_model

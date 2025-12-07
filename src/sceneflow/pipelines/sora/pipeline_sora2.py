@@ -3,7 +3,7 @@ from PIL import Image
 from typing import Optional, Union, Dict, Any
 
 from ...operators.sora2_operator import Sora2Operator
-from ...synthesis.visual_generation.sora2.sora2_synthesis import Sora2Synthesis
+from ...synthesis.visual_generation.sora.sora2.sora2_synthesis import Sora2Synthesis
 
 
 
@@ -12,25 +12,25 @@ class Sora2Pipeline:
         self, 
         operator: Optional[Sora2Operator] = None,
         synthesis_model: Optional[Sora2Synthesis] = None,
-        base_url: str = "https://api.openai.com/v1", 
+        endpoint: str = "https://api.openai.com/v1", 
         api_key: str = "your_api_key"):
         """
         初始化 Sora2Pipeline
         Args:
             operator: Sora2 operator 实例（如果为None则自动创建）
             synthesis_model: Sora2 synthesis 模型实例（如果为None则自动创建）
-            base_url: API基础URL
+            endpoint: API基础URL
             api_key: API密钥
         """
         self.operator = operator
         self.synthesis_model = synthesis_model
-        self.base_url = base_url
+        self.endpoint = endpoint
         self.api_key = api_key
 
     @classmethod
-    def from_pretrained(
+    def api_init(
         cls,
-        base_url: str = "https://api.openai.com/v1",
+        endpoint: str = "https://api.openai.com/v1",
         api_key: str = "your_api_key",
         logger=None,
         **kwargs
@@ -39,19 +39,19 @@ class Sora2Pipeline:
         从配置加载完整的 pipeline
         
         Args:
-            base_url: API基础URL
+            endpoint: API基础URL
             api_key: API密钥
             logger: 日志记录器
             **kwargs: 额外参数
         """
         if logger:
-            logger.info(f"Loading Sora2 pipeline with base_url: {base_url}")
+            logger.info(f"Loading Sora2 pipeline with endpoint: {endpoint}")
         
         # 加载 synthesis 模型
         if logger:
             logger.info("Loading Sora2 synthesis model...")
-        synthesis_model = Sora2Synthesis.from_pretrained(
-            base_url=base_url,
+        synthesis_model = Sora2Synthesis.api_init(
+            endpoint=endpoint,
             api_key=api_key,
             logger=logger,
             **kwargs
@@ -64,7 +64,7 @@ class Sora2Pipeline:
         pipeline = cls(
             operator=operator,
             synthesis_model=synthesis_model,
-            base_url=base_url,
+            endpoint=endpoint,
             api_key=api_key
         )
         
@@ -85,7 +85,7 @@ class Sora2Pipeline:
         if self.operator is None:
             raise ValueError("Operator is not initialized")
         
-        processed_data = self.operator.process_interaction(
+        processed_data = self.operator.process_perception(
             prompt=prompt,
             reference_image=reference_image,
             **kwargs

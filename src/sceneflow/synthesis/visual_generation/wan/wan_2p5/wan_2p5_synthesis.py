@@ -4,7 +4,7 @@ from PIL import Image
 import dashscope
 
 
-class Wan25Synthesis(object):
+class Wan2p5Synthesis(object):
     """
     Wan2.5 生成合成类，提供统一的接口用于音视频生成
     
@@ -13,7 +13,7 @@ class Wan25Synthesis(object):
     
     def __init__(
         self,
-        base_url: str = "https://dashscope.aliyuncs.com/api/v1",
+        endpoint: str = "https://dashscope.aliyuncs.com/api/v1",
         api_key: str = "your_api_key",
         logger=None,
     ):
@@ -21,21 +21,21 @@ class Wan25Synthesis(object):
         初始化 Wan25Synthesis
         
         Args:
-            base_url: API基础URL
+            endpoint: API基础URL
             api_key: API密钥
             logger: 日志记录器
         """
-        self.base_url = base_url
+        self.endpoint = endpoint
         self.api_key = api_key
         self.logger = logger
         
         # 设置API基础URL
-        dashscope.base_http_api_url = self.base_url
+        dashscope.base_http_api_url = self.endpoint
     
     @classmethod
-    def from_pretrained(
+    def api_init(
         cls,
-        base_url: str = "https://dashscope.aliyuncs.com/api/v1",
+        endpoint: str = "https://dashscope.aliyuncs.com/api/v1",
         api_key: str = "your_api_key",
         logger=None,
         **kwargs
@@ -44,7 +44,7 @@ class Wan25Synthesis(object):
         从配置创建 Wan25Synthesis 实例
         
         Args:
-            base_url: API基础URL
+            endpoint: API基础URL
             api_key: API密钥
             logger: 日志记录器
             **kwargs: 其他参数
@@ -53,7 +53,7 @@ class Wan25Synthesis(object):
             Wan25Synthesis 实例
         """
         return cls(
-            base_url=base_url,
+            endpoint=endpoint,
             api_key=api_key,
             logger=logger,
         )
@@ -87,7 +87,7 @@ class Wan25Synthesis(object):
         Returns:
             API响应结果
         """
-        dashscope.base_http_api_url = self.base_url
+        dashscope.base_http_api_url = self.endpoint
         rsp = VideoSynthesis.call(
             api_key=self.api_key,
             model='wan2.5-t2v-preview',
@@ -134,7 +134,7 @@ class Wan25Synthesis(object):
         Returns:
             API响应结果
         """
-        dashscope.base_http_api_url = self.base_url
+        dashscope.base_http_api_url = self.endpoint
         rsp = VideoSynthesis.call(
             api_key=self.api_key,
             model='wan2.5-i2v-preview',
