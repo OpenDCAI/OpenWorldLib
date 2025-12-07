@@ -19,7 +19,7 @@ class Veo3Pipeline:
         operator: Optional[Veo3Operator] = None,
         synthesis_model: Optional[Veo3Synthesis] = None,
         api_key: str = "your_api_key",
-        base_url: str = "",
+        endpoint: str = "",
     ):
         """
         初始化 Veo3Pipeline
@@ -28,18 +28,18 @@ class Veo3Pipeline:
             operator: Veo3 operator 实例（如果为None则自动创建）
             synthesis_model: Veo3 synthesis 模型实例（如果为None则自动创建）
             api_key: API密钥
-            base_url: API基础URL
+            endpoint: API基础URL
         """
         self.api_key = api_key
-        self.base_url = base_url
+        self.endpoint = endpoint
         self.operator = operator
         self.synthesis_model = synthesis_model
 
     @classmethod
-    def from_pretrained(
+    def api_init(
         cls,
         api_key: str,
-        base_url: str = "",
+        endpoint: str = "",
         logger=None,
         **kwargs
     ) -> 'Veo3Pipeline':
@@ -48,7 +48,7 @@ class Veo3Pipeline:
         
         Args:
             api_key: API密钥
-            base_url: API基础URL
+            endpoint: API基础URL
             logger: 日志记录器
             **kwargs: 额外参数
             
@@ -56,13 +56,13 @@ class Veo3Pipeline:
             Veo3Pipeline: 初始化的 pipeline 实例
         """
         if logger:
-            logger.info(f"Loading Veo3 pipeline with base_url: {base_url}")
+            logger.info(f"Loading Veo3 pipeline with endpoint: {endpoint}")
         
         # 加载 synthesis 模型
         if logger:
             logger.info("Loading Veo3 synthesis model...")
-        synthesis_model = Veo3Synthesis.from_pretrained(
-            base_url=base_url,
+        synthesis_model = Veo3Synthesis.api_init(
+            endpoint=endpoint,
             api_key=api_key,
             logger=logger,
             **kwargs
@@ -76,7 +76,7 @@ class Veo3Pipeline:
             operator=operator,
             synthesis_model=synthesis_model,
             api_key=api_key,
-            base_url=base_url
+            endpoint=endpoint
         )
         
         if logger:
@@ -96,6 +96,9 @@ class Veo3Pipeline:
         last_frame: Optional[Union[str, Image.Image]] = None,
         reference_images: Optional[List[Union[str, Image.Image]]] = None,
         person_generation: Optional[str] = None,
+        enhance_prompt: Optional[bool] = None,
+        generate_audio: Optional[bool] = None,
+        fps: Optional[int] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -120,7 +123,7 @@ class Veo3Pipeline:
         if self.operator is None:
             raise ValueError("Operator is not initialized")
         
-        processed_data = self.operator.process_interaction(
+        processed_data = self.operator.process_perception(
             prompt=prompt,
             image=image,
             aspect_ratio=aspect_ratio,
@@ -131,6 +134,9 @@ class Veo3Pipeline:
             last_frame=last_frame,
             reference_images=reference_images,
             person_generation=person_generation,
+            enhance_prompt=enhance_prompt,
+            generate_audio=generate_audio,
+            fps=fps,
             **kwargs
         )
         
@@ -149,6 +155,9 @@ class Veo3Pipeline:
         last_frame: Optional[Union[str, Image.Image]] = None,
         reference_images: Optional[List[Union[str, Image.Image]]] = None,
         person_generation: Optional[str] = None,
+        enhance_prompt: Optional[bool] = None,
+        generate_audio: Optional[bool] = None,
+        fps: Optional[int] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -191,6 +200,9 @@ class Veo3Pipeline:
             last_frame=last_frame,
             reference_images=reference_images,
             person_generation=person_generation,
+            enhance_prompt=enhance_prompt,
+            generate_audio=generate_audio,
+            fps=fps,
             **kwargs
         )
         

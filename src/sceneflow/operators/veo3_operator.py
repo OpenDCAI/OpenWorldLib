@@ -3,13 +3,14 @@ from __future__ import annotations
 import base64
 import json
 import mimetypes
+from pathlib import Path
 from typing import Optional, Union, Dict, Any, List, Tuple
 
 from PIL import Image
 from .base_operator import BaseOperator
 
 
-def _image_to_data_url(image_input: Union[str, Image.Image]) -> Tuple[str, str]:
+def _image_to_data_url(image_input: Union[str, Path, Image.Image]) -> Tuple[str, str]:
     """
     将图像转为 data URL 与 MIME 类型，方便在 Chat Completion 消息中以 base64 形式携带。
     
@@ -28,11 +29,14 @@ def _image_to_data_url(image_input: Union[str, Image.Image]) -> Tuple[str, str]:
         buffer = BytesIO()
         image_input.save(buffer, format="PNG")
         content = buffer.getvalue()
-    elif isinstance(image_input, str):
-        mime_type_guess, _ = mimetypes.guess_type(image_input)
+    elif isinstance(image_input, (str, Path)):
+        img_path = Path(image_input)
+        if not img_path.exists():
+            raise FileNotFoundError(f"Image file not found: {img_path}")
+        mime_type_guess, _ = mimetypes.guess_type(img_path)
         if mime_type_guess:
             mime_type = mime_type_guess
-        with open(image_input, "rb") as f:
+        with open(img_path, "rb") as f:
             content = f.read()
     else:
         raise TypeError("image_input 必须是文件路径或 PIL.Image")
@@ -66,17 +70,6 @@ class Veo3Operator(BaseOperator):
         # 初始化交互模板   
         self.interaction_template = ["text_prompt", "image_prompt", "multimodal_prompt"]
         self.interaction_template_init()
-    
-    def check_interaction(self, interaction):
-        """检查交互类型是否有效"""
-        if not isinstance(interaction, str):
-            raise TypeError(f"Invalid interaction")
-        return True
-    
-    def get_interaction(self, interaction):
-        """获取交互类型"""
-        if self.check_interaction(interaction):
-            self.current_interaction = interaction
     
     def process_image(self, image_input: Union[str, Image.Image]) -> Tuple[str, str]:
         """
@@ -151,7 +144,7 @@ class Veo3Operator(BaseOperator):
         return content
         
     
-    def process_interaction(
+    def process_perception(
         self,
         prompt: str,
         *,
@@ -164,6 +157,9 @@ class Veo3Operator(BaseOperator):
         last_frame: Optional[Union[str, Image.Image]] = None,
         reference_images: Optional[List[Union[str, Image.Image]]] = None,
         person_generation: Optional[str] = None,
+        enhance_prompt: Optional[bool] = None,
+        generate_audio: Optional[bool] = None,
+        fps: Optional[int] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -189,26 +185,50 @@ class Veo3Operator(BaseOperator):
                 - image: 主图像（如果有）
                 - reference_images: 参考图像列表（如果有）
         """
-        self.get_interaction(prompt)
+        # 简单检查 prompt 类型
+        if not isinstance(prompt, str):
+            raise TypeError(f"Prompt must be a string, got {type(prompt)}")
+        
+        # 简单判断路径是否存在
+        def _check_path(img):
+            if isinstance(img, (str, Path)):
+                img_path = Path(img)
+                if not img_path.exists():
+                    raise FileNotFoundError(f"Image file not found: {img_path}")
+        
+        if image is not None:
+            _check_path(image)
+        if last_frame is not None:
+            _check_path(last_frame)
+        if reference_images:
+            for img in reference_images:
+                _check_path(img)
+        
+        # 规范化路径
+        def _norm(img):
+            return Path(img) if isinstance(img, str) else img
         
         user_content = self.build_user_content(
-            prompt=self.current_interaction,
+            prompt=prompt,
             aspect_ratio=aspect_ratio,
             resolution=resolution,
             duration_seconds=duration_seconds,
             negative_prompt=negative_prompt,
             seed=seed,
             person_generation=person_generation,
-            reference_images=reference_images,
-            image=image,
-            last_frame=last_frame,
+            reference_images=[_norm(i) for i in reference_images] if reference_images else None,
+            image=_norm(image) if image is not None else None,
+            last_frame=_norm(last_frame) if last_frame is not None else None,
+            enhance_prompt=enhance_prompt,
+            generate_audio=generate_audio,
+            fps=fps,
         )
         
         result: Dict[str, Any] = {
-            "prompt": self.current_interaction,
+            "prompt": prompt,
             "user_content": user_content,
-            "image": image,
-            "reference_images": reference_images,
+            "image": _norm(image) if image is not None else None,
+            "reference_images": [_norm(i) for i in reference_images] if reference_images else None,
         }
         
         return result

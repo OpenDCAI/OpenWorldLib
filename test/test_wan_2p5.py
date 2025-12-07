@@ -1,6 +1,6 @@
 import sys 
 sys.path.append("..") 
-from src.sceneflow.pipelines.wan25.pipeline_wan25 import Wan25Pipeline
+from src.sceneflow.pipelines.wan.pipeline_wan_2p5 import Wan2p5Pipeline
 from http import HTTPStatus
 import os
 import requests
@@ -67,14 +67,14 @@ image_path = "./data/test_case1/ref_image.png"
 test_prompt = "An old-fashioned European village with thatched roofs on the houses."
 output_dir = "./output/wan25"
 
-wan25_pipeline = Wan25Pipeline.from_pretrained(
-    base_url="https://dashscope.aliyuncs.com/api/v1", 
-    api_key="api_key"
+wan25_pipeline = Wan2p5Pipeline.api_init(
+    endpoint="your endpoint", 
+    api_key="your apikey"
 )
 
 result = wan25_pipeline(
     prompt=test_prompt,
-    # reference_image=image_path,  # 提供图像则自动使用 i2av
+    reference_image=image_path,  # 提供图像则自动使用 i2av
 )
 
 # 处理并保存结果

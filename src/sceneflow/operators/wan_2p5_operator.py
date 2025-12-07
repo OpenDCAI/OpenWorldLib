@@ -1,5 +1,6 @@
 from PIL import Image
 from typing import Union, Optional, Dict, Any
+from pathlib import Path
 import mimetypes
 import base64
 import io
@@ -7,7 +8,7 @@ import io
 from .base_operator import BaseOperator
 
 
-def encode_file(image_input: Union[str, Image.Image]) -> str:
+def encode_file(image_input: Union[str, Path, Image.Image]) -> str:
     '''
     将图片编码为base64 格式
     
@@ -25,18 +26,23 @@ def encode_file(image_input: Union[str, Image.Image]) -> str:
         image_input.save(buffer, format='PNG')
         image_bytes = buffer.getvalue()
         mime_type = 'image/png'
-    elif isinstance(image_input, str):
-        mime_type, _ = mimetypes.guess_type(image_input)
+    elif isinstance(image_input, (str, Path)):
+        img_path = Path(image_input)
+        mime_type, _ = mimetypes.guess_type(img_path)
         if not mime_type or not mime_type.startswith("image/"):
             raise ValueError("不支持或无法识别的图像格式")
-        with open(image_input, "rb") as image_file:
+        if not img_path.exists():
+            raise FileNotFoundError(f"Image file not found: {img_path}")
+        with open(img_path, "rb") as image_file:
             image_bytes = image_file.read()
+    else:
+        raise TypeError("image_input 必须是文件路径(Path/str)或 PIL Image")
     
     encoded_string = base64.b64encode(image_bytes).decode('utf-8')
     return f"data:{mime_type};base64,{encoded_string}"
 
 
-class Wan25Operator(BaseOperator):
+class Wan2p5Operator(BaseOperator):
     """
     Wan2.5 数据处理 Operator
     
@@ -56,33 +62,22 @@ class Wan25Operator(BaseOperator):
         """
         if operation_types is None:
             operation_types = ["image_processing", "prompt_processing"]
-        super(Wan25Operator, self).__init__(operation_types)
+        super(Wan2p5Operator, self).__init__(operation_types)
         
         # 初始化交互模板
         self.interaction_template = ["text_prompt", "image_prompt", "multimodal_prompt"]
         self.interaction_template_init()
     
-    def check_interaction(self, interaction):
-        """检查交互类型是否有效"""
-        if not isinstance(interaction, str):
-            raise TypeError(f"Invalid interaction")
-        return True
-    
-    def get_interaction(self, interaction):
-        """获取交互类型"""
-        if self.check_interaction(interaction):
-            self.current_interaction = interaction
-    
-    def process_image(self, image_input: Union[str, Image.Image]) -> str:
+    def process_image(self, image_input: Union[str, Path, Image.Image]) -> str:
         """
         编码图像为base64格式
         """
         return encode_file(image_input)
     
-    def process_interaction(
+    def process_perception(
         self,
         prompt: str,
-        reference_image: Optional[Union[str, Image.Image]] = None,
+        reference_image: Optional[Union[str, Image.Image, Path]] = None,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -99,15 +94,22 @@ class Wan25Operator(BaseOperator):
                 - encoded_image: 编码后的图像（如果有）
                 - reference_image: 原始参考图像（如果有）
         """
-        self.get_interaction(prompt)
+        # 简单检查 prompt 类型
+        if not isinstance(prompt, str):
+            raise TypeError(f"Prompt must be a string, got {type(prompt)}")
+        
         result: Dict[str, Any] = {
-            "prompt": self.current_interaction,
+            "prompt": prompt,
             "encoded_image": None,
             "reference_image": None
         }
         
-        # 处理图像（如果提供）
+        # 简单判断路径是否存在
         if reference_image is not None:
+            if isinstance(reference_image, (str, Path)):
+                img_path = Path(reference_image)
+                if not img_path.exists():
+                    raise FileNotFoundError(f"Image file not found: {reference_image}")
             result["encoded_image"] = self.process_image(reference_image)
             result["reference_image"] = reference_image
         

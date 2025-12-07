@@ -1,6 +1,6 @@
 import sys 
 sys.path.append("..") 
-from src.sceneflow.pipelines.sora2.pipeline_sora2 import Sora2Pipeline
+from src.sceneflow.pipelines.sora.pipeline_sora2 import Sora2Pipeline
 import os
 import time
 
@@ -130,9 +130,9 @@ test_prompt = "An old-fashioned European village with thatched roofs on the hous
 output_dir = "./output/sora2"
 
 # 初始化 pipeline
-sora2_pipeline = Sora2Pipeline.from_pretrained(
-    base_url="https://api.openai.com/v1", 
-    api_key="your api key"
+sora2_pipeline = Sora2Pipeline.api_init(
+    endpoint="your endpoint", 
+    api_key="your apikey"
 )
 
 # 使用 __call__ 方法（推荐，统一接口）
