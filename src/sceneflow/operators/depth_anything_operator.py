@@ -112,38 +112,45 @@ class DepthAnythingOperator(BaseOperator):
             depth[None], target_size, mode="bilinear", align_corners=False
         )[0, 0]
     
-    def load_and_preprocess_image(
+    def process_perception(
         self,
-        input_image: Union[str, np.ndarray, torch.Tensor]
+        input_signal: Union[str, np.ndarray, torch.Tensor]
     ) -> np.ndarray:
         """
-        Load and preprocess image from various input types.
+        Process visual signal (image) for real-time interactive updates.
+        This function handles loading and preprocessing of images from various input types.
         
         Args:
-            input_image: Image path, numpy array, or torch tensor
-            
+            input_signal: Visual input signal - can be:
+                - Image file path (str)
+                - Numpy array (H, W, 3) in RGB or BGR format
+                - Torch tensor (C, H, W) or (1, C, H, W) in CHW format
+                
         Returns:
-            Preprocessed RGB image array (normalized to [0, 1])
+            Preprocessed RGB image array (normalized to [0, 1]) with shape (H, W, 3)
+            
+        Raises:
+            ValueError: If image cannot be loaded or processed
         """
-        if isinstance(input_image, torch.Tensor):
+        if isinstance(input_signal, torch.Tensor):
             # Assume tensor is in CHW format, convert to numpy
-            if input_image.dim() == 3:
-                image_rgb = input_image.permute(1, 2, 0).cpu().numpy()
+            if input_signal.dim() == 3:
+                image_rgb = input_signal.permute(1, 2, 0).cpu().numpy()
             else:
-                image_rgb = input_image[0].permute(1, 2, 0).cpu().numpy()
+                image_rgb = input_signal[0].permute(1, 2, 0).cpu().numpy()
             if image_rgb.max() > 1.0:
                 image_rgb = image_rgb / 255.0
-        elif isinstance(input_image, np.ndarray):
-            image_rgb = input_image / 255.0 if input_image.max() > 1.0 else input_image
+        elif isinstance(input_signal, np.ndarray):
+            image_rgb = input_signal / 255.0 if input_signal.max() > 1.0 else input_signal
             # Convert BGR to RGB if needed (heuristic: if first channel mean > last channel mean)
             if len(image_rgb.shape) == 3 and image_rgb.shape[2] == 3:
                 if image_rgb[..., 0].mean() > image_rgb[..., 2].mean():
                     image_rgb = image_rgb[..., ::-1]
         else:
             # Assume it's a file path
-            raw_image = cv2.imread(input_image)
+            raw_image = cv2.imread(input_signal)
             if raw_image is None:
-                raise ValueError(f"Could not read image from {input_image}")
+                raise ValueError(f"Could not read image from {input_signal}")
             image_rgb = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0
         
         return image_rgb
