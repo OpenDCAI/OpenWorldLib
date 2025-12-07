@@ -17,6 +17,8 @@ import torch.distributed
 
 from einops import rearrange
 import torchvision
+import os
+from huggingface_hub import snapshot_download
 
 ACTION_DICT = {"w": "forward", "a": "left", "d": "right", "s": "backward", "left_rot":"left_rot", "right_rot":"right_rot", "up_rot":"up_rot", "down_rot":"down_rot",}
             
@@ -455,11 +457,22 @@ class HunyuanGameCraftSynthesis(Inference):
     @classmethod
     def from_pretrained(cls, 
                         pretrained_model_path,
-                        model_base,
                         args,
                         device,
                         **kwargs):
-        return super().from_pretrained(pretrained_model_path, model_base, args, device, **kwargs)
+        
+        if os.path.isdir(pretrained_model_path):
+            model_root = pretrained_model_path
+        else:
+            # download from HuggingFace repo_id
+            print(f"Downloading weights from HuggingFace repo: {pretrained_model_path}")
+            model_root = snapshot_download(pretrained_model_path)
+            print(f"Model downloaded to: {model_root}")
+
+        model_base = f"{model_root}/stdmodels"
+        synthesis_t2v_model_path = f"{model_root}/gamecraft_models/mp_rank_00_model_states.pt"
+
+        return super().from_pretrained(synthesis_t2v_model_path, model_base, args, device, **kwargs)
 
     def get_rotary_pos_embed(self, video_length, height, width, concat_dict={}):
         target_ndim = 3
