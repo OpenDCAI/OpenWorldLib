@@ -32,8 +32,7 @@ class HunyuanGameCraftPipeline:
                         cpu_offload: bool = False,
                         seed: int = 250160,
                         **kwargs) -> "HunyuanGameCraftPipeline":
-        if synthesis_model_path is None:
-            synthesis_model_path = "tencent/Hunyuan-GameCraft-1.0"
+        
 
         args = parse_args()
         args.cpu_offload = cpu_offload
@@ -41,14 +40,13 @@ class HunyuanGameCraftPipeline:
 
         initialize_distributed(args.seed)
 
-        model_base = f"{synthesis_model_path}/stdmodels"
-        synthesis_t2v_model_path = f"{synthesis_model_path}/gamecraft_models/mp_rank_00_model_states.pt"
+        if synthesis_model_path is None:
+            synthesis_model_path = "tencent/Hunyuan-GameCraft-1.0"
 
         print(f"Loading HunyuanGameCraft synthesis model from {synthesis_model_path}...")
         
         synthesis_model = HunyuanGameCraftSynthesis.from_pretrained(
-            pretrained_model_path=synthesis_t2v_model_path,
-            model_base=model_base,
+            pretrained_model_path=synthesis_model_path,
             device=device if not args.cpu_offload else torch.device("cpu"),
             weight_dtype=weight_dtype,
             args=args,
