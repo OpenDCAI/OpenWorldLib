@@ -1,5 +1,6 @@
 import torch
 import os
+from dataclasses import dataclass
 from typing import Optional, Any, Union, Dict, List
 from pathlib import Path
 from loguru import logger
@@ -8,21 +9,23 @@ from ...operators.mmaudio_operator import MMAudioOperator
 from ...synthesis.audio_generation.mmaudio.mmaudio_synthesis import MMAudioSynthesis
 
 
-class Args:
-    variant = 'large_44k_v2'
-    video = None
-    prompt = None
-    negative_prompt = None
-    duration = 8.0
-    cfg_strength = 4.5
-    num_steps = 25
-    seed = 42
-    mask_away_clip = False
-    output = None
-    skip_video_composite = False
-    full_precision = False
+@dataclass
+class MMAudioArgs:
+    variant: str = 'large_44k_v2'
+    video: Optional[Union[str, Path]] = None
+    prompt: Optional[str] = None
+    negative_prompt: Optional[str] = None
+    duration: float = 8.0
+    cfg_strength: float = 4.5
+    num_steps: int = 25
+    seed: int = 42
+    mask_away_clip: bool = False
+    output: Optional[str] = None
+    skip_video_composite: bool = False
+    full_precision: bool = False
 
-args = Args()
+# 默认全局参数实例
+args = MMAudioArgs()
 
 class MMAudioPipeline:  
     """

@@ -1,6 +1,6 @@
 import sys
 sys.path.append("..") 
-from src.sceneflow.pipelines.mmaudio.pipeline_mmaudio import MMAudioPipeline, Args
+from src.sceneflow.pipelines.mmaudio.pipeline_mmaudio import MMAudioPipeline, MMAudioArgs
 from src.sceneflow.synthesis.audio_generation.mmaudio.mmaudio.eval_utils import make_video
 from pathlib import Path
 import torchaudio
@@ -52,30 +52,27 @@ def save_audio_result(result, output_dir, prompt, skip_video_composite=False):
 
 
 
-# 视频路径（可选，如果不提供则为 text-to-audio 模式）None
+# 视频路径（可选，如果不提供则为 text-to-audio 模式）则设置为None
 video_path = "./data/test_case1/test_video.mp4"  
-# video_path = None
-
 test_prompt = "A man plays guitar"
 output_dir = "./output/mmaudio"
 
-# 如果需要自定义参数，可以修改 Args
-custom_args = Args()
-custom_args.variant = 'large_44k_v2'  # 可选: 'small_16k', 'small_44k', 'medium_44k', 'large_44k', 'large_44k_v2'
-custom_args.full_precision = False    # True: float32, False: bfloat16
-custom_args.num_steps = 25
-custom_args.duration = 8.0
-custom_args.cfg_strength = 4.5
-custom_args.seed = 42
+args = MMAudioArgs(
+    variant='large_44k_v2', # 可选: 'small_16k', 'small_44k', 'medium_44k', 'large_44k', 'large_44k_v2'
+    full_precision=False,
+    num_steps=25,
+    duration=8.0,
+    cfg_strength=4.5,
+    seed=42,
+)
 
 pipeline = MMAudioPipeline.from_pretrained(
-    synthesis_args=custom_args,
+    synthesis_args=args,
     device=None,  # 自动检测设备 (cuda/mps/cpu)
 )
 
-# ==================== 运行推理 ====================
-logger.info(f"Generating audio for prompt: '{test_prompt}'")
 
+# mmaudio支持t2a和v2a下面分别是两种情况
 if video_path and Path(video_path).exists():
     logger.info(f"Using video: {video_path}")
     result = pipeline(

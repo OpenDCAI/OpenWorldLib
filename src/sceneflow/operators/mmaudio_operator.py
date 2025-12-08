@@ -198,37 +198,6 @@ class MMAudioOperator(BaseOperator):
         return video_info
 
 
-    def check_interaction(
-        self, 
-        video_path: Optional[Union[str, Path]], 
-        prompt: str, 
-        negative_prompt: str, 
-        duration: float,
-        **kwargs
-    ):
-        """
-        验证输入参数的合法性
-        
-        Args:
-            video_path: 视频路径
-            prompt: 文本提示
-            negative_prompt: 负面提示
-            duration: 持续时间
-        """
-        if video_path is not None:
-            video_path = Path(video_path) if isinstance(video_path, str) else video_path
-            if not video_path.exists():
-                raise FileNotFoundError(f"Video file not found: {video_path}")
-        
-        if duration <= 0:
-            raise ValueError(f"Duration must be positive, got {duration}")
-        
-        if not isinstance(prompt, str):
-            raise TypeError(f"Prompt must be string, got {type(prompt)}")
-            
-        if not isinstance(negative_prompt, str):
-            raise TypeError(f"Negative prompt must be string, got {type(negative_prompt)}")
-    
     def process_text(
         self, 
         prompt: str, 
@@ -248,42 +217,6 @@ class MMAudioOperator(BaseOperator):
         neg_prompts = [negative_prompt] if isinstance(negative_prompt, str) else negative_prompt
         return prompts, neg_prompts
 
-    def get_interaction(
-        self,
-        video: Optional[Union[str, Path]] = None,
-        prompt: str = "",
-        negative_prompt: str = "",
-        duration: float = 8.0,
-        mask_away_clip: bool = False,
-        load_all_frames: bool = True,
-        **kwargs
-    ):
-        """
-        将一次交互（视频 + 文本 + 其他控制参数）写入 current_interaction。
-
-        与其它 Operator 保持一致的交互获取逻辑：
-        - 先通过 check_interaction 做合法性检查；
-        - 再把本次交互保存到 self.current_interaction 中，供 process_interaction 使用。
-        """
-        # 先做合法性检查
-        self.check_interaction(video, prompt, negative_prompt, duration, **kwargs)
-
-        # 规范化 video 路径，避免后续重复判断
-        if video is not None and isinstance(video, str):
-            video = Path(video)
-
-        interaction: Dict[str, Any] = {
-            "video": video,
-            "prompt": prompt,
-            "negative_prompt": negative_prompt,
-            "duration": duration,
-            "mask_away_clip": mask_away_clip,
-            "load_all_frames": load_all_frames,
-            "extra_kwargs": kwargs,
-        }
-
-        self.current_interaction.append(interaction)
-    
     def process_perception(
         self, 
         video: Optional[Union[str, Path]] = None,
@@ -319,34 +252,18 @@ class MMAudioOperator(BaseOperator):
                 - duration: 实际音频时长
                 - video_info: VideoInfo 对象（如果有视频）
         """
-        # 如果显式传入了参数，则先登记本次交互
-        if any([video is not None, bool(prompt), bool(negative_prompt), bool(kwargs)]):
-            self.get_interaction(
-                video=video,
-                prompt=prompt,
-                negative_prompt=negative_prompt,
-                duration=duration,
-                mask_away_clip=mask_away_clip,
-                load_all_frames=load_all_frames,
-                **kwargs,
-            )
-
-        # 保证当前至少有一条待处理交互
-        if not self.current_interaction:
-            raise ValueError("No interaction to process, please call get_interaction first.")
-
-        # 取出最近一次交互并记录到历史
-        interaction = self.current_interaction[-1]
-        self.interaction_history.append(interaction)
-
-        # 从交互中解包参数
-        video = interaction["video"]
-        prompt = interaction["prompt"]
-        negative_prompt = interaction["negative_prompt"]
-        duration = interaction["duration"]
-        mask_away_clip = interaction["mask_away_clip"]
-        load_all_frames = interaction["load_all_frames"]
-        extra_kwargs = interaction.get("extra_kwargs", {}) or {}
+        # 参数校验（最小必要）
+        if video is not None:
+            video = Path(video) if isinstance(video, str) else video
+            if not video.exists():
+                raise FileNotFoundError(f"Video file not found: {video}")
+        if duration <= 0:
+            raise ValueError(f"Duration must be positive, got {duration}")
+        if not isinstance(prompt, str):
+            raise TypeError(f"Prompt must be string, got {type(prompt)}")
+        if not isinstance(negative_prompt, str):
+            raise TypeError(f"Negative prompt must be string, got {type(negative_prompt)}")
+        extra_kwargs = kwargs or {}
 
         # 处理视频（如果有）
         video_info = None
