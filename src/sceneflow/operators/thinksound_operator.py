@@ -26,12 +26,18 @@ class ThinkSoundOperator(BaseOperator):
         cot_dir: Union[str, Path] = "cot_coarse",
         results_dir: Union[str, Path] = "results",
         scripts_dir: Union[str, Path] = ".",
+        synchformer_ckpt_path: Union[str, Path] = "ckpts/synchformer_state_dict.pth",
         operation_types: list = None
     ):
         """
         初始化 ThinkSoundOperator
         
         Args:
+            video_dir: 视频目录
+            cot_dir: COT 目录
+            results_dir: 结果目录
+            scripts_dir: 脚本目录
+            synchformer_ckpt_path: Synchformer 模型路径
             operation_types: 操作类型列表
         """
         if operation_types is None:
@@ -44,58 +50,12 @@ class ThinkSoundOperator(BaseOperator):
         self.cot_dir = Path(cot_dir)
         self.results_dir = Path(results_dir)
         self.scripts_dir = Path(scripts_dir)
+        self.synchformer_ckpt_path = Path(synchformer_ckpt_path) if synchformer_ckpt_path else None
 
         self.video_dir.mkdir(parents=True, exist_ok=True)
         self.cot_dir.mkdir(parents=True, exist_ok=True)
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
-    def check_interaction(
-        self,
-        video_path: Union[str, Path],
-        title: str,
-        description: str,
-    ) -> bool:
-        """
-        检查一次 ThinkSound 交互是否有效：
-            - video_path 必须存在
-            - title / description 必须为非空字符串
-        """
-        if not isinstance(video_path, (str, Path)):
-            raise TypeError("video_path must be a str or Path")
-        video_path = Path(video_path)
-        if not video_path.exists():
-            raise FileNotFoundError(f"video_path not found: {video_path}")
-
-        if not isinstance(title, str) or not title.strip():
-            raise ValueError("title must be a non-empty string")
-        if not isinstance(description, str) or not description.strip():
-            raise ValueError("description must be a non-empty string")
-
-        return True
-
-    def get_interaction(
-        self,
-        video_path: Union[str, Path],
-        title: str,
-        description: str,
-    ) -> Dict[str, Any]:
-        """
-        记录当前交互信息，便于上层 pipeline 或日志使用。
-
-        为了与其它 Operator 保持一致：
-        - 将每次交互 append 到 BaseOperator.current_interaction（list）
-        - 返回本次交互的字典对象
-        """
-        if self.check_interaction(video_path, title, description):
-            interaction: Dict[str, Any] = {
-                "video_path": str(video_path),
-                "title": title,
-                "description": description,
-            }
-            self.current_interaction.append(interaction)
-            return interaction
-        raise RuntimeError("check_interaction failed but no exception was raised.")
-    
     #  视频转换与时长计算 
     def _prepare_video(self, video_path: Union[str, Path]) -> tuple[Path, float]:
         """
@@ -137,7 +97,9 @@ class ThinkSoundOperator(BaseOperator):
         #     "--duration_sec",
         #     str(int(duration_sec)),
         # ]
-        cmd = ["python", "/data0/hdl/sceneflow/SceneFlow/src/sceneflow/synthesis/audio_generation/thinksound/ThinkSound/extract_latents.py", "--duration_sec", str(int(duration_sec))]
+        cmd = ["python", "src/sceneflow/synthesis/audio_generation/thinksound/ThinkSound/extract_latents.py", "--duration_sec", str(int(duration_sec))]
+        if self.synchformer_ckpt_path and self.synchformer_ckpt_path.exists():
+            cmd.extend(["--synchformer_ckpt", str(self.synchformer_ckpt_path)])
         if use_half:
             cmd.append("--use_half")
         subprocess.run(cmd, check=True)
@@ -176,16 +138,17 @@ class ThinkSoundOperator(BaseOperator):
         device: str = "cuda",
         **kwargs
     ) -> Dict[str, Any]:
+        # 简单检查输入合法性
+        if not isinstance(video_path, (str, Path)):
+            raise TypeError("video_path must be a str or Path")
+        video_path = Path(video_path)
+        if not video_path.exists():
+            raise FileNotFoundError(f"video_path not found: {video_path}")
 
-        # 记录交互并写入 history
-        interaction = self.get_interaction(video_path, title, description)
-        self.interaction_history.append(interaction)
-
-        # 从最后一次交互中读取参数（与传参内容一致，保持行为不变）
-        last_interaction = self.current_interaction[-1]
-        video_path = last_interaction["video_path"]
-        title = last_interaction["title"]
-        description = last_interaction["description"]
+        if not isinstance(title, str) or not title.strip():
+            raise ValueError("title must be a non-empty string")
+        if not isinstance(description, str) or not description.strip():
+            raise ValueError("description must be a non-empty string")
 
         # 下面逻辑保持原有功能：视频准备、写 COT、提取特征、加载 npz
         temp_video, duration_sec = self._prepare_video(video_path)

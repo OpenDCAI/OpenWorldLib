@@ -12,11 +12,12 @@ from ...synthesis.audio_generation.thinksound.thinksound_synthesis import ThinkS
 @dataclass
 class ThinkSoundArgs:
     """ThinkSound 配置参数"""
-    model_config: str = "ThinkSound/configs/model_configs/thinksound.json"
+    model_config: str = "src/sceneflow/synthesis/audio_generation/thinksound/ThinkSound/ThinkSound/configs/model_configs/thinksound.json"
     # 主模型权重（对应 infer.sh 里的 ckpts/thinksound.ckpt）
     ckpt_dir: str = "ckpts/thinksound.ckpt"
     # VAE 权重（对应 infer.sh / defaults.ini 里的 ckpts/vae.ckpt）
     pretransform_ckpt_path: str = "ckpts/vae.ckpt"
+    synchformer_ckpt_path: str = "ckpts/synchformer_state_dict.pth"
     duration_sec: float = 8.0  # 用于初始化模型配置，可按需调整
     seed: int = 42
     compile: bool = False
@@ -57,6 +58,7 @@ class ThinkSoundPipeline:
     @classmethod
     def from_pretrained(
         cls, 
+        synthesis_model_path: str,
         synthesis_args: Optional[ThinkSoundArgs] = None, 
         device: str = None, 
         logger_obj=None,
@@ -73,18 +75,17 @@ class ThinkSoundPipeline:
         Returns:
             ThinkSoundPipeline 实例
         """
-        # 使用默认 args 如果未提供
         if synthesis_args is None:
             synthesis_args = ThinkSoundArgs()
         
         if logger_obj:
             logger_obj.info("Loading ThinkSound pipeline...")
         
-        # 加载 synthesis 模型
         if logger_obj:
             logger_obj.info("Loading ThinkSound synthesis model...")
         
         synthesis_model = ThinkSoundSynthesis.from_pretrained(
+            synthesis_model_path=synthesis_model_path,
             args=synthesis_args,
             device=device,
             logger_obj=logger_obj,
@@ -96,6 +97,7 @@ class ThinkSoundPipeline:
             cot_dir=synthesis_args.cot_dir,
             results_dir=synthesis_args.results_dir,
             scripts_dir=synthesis_args.scripts_dir,
+            synchformer_ckpt_path=synthesis_args.synchformer_ckpt_path,
         )
         
         pipeline = cls(

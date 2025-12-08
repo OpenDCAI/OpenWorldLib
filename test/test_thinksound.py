@@ -22,14 +22,10 @@ def save_audio_result(result, output_dir):
     sampling_rate = result["sampling_rate"]
     audio_id = result.get("id", "demo")
     
-    # 创建输出目录
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
-    
-    # 取第一个样本，直接用 int16 保存
-    # 原版 ThinkSound 约定 audio 维度为 [batch, channels, num_samples]
-    # torchaudio.save 会自动处理 int16，将其范围 [-32768, 32767] 映射到 [-1, 1]
-    waveform = audio[0]  # [channels, num_samples] int16
+
+    waveform = audio[0]
     
     save_path = output_path / f"{audio_id}.wav"
     torchaudio.save(str(save_path), waveform, sampling_rate)
@@ -37,23 +33,16 @@ def save_audio_result(result, output_dir):
     
     return str(save_path)
 
-
+# thinksound不允许为none，duration-sec必须是匹配的
 video_path = "/data0/hdl/sceneflow/SceneFlow/data/test_video_case1/talking_man.mp4"
-# thinksound不允许为none
 title = "play guitar"
 description = "A man is playing guitar gently"
-
-model_config = "/data0/hdl/sceneflow/SceneFlow/src/sceneflow/synthesis/audio_generation/thinksound/ThinkSound/ThinkSound/configs/model_configs/thinksound.json"
-ckpt_dir = "ckpts/thinksound_light.ckpt"
-pretransform_ckpt_path = "ckpts/vae.ckpt"
 output_dir = "./output/thinksound"
+pretrained_model_path = "FunAudioLLM/ThinkSound"
 
 args = ThinkSoundArgs(
-    model_config=model_config,
-    ckpt_dir=ckpt_dir,
-    pretransform_ckpt_path=pretransform_ckpt_path,
     duration_sec=3.0,
-    seed=100,
+    seed=42,
     compile=False,
     video_dir="videos",
     cot_dir="cot_coarse",
@@ -63,6 +52,7 @@ args = ThinkSoundArgs(
 
 
 pipeline = ThinkSoundPipeline.from_pretrained(
+    synthesis_model_path=pretrained_model_path,
     synthesis_args=args,
     device=None,  # 自动检测设备
 )

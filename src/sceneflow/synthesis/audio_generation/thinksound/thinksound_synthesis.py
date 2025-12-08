@@ -2,27 +2,24 @@
 from typing import Union, Optional, List, Tuple, Dict
 from pathlib import Path
 import os
+import json
+import re
 import time
 import random
 import logging
+from datetime import datetime
 
-import torch
-from loguru import logger
-
-from prefigure.prefigure import get_all_args, push_wandb_config
-import json
-import os
-import re
 import torch
 import torchaudio
-from lightning.pytorch import seed_everything
-import random
-from datetime import datetime
 import numpy as np
+from loguru import logger
+from lightning.pytorch import seed_everything
+from prefigure.prefigure import get_all_args, push_wandb_config
+from huggingface_hub import snapshot_download, hf_hub_download
+
 from .ThinkSound.ThinkSound.models import create_model_from_config
 from .ThinkSound.ThinkSound.models.utils import load_ckpt_state_dict, remove_weight_norm_from_model
 from .ThinkSound.ThinkSound.inference.sampling import sample, sample_discrete_euler
-from pathlib import Path
 
 
 def load_models(args, device, logger_obj):
@@ -92,6 +89,7 @@ class ThinkSoundSynthesis:
     @classmethod
     def from_pretrained(
         cls, 
+        synthesis_model_path: str,
         args, 
         device=None, 
         logger_obj=None, 
@@ -101,6 +99,7 @@ class ThinkSoundSynthesis:
         从预训练模型路径加载 ThinkSoundSynthesis
         
         Args:
+            synthesis_model_path: 模型路径，可以是本地目录路径或 HuggingFace repo_id
             args: 配置参数，包含 model_config, ckpt_dir, pretransform_ckpt_path 等
             device: 设备
             logger_obj: 日志记录器
@@ -109,8 +108,83 @@ class ThinkSoundSynthesis:
         Returns:
             ThinkSoundSynthesis 实例
         """
+        if os.path.isdir(synthesis_model_path):
+            model_root = synthesis_model_path
+            if logger_obj:
+                logger_obj.info(f"Using local model directory: {model_root}")
+            
+            # 假设模型文件在目录根目录或 ckpts 子目录中
+            if os.path.exists(os.path.join(model_root, "thinksound.ckpt")):
+                args.ckpt_dir = os.path.join(model_root, "thinksound.ckpt")
+            elif os.path.exists(os.path.join(model_root, "thinksound_light.ckpt")):
+                args.ckpt_dir = os.path.join(model_root, "thinksound_light.ckpt")
+            elif os.path.exists(os.path.join(model_root, "ckpts", "thinksound.ckpt")):
+                args.ckpt_dir = os.path.join(model_root, "ckpts", "thinksound.ckpt")
+            elif os.path.exists(os.path.join(model_root, "ckpts", "thinksound_light.ckpt")):
+                args.ckpt_dir = os.path.join(model_root, "ckpts", "thinksound_light.ckpt")
+            
+            # 更新 VAE 路径
+            if os.path.exists(os.path.join(model_root, "vae.ckpt")):
+                args.pretransform_ckpt_path = os.path.join(model_root, "vae.ckpt")
+            elif os.path.exists(os.path.join(model_root, "ckpts", "vae.ckpt")):
+                args.pretransform_ckpt_path = os.path.join(model_root, "ckpts", "vae.ckpt")
+            
+            # 更新 Synchformer 路径
+            if hasattr(args, 'synchformer_ckpt_path'):
+                if os.path.exists(os.path.join(model_root, "synchformer_state_dict.pth")):
+                    args.synchformer_ckpt_path = os.path.join(model_root, "synchformer_state_dict.pth")
+                elif os.path.exists(os.path.join(model_root, "ckpts", "synchformer_state_dict.pth")):
+                    args.synchformer_ckpt_path = os.path.join(model_root, "ckpts", "synchformer_state_dict.pth")
+
+        else:
+            if logger_obj:
+                logger_obj.info(f"Downloading weights from HuggingFace repo: {synthesis_model_path}")
+            else:
+                print(f"Downloading weights from HuggingFace repo: {synthesis_model_path}")
+            
+            download_dir = os.path.join(os.getcwd(), "hugid")
+            os.makedirs(download_dir, exist_ok=True)
+            
+            model_root = snapshot_download(synthesis_model_path, local_dir=download_dir)
+            
+            if logger_obj:
+                logger_obj.info(f"Model downloaded to: {model_root}")
+            else:
+                print(f"Model downloaded to: {model_root}")
+            
+            # 更新 args 中的路径
+            # 尝试查找模型文件（根据 HuggingFace 仓库的实际结构）
+            if os.path.exists(os.path.join(model_root, "thinksound.ckpt")):
+                args.ckpt_dir = os.path.join(model_root, "thinksound.ckpt")
+            elif os.path.exists(os.path.join(model_root, "thinksound_light.ckpt")):
+                args.ckpt_dir = os.path.join(model_root, "thinksound_light.ckpt")
+            elif os.path.exists(os.path.join(model_root, "ckpts", "thinksound.ckpt")):
+                args.ckpt_dir = os.path.join(model_root, "ckpts", "thinksound.ckpt")
+            elif os.path.exists(os.path.join(model_root, "ckpts", "thinksound_light.ckpt")):
+                args.ckpt_dir = os.path.join(model_root, "ckpts", "thinksound_light.ckpt")
+
+            
+            # 更新 VAE 路径
+            if os.path.exists(os.path.join(model_root, "vae.ckpt")):
+                args.pretransform_ckpt_path = os.path.join(model_root, "vae.ckpt")
+            elif os.path.exists(os.path.join(model_root, "ckpts", "vae.ckpt")):
+                args.pretransform_ckpt_path = os.path.join(model_root, "ckpts", "vae.ckpt")
+
+            
+            # 更新 Synchformer 路径
+            if hasattr(args, 'synchformer_ckpt_path'):
+                if os.path.exists(os.path.join(model_root, "synchformer_state_dict.pth")):
+                    args.synchformer_ckpt_path = os.path.join(model_root, "synchformer_state_dict.pth")
+                elif os.path.exists(os.path.join(model_root, "ckpts", "synchformer_state_dict.pth")):
+                    args.synchformer_ckpt_path = os.path.join(model_root, "ckpts", "synchformer_state_dict.pth")
+
+
         if logger_obj:
             logger_obj.info(f"Loading ThinkSound synthesis model from config: {args.model_config}")
+            logger_obj.info(f"Using checkpoint: {args.ckpt_dir}")
+            logger_obj.info(f"Using VAE checkpoint: {args.pretransform_ckpt_path}")
+            if hasattr(args, 'synchformer_ckpt_path'):
+                logger_obj.info(f"Using Synchformer checkpoint: {args.synchformer_ckpt_path}")
 
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
