@@ -110,6 +110,7 @@ for prompt in prompt_list:
     # autoregressive update
     image_path = model_helper.save_image(frames[-1], ...)
 ```
+
 WorldScore 仅需要「帧序列」和「元信息」，评测不会读取你的视频文件
 
 ### **output**
@@ -138,24 +139,23 @@ WorldScore 仅需要「帧序列」和「元信息」，评测不会读取你的
 
 ## **4. Metrics Specification**
 
-| Major Dimension     | Level-1 Metric (10)        | Code-Level Metric (11 classes)                       | Script Path                                                  |
-| ------------------- | -------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ |
-| **Controllability** | Camera Controllability     | `CameraErrorMetric`                                  | `worldscore/benchmark/third_party/camera_error_metrics.py`   |
-|                     | Object Controllability     | `ObjectDetectionMetric`                              | `worldscore/benchmark/third_party/object_detection_metrics.py` |
-|                     | Content Alignment          | `CLIPScoreMetric`                                    | `worldscore/benchmark/iqa_pytorch/clip_score_metrics.py`     |
-| **Quality**         | 3D Consistency             | `ReprojectionErrorMetric`                            | `worldscore/benchmark/third_party/reprojection_error_metrics.py` |
-|                     | Photometric Consistency    | `OpticalFlowAverageEndPointErrorMetric`              | `worldscore/benchmark/third_party/flow_aepe_metrics.py`      |
-|                     | Style Consistency          | `GramMatrixMetric`                                   | `worldscore/benchmark/third_party/gram_matrix_metrics.py`    |
-|                     | Subjective Quality         | `CLIPImageQualityAssessmentPlusMetric` (IQA)         | `worldscore/benchmark/iqa_pytorch/clip_iqa_metrics.py`       |
-|                     |                            | `IQACLIPAestheticScoreMetric` (Aesthetic)            | `worldscore/benchmark/iqa_pytorch/clip_aesthetic_metrics.py` |
-| **Dynamics**        | Motion Accuracy            | `MotionAccuracyMetric`                               | `worldscore/benchmark/third_party/motion_accuracy_metrics.py` |
-|                     | Motion Magnitude           | `OpticalFlowMetric`                                  | `worldscore/benchmark/third_party/flow_metrics.py`           |
-|                     | Motion Smoothness          | `MotionSmoothnessMetric`                             | `worldscore/benchmark/third_party/motion_smoothness_metrics.py` |
+| Major Dimension           | Level-1 Metric (10)     | Code-Level Metric (11 classes)                 | Script Path                                                        |
+| ------------------------- | ----------------------- | ---------------------------------------------- | ------------------------------------------------------------------ |
+| **Controllability** | Camera Controllability  | `CameraErrorMetric`                          | `worldscore/benchmark/third_party/camera_error_metrics.py`       |
+|                           | Object Controllability  | `ObjectDetectionMetric`                      | `worldscore/benchmark/third_party/object_detection_metrics.py`   |
+|                           | Content Alignment       | `CLIPScoreMetric`                            | `worldscore/benchmark/iqa_pytorch/clip_score_metrics.py`         |
+| **Quality**         | 3D Consistency          | `ReprojectionErrorMetric`                    | `worldscore/benchmark/third_party/reprojection_error_metrics.py` |
+|                           | Photometric Consistency | `OpticalFlowAverageEndPointErrorMetric`      | `worldscore/benchmark/third_party/flow_aepe_metrics.py`          |
+|                           | Style Consistency       | `GramMatrixMetric`                           | `worldscore/benchmark/third_party/gram_matrix_metrics.py`        |
+|                           | Subjective Quality      | `CLIPImageQualityAssessmentPlusMetric` (IQA) | `worldscore/benchmark/iqa_pytorch/clip_iqa_metrics.py`           |
+|                           |                         | `IQACLIPAestheticScoreMetric` (Aesthetic)    | `worldscore/benchmark/iqa_pytorch/clip_aesthetic_metrics.py`     |
+| **Dynamics**        | Motion Accuracy         | `MotionAccuracyMetric`                       | `worldscore/benchmark/third_party/motion_accuracy_metrics.py`    |
+|                           | Motion Magnitude        | `OpticalFlowMetric`                          | `worldscore/benchmark/third_party/flow_metrics.py`               |
+|                           | Motion Smoothness       | `MotionSmoothnessMetric`                     | `worldscore/benchmark/third_party/motion_smoothness_metrics.py`  |
 
 ---
 
 ## **5. Evaluation**
-
 
 ### **1. Register Your Model**
 

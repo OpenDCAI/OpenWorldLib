@@ -68,6 +68,9 @@
 - **WorldMirror** · [[Paper]](https://arxiv.org/pdf/2510.10726) [[Code]](#) · citation: 0 · github star: 0
 - **Skyfall-GS** · [[Paper]](https://arxiv.org/pdf/2510.15869) [[Code]](https://github.com/jayin92/skyfall-gs) · citation: 0 · github star: 402
 - **Worldgrow** · [[Paper]](https://arxiv.org/pdf/2510.21682) [[Code]](https://github.com/world-grow/WorldGrow) · citation: 0 · github star: 356
+* **Continuous 3D Perception Model with Persistent State (CUT3R)** · [[Paper]](https://arxiv.org/pdf/2501.12387) [[Code]](https://github.com/CUT3R/CUT3R) · citation: – · github star: 1.2k
+
+#### 4D+physical knowledge
 - **PhysDreamer** · [[Paper]](https://arxiv.org/pdf/2404.13026) [[Code]](https://github.com/a1600012888/PhysDreamer) · citation: 114 · github star: 594
 - **Physics3D** · [[Paper]](https://arxiv.org/pdf/2406.04338) [[Code]](https://github.com/liuff19/Physics3D) · citation: 39 · github star: 223
 - **DriveDreamer4D** · [[Paper]](https://arxiv.org/pdf/2410.13571) [[Code]](https://github.com/GigaAI-research/DriveDreamer4D) · citation: 62 · github star: 258
@@ -75,6 +78,9 @@
 - **OccSora** · [[Paper]](https://arxiv.org/pdf/2405.20337) [[Code]](https://github.com/wzzheng/OccSora) · citation: 55 · github star: 191
 - **DynamicCity** · [[Paper]](https://arxiv.org/pdf/2410.18084) [[Code]](https://github.com/3DTopia/DynamicCity) · citation: 16 · github star: 223
 - **Aether** · [[Paper]](https://arxiv.org/pdf/2503.18945) [[Code]](#) · citation: 36 · github star: 0
+
+#### Single-view video to 4D
+
 - **SEE4D** · [[Paper]](https://arxiv.org/pdf/2510.26796) [[Code]](#) · citation: 0 · github star: 0
 
 #### spatial intelligence
@@ -113,6 +119,19 @@
 
 - **ReCamMaster:** · [[Paper]](https://arxiv.org/pdf/2509.19296) [[Code]](https://github.com/nv-tlabs/lyra) · citation: 2 · github star: 591
 - **CamCloneMaster** · [[Paper]](https://arxiv.org/pdf/2506.03140) [[Code]](https://github.com/KlingTeam/CamCloneMaster) · citation: 1 · github star: 129
+
+</details>
+
+<details>
+<summary><h3 style="display:inline;">Memory</h3></summary><br>
+
+#### 模型记忆/知识表征
+
+- **LANGUAGE MODELS REPRESENT SPACE AND TIME**:  · [[Paper]](https://arxiv.org/pdf/2310.02207) [[Code]](#) · citation: 0 · github star: 0
+
+#### 视频生成memory
+
+- **Inferix: A Block-Diffusion based Next-Generation Inference Engine for World Simulation**: · [[Paper]](https://arxiv.org/pdf/2511.20714) [[Code]](https://github.com/alibaba-damo-academy/Inferix) · citation: 0 · github star: 84
 
 </details>
 
@@ -166,8 +185,8 @@
 * **MLLMs Need 3D-Aware Representation Supervision for Scene Understanding (3DRS)** · [[Paper]](https://arxiv.org/abs/2506.01946) [[Code]](https://github.com/Visual-AI/3DRS) · citation: – · github star: 122
 * **Diffusion Feedback Helps CLIP See Better (DIVA)** · [[Paper]](https://openreview.net/forum?id=tLFWU6izoA) [[Code]](https://github.com/baaivision/DIVA) · citation: – · github star: 295
 * **Learning from Videos for 3D World: Enhancing MLLMs with 3D Vision Geometry Priors** · [[Paper]](https://arxiv.org/pdf/2505.24625) [[Code]](https://github.com/LaVi-Lab/VG-LLM) · citation: – · github star: 172
-* **Continuous 3D Perception Model with Persistent State (CUT3R)** · [[Paper]](https://arxiv.org/pdf/2501.12387) [[Code]](https://github.com/CUT3R/CUT3R) · citation: – · github star: 1.2k
-
+* **Thinking by Doing** · [[Paper]](https://arxiv.org/pdf/2511.23476) [[Code]](#) · citation: - · github star: -
+* 
 #### 世界建模，可控生成
 
 * **Cambrian-S** · [[Paper]](https://arxiv.org/pdf/2511.04670) [[Code]](https://github.com/cambrian-mllm/cambrian-s) · citation: – · github star: 404
@@ -308,8 +327,11 @@
 </details>
 
 <details>
-<summary><h3 style="display:inline;">Datasets</h3></summary><br>
+
+<summary><h3 style="display:inline;">Agent</h3></summary><br>
+
 - **Lumine** · [[Paper]](https://arxiv.org/pdf/2511.08892) [[Code]](#) · citation: 0 · github star: 0
+
 </details>
 
 <details>
@@ -475,6 +497,7 @@
 - **nan** · [[Paper]](#) [[Code]](https://github.com/oahzxl/Awesome-Efficient-Video-Generation) · citation: 0 · github star: 40
 - **Advances in Feed-Forward 3D Reconstruction and View Synthesis: A Survey：** · [[Paper]](https://arxiv.org/pdf/2507.14501) [[Code]](#) · citation: 3 · github star: 0
 - **Awesome-World-Models** · [[Paper]](#) [[Code]](https://github.com/knightnemo/Awesome-World-Models) · citation: 0 · github star: 837
+- **3D representation** · [[Paper]](https://arxiv.org/pdf/2512.03422) [[Code]](#) · citation: 0 · github star: 0
 
 </details>
 
@@ -484,4 +507,5 @@
 <summary><h3 style="display:inline;">train</h3></summary><br>
 
 - **RLVR-World** · [[Paper]](https://arxiv.org/pdf/2505.13934) [[Code]](https://github.com/thuml/RLVR-World) · citation: 0 · github star: 149
+
 </details>
