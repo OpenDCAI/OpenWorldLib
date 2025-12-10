@@ -9,7 +9,10 @@ from kornia.morphology import erosion
 from util.midas_utils import dpt_transform, dpt_512_transform
 from util.segment_utils import refine_disp_with_segments as refine_disp_algo 
 from util.segment_utils import save_sam_anns
+from util.segment_utils import create_mask_generator
 from util.utils import save_depth_map, save_point_cloud_as_ply
+from midas.model_loader import load_model 
+from midas.transformers import OneFormerProcessor, OneFormerForUniversalSegmentation
 
 class WonderJourneyRepresentation:
     def __init__(self, depth_model, segment_model, segment_processor, mask_generator, device='cuda', **kwargs):
@@ -43,8 +46,26 @@ class WonderJourneyRepresentation:
 
     @classmethod
     def from_pretrained(cls, pretrained_model_path, device='cuda', **kwargs):
-        print("Loading Representation Models...")
-        return cls(None, None, None, None, device=device, **kwargs)
+        """
+        加载 MiDaS, OneFormer, SAM。
+        pretrained_model_path: 本地文件夹，包含 dpt_beit_large_512.pt
+        """
+        
+        print("Loading OneFormer...")
+        processor = OneFormerProcessor.from_pretrained("shi-labs/oneformer_coco_swin_large")
+        segment_model = OneFormerForUniversalSegmentation.from_pretrained("shi-labs/oneformer_coco_swin_large").to(device)
+
+        print("Loading MiDaS...")
+        midas_path = os.path.join(pretrained_model_path, "dpt_beit_large_512.pt") if os.path.isdir(pretrained_model_path) else "dpt_beit_large_512.pt"
+        if not os.path.exists(midas_path):
+            print(f"Warning: MiDaS weights not found at {midas_path}. Please download.")
+        
+        depth_model, _, _, _ = load_model(device, midas_path, 'dpt_beit_large_512', optimize=False)
+
+        print("Loading SAM...")
+        mask_generator = create_mask_generator() # 内部会加载 sam_vit_h_4b8939.pth
+
+        return cls(depth_model, segment_model, processor, mask_generator, device=device, **kwargs)
 
     def get_representation(self, data):
         return self.get_depth(data)

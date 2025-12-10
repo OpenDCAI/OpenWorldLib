@@ -8,6 +8,7 @@ class WonderJourneyOperator:
     def __init__(self, device='cuda', **kwargs):
         self.device = device
         
+        # 1. 定义交互模板
         self.interaction_template = {
             "movement": ["straight", "turn_right", "turn_left", "stop"],
             "text": str, 
@@ -20,6 +21,7 @@ class WonderJourneyOperator:
         self.predefined_cameras = [] # 存储预设轨迹
         self.use_predefined = False  # 是否开启用户上传轨迹模式
         
+        # 基础配置
         self.config = {
             "init_focal_length": 512,
             "forward_speed_multiplier": 0.05, 
@@ -53,11 +55,9 @@ class WonderJourneyOperator:
         elif i_type == "config":
             if content not in self.interaction_template["config"]:
                 raise ValueError(f"Config command '{content}' not in template")
-        
         return True
 
     def get_interaction(self, interaction):
-
         self.check_interaction(interaction)
         self.current_interaction.append(interaction)
         
@@ -69,15 +69,19 @@ class WonderJourneyOperator:
             paths = interaction.get("paths", {})
             self.load_predefined_trajectory(paths.get("intrinsics"), paths.get("extrinsics"))
             self.use_predefined = True
-            print("Switched to Predefined Trajectory Mode.")
             return
 
-        # 处理运动指令 (重置状态机以触发加减速逻辑)
         if i_type == "movement":
-            self.use_predefined = False 
+            self.use_predefined = False
             frames = interaction.get("frames", self.config["frames_per_scene"])
             
-            # 重置计数器
+            # 自定义角度支持
+            if "total_angle" in interaction:
+                angle_deg = interaction["total_angle"]
+                self.config["rotation_range_theta"] = np.deg2rad(angle_deg)
+            else:
+                self.config["rotation_range_theta"] = 0.05
+
             self.state["frame_counter"] = 0 
             self.state["total_frames"] = frames
             self.state["speed_up"] = True   
@@ -113,9 +117,6 @@ class WonderJourneyOperator:
 
     def load_predefined_trajectory(self, intrinsics_path, extrinsics_path):
         # FrameSyn.__init__ 中的 predefined 部分
-        if not intrinsics_path or not extrinsics_path:
-            raise ValueError("Intrinsics or Extrinsics path missing.")
-            
         intrinsics = np.load(intrinsics_path).astype(np.float32)
         extrinsics = np.load(extrinsics_path).astype(np.float32)
 
@@ -224,6 +225,23 @@ class WonderJourneyOperator:
         self.current_camera = next_camera
         
         return next_camera
+
+    def process_perception(self, multimodal_input):
+        """处理视觉、文本信号"""
+        print(f"[Operator] Processing perception signals...")
+        if "visual" in multimodal_input:
+            image = multimodal_input["visual"]
+            width = 512
+            if hasattr(image, "size"): width = image.size[0]
+            elif hasattr(image, "shape"): width = image.shape[-1]
+            self.config["init_focal_length"] = width
+            print(f"  - Visual: Set focal length to {width}")
+
+        if "text" in multimodal_input:
+            prompt = multimodal_input["text"].lower()
+            if "fast" in prompt: self.config["forward_speed_multiplier"] = 0.1
+            elif "slow" in prompt: self.config["forward_speed_multiplier"] = 0.02
+
 
     def delete_last_interaction(self):
         if self.current_interaction:

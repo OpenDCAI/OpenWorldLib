@@ -24,19 +24,24 @@ class WonderJourneyPipeline:
         self.device = self.representation.device
 
     @classmethod
-    def from_pretrained(
-        cls, 
-        pretrained_model_path: str, 
-        device: str = "cuda",
-        **kwargs
-    ):
-        raise NotImplementedError("Please implement specific model loading logic or use the constructor directly.")
+    def from_pretrained(cls, midas_path, device="cuda", **kwargs):
+        """
+        在这里对representation, reasoning, synthesis的pretrained模型进行加载
+        """
+        print(f"Initializing WonderJourney Pipeline from {pretrained_model_path}...")
+        operator = WonderJourneyOperator(device=device, **kwargs)
+        # 加载 MiDaS, SAM 等
+        representation = WonderJourneyRepresentation.from_pretrained(midas_path, device=device, **kwargs)
+        # 加载 SD
+        synthesis = WonderJourneySynthesis.from_pretrained(device=device, **kwargs)
+        memory = WonderJourneyMemory(device=self.device)
+        return cls(operator, representation, synthesis, memory)
 
     @torch.no_grad()
     def process(self, image: Image.Image, prompt: str, **kwargs):
         """
         Template 要求接口：单步处理
-        这里可以理解为生成下一帧的关键帧逻辑
+        生成下一帧的关键帧逻辑
         """
         pass
 
@@ -85,7 +90,7 @@ class WonderJourneyPipeline:
             valid_mask=None, 
             camera=self.operator.current_camera
         )
-        self.memory.update_point_cloud(new_pts, new_cols) # 存入 Memory
+        self.memory.update_point_cloud(new_pts, new_cols) 
 
         if enable_upsample:
              full_mask = torch.ones_like(depth)

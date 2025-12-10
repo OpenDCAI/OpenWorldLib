@@ -135,9 +135,7 @@ class WonderJourneySynthesis:
         ).to(self.device)
 
     @classmethod
-    def from_pretrained(cls, pretrained_model_path, device='cuda', **kwargs):
-        print(f"Loading Synthesis Models from {pretrained_model_path}...")
-        
+    def from_pretrained(cls, device='cuda', **kwargs):
         inpainter_pipeline = StableDiffusionInpaintPipeline.from_pretrained(
             pretrained_model_path,
             safety_checker=None,
