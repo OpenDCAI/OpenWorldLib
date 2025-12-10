@@ -144,5 +144,3 @@ output_text = processor.batch_decode(...)
 ```
 
 换其他模型时，只需改成它们自己的推理方式即可
-
----

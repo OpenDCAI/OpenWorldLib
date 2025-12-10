@@ -12,7 +12,7 @@
 
 **Benchmark Code Path**: `seephys/vlmeval`
 
-**Dataset Path**: `[download from huggingface](https://huggingface.co/datasets/SeePhys/SeePhys)`
+**Dataset Path**: [download from huggingface](https://huggingface.co/datasets/SeePhys/SeePhys)
 
 **Task Type**: Multimodal Reasoning / Physics QA
 （Open-ended, Text–Image Multimodal Reasoning）
