@@ -89,12 +89,10 @@ class Sora2Pipeline:
         processed_data: Dict[str, Any] = {}
 
         # 视文本为交互输入通过process_interaction处理
-        processed_interaction = self.operator.process_interaction(
-            prompt=prompt,
-            **kwargs
-        )
+        self.operator.get_interaction(prompt)
+        processed_interaction = self.operator.process_interaction()
         processed_data['prompt'] = processed_interaction['processed_prompt']
-        
+
         # 视图片为感知输入通过process_perception处理
         processed_perception = self.operator.process_perception(
             reference_image=reference_image,
