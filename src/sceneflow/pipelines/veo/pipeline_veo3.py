@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from multiprocessing import process
 from typing import Optional, Union, Dict, Any, List
 
 from PIL import Image
@@ -18,8 +19,8 @@ class Veo3Pipeline:
         self,
         operator: Optional[Veo3Operator] = None,
         synthesis_model: Optional[Veo3Synthesis] = None,
-        api_key: str = "your_api_key",
         endpoint: str = "",
+        api_key: str = "your_api_key",
     ):
         """
         初始化 Veo3Pipeline
@@ -122,8 +123,16 @@ class Veo3Pipeline:
         """
         if self.operator is None:
             raise ValueError("Operator is not initialized")
+
+        processed_data: Dict[str, Any] = {}
+
+        processed_interaction = self.operator.process_interaction(
+            prompt=prompt,
+            **kwargs
+        )
+        processed_data['prompt'] = processed_interaction['processed_prompt']
         
-        processed_data = self.operator.process_perception(
+        processed_perception = self.operator.process_perception(
             prompt=prompt,
             image=image,
             aspect_ratio=aspect_ratio,
@@ -139,7 +148,11 @@ class Veo3Pipeline:
             fps=fps,
             **kwargs
         )
-        
+
+        processed_data['user_content'] = processed_perception['user_content']
+        processed_data['image'] = processed_perception['image']
+        processed_data['reference_images'] = processed_perception['reference_images']
+
         return processed_data
 
     def __call__(

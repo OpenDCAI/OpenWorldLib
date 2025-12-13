@@ -10,13 +10,12 @@ from src.sceneflow.pipelines.veo.pipeline_veo3 import Veo3Pipeline
 
 
 image_path = "./data/test_case1/ref_image.png"
-output_path = "./output/veo3/generated.mp4"
 input_prompt = "An old-fashioned European village with thatched roofs on the houses."
 duration_seconds = 8
 
 veo3_pipeline = Veo3Pipeline.api_init(
-    api_key='your apikey',
-    endpoint='your endpoint')
+    endpoint='https://api.newcoin.top/v1',
+    api_key='your api key')
 
 result = veo3_pipeline(
     image=image_path,
@@ -24,4 +23,6 @@ result = veo3_pipeline(
     duration_seconds=duration_seconds
 )
 
-print('-------------result-------------', result)
+print(result)
+
+# download video from result 由于目前仅支持三方api，暂时没有实现统一的下载路径
