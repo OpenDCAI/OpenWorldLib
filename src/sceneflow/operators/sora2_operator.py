@@ -81,9 +81,23 @@ class Sora2Operator(BaseOperator):
         image_bytes, mime_type, filename = image_to_bytes(image_input)
         return (filename, image_bytes, mime_type)
 
+    def get_interaction(self, interaction):
+        if self.check_interaction(interaction):
+            self.current_interaction.append(interaction)
+
+    def check_interaction(self, interaction):
+        if not isinstance(interaction, str):
+            raise TypeError(f"Interaction must be a string, got {type(interaction)}")
+        return True
+
+    def process_interaction(self, prompt: str, **kwargs) -> Dict[str, Any]:
+        self.get_interaction(prompt)
+        return {
+            "processed_prompt": self.current_interaction[-1]
+        }
+    
     def process_perception(
         self,
-        prompt: str,
         reference_image: Optional[Union[str, Image.Image]] = None,
         **kwargs
     ) -> Dict[str, Any]:
@@ -91,22 +105,17 @@ class Sora2Operator(BaseOperator):
         处理交互输入，生成模型所需的输入格式
         
         Args:
-            prompt: 文本提示词
             reference_image: 参考图像（可选）
             **kwargs: 其他参数
             
         Returns:
             Dict 包含处理后的输入数据：
-                - prompt: 文本提示词
                 - encoded_image: 图像元组 (filename, bytes, mime_type)（如果有）
                 - reference_image: 原始参考图像（如果有）
         """
-        # 简单检查 prompt 类型
-        if not isinstance(prompt, str):
-            raise TypeError(f"Prompt must be a string, got {type(prompt)}")
+
         
         result: Dict[str, Any] = {
-            "prompt": prompt,
             "encoded_image": None,
             "reference_image": None
         }

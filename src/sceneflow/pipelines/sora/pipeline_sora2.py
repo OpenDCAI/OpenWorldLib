@@ -1,4 +1,6 @@
-from openai import OpenAI
+import sys
+import time
+from multiprocessing import process
 from PIL import Image
 from typing import Optional, Union, Dict, Any
 
@@ -84,12 +86,22 @@ class Sora2Pipeline:
         """
         if self.operator is None:
             raise ValueError("Operator is not initialized")
-        
-        processed_data = self.operator.process_perception(
+        processed_data: Dict[str, Any] = {}
+
+        # 视文本为交互输入通过process_interaction处理
+        processed_interaction = self.operator.process_interaction(
             prompt=prompt,
+            **kwargs
+        )
+        processed_data['prompt'] = processed_interaction['processed_prompt']
+        
+        # 视图片为感知输入通过process_perception处理
+        processed_perception = self.operator.process_perception(
             reference_image=reference_image,
             **kwargs
         )
+        processed_data['encoded_image'] = processed_perception['encoded_image']
+        processed_data['reference_image'] = processed_perception['reference_image']
         
         return processed_data
 
@@ -98,8 +110,11 @@ class Sora2Pipeline:
         prompt: str,
         reference_image: Optional[Union[str, Image.Image]] = None,
         size: str = "1280x720",
-        duration: int = 8,
+        duration: int = 4,
         task_type: str = "auto",
+        wait: bool = True,
+        poll_interval: int = 2,
+        max_retries: int = 600,
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -120,7 +135,7 @@ class Sora2Pipeline:
         )
         
         # 使用 synthesis 模型的 predict 方法进行推理
-        response = self.synthesis_model.predict(
+        result = self.synthesis_model.predict(
             processed_data=processed_data,
             task_type=task_type,
             size=size,
@@ -128,7 +143,82 @@ class Sora2Pipeline:
             **kwargs
         )
 
-        return response
+        if wait:
+            final_video = self._poll_video_status(
+                video=result["response"],
+                poll_interval=poll_interval,
+                max_retries=max_retries
+            )
+            result["response"] = final_video
+
+        return result
+
+    def _poll_video_status(self, video: Any, poll_interval: int = 2, max_retries: int = 600) -> Any:
+        """
+        轮询视频生成状态，直到完成或失败，返回最终视频对象
+        """
+        if self.synthesis_model is None or not hasattr(self.synthesis_model, "client"):
+            raise ValueError("Synthesis model client is not initialized")
+
+        openai_client = self.synthesis_model.client
+
+        completed_statuses = ("completed", "succeeded", "success", "done")
+        retry_count = 0
+
+        # 进度打印相关
+        bar_length = 30
+        progress_raw = getattr(video, "progress", 0)
+        progress = progress_raw if progress_raw is not None else 0
+
+        while (
+            video.status.lower() not in [s.lower() for s in completed_statuses]
+            and video.status.lower() not in ["failed", "error"]
+        ):
+            if retry_count >= max_retries:
+                print(f"\nFailed to poll, reached the maximum number of retries ({max_retries})")
+                return video
+
+            try:
+                video = openai_client.videos.retrieve(video.id)
+            except Exception as e:
+                print(f"\nFailed to get video status: {e}")
+                time.sleep(poll_interval)
+                retry_count += 1
+                continue
+
+            progress_raw = getattr(video, "progress", 0)
+            progress = progress_raw if progress_raw is not None else 0
+            status_lower = video.status.lower()
+
+            filled_length = int((progress / 100) * bar_length) if progress is not None else 0
+            bar = "=" * filled_length + "-" * (bar_length - filled_length)
+
+            if status_lower == "queued":
+                status_text = "Queued"
+            elif status_lower in ["submitted", "not_start"]:
+                status_text = "Submitted"
+            elif status_lower in ["in_progress", "processing", "running"]:
+                status_text = "Processing"
+            else:
+                status_text = video.status
+
+            progress_display = f"{progress:.1f}%" if progress is not None else "N/A"
+            sys.stdout.write(f"\r{status_text}: [{bar}] {progress_display} (Status: {video.status})")
+            sys.stdout.flush()
+
+            if status_lower in [s.lower() for s in completed_statuses]:
+                break
+
+            time.sleep(poll_interval)
+            retry_count += 1
+
+        sys.stdout.write("\n")
+
+        if video.status.lower() in ["failed", "error"]:
+            error_msg = getattr(getattr(video, "error", None), "message", "Unknown error")
+            print(f"Failed to generate video: {error_msg}")
+
+        return video
 
     def get_operator(self) -> Optional[Sora2Operator]:
         """获取 operator 实例"""

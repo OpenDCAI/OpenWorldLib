@@ -142,6 +142,21 @@ class Veo3Operator(BaseOperator):
                 content.append(to_data_url(last_frame))
 
         return content
+
+    def get_interaction(self, prompt: str):
+        if self.check_interaction(prompt):
+            self.current_interaction.append(prompt)
+
+    def check_interaction(self, prompt: str) -> bool:
+        if not isinstance(prompt, str):
+            raise TypeError(f"Prompt must be a string, got {type(prompt)}")
+        return True
+    
+    def process_interaction(self, prompt: str, **kwargs) -> Dict[str, Any]:
+        self.get_interaction(prompt)
+        return {
+            "processed_prompt": self.current_interaction[-1]
+        }
         
     
     def process_perception(
@@ -185,10 +200,7 @@ class Veo3Operator(BaseOperator):
                 - image: 主图像（如果有）
                 - reference_images: 参考图像列表（如果有）
         """
-        # 简单检查 prompt 类型
-        if not isinstance(prompt, str):
-            raise TypeError(f"Prompt must be a string, got {type(prompt)}")
-        
+
         # 简单判断路径是否存在
         def _check_path(img):
             if isinstance(img, (str, Path)):
@@ -225,7 +237,6 @@ class Veo3Operator(BaseOperator):
         )
         
         result: Dict[str, Any] = {
-            "prompt": prompt,
             "user_content": user_content,
             "image": _norm(image) if image is not None else None,
             "reference_images": [_norm(i) for i in reference_images] if reference_images else None,

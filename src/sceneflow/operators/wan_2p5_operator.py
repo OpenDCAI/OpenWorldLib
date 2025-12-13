@@ -74,9 +74,23 @@ class Wan2p5Operator(BaseOperator):
         """
         return encode_file(image_input)
     
+    def get_interaction(self, interaction):
+        if self.check_interaction(interaction):
+            self.current_interaction.append(interaction)
+
+    def check_interaction(self, interaction):
+        if not isinstance(interaction, str):
+            raise TypeError(f"Interaction must be a string, got {type(interaction)}")
+        return True
+
+    def process_interaction(self, prompt: str, **kwargs) -> Dict[str, Any]:
+        self.get_interaction(prompt)
+        return {
+            "processed_prompt": self.current_interaction[-1]
+        }
+    
     def process_perception(
         self,
-        prompt: str,
         reference_image: Optional[Union[str, Image.Image, Path]] = None,
         **kwargs
     ) -> Dict[str, Any]:
@@ -94,12 +108,7 @@ class Wan2p5Operator(BaseOperator):
                 - encoded_image: 编码后的图像（如果有）
                 - reference_image: 原始参考图像（如果有）
         """
-        # 简单检查 prompt 类型
-        if not isinstance(prompt, str):
-            raise TypeError(f"Prompt must be a string, got {type(prompt)}")
-        
         result: Dict[str, Any] = {
-            "prompt": prompt,
             "encoded_image": None,
             "reference_image": None
         }

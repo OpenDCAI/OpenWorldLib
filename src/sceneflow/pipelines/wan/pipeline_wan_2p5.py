@@ -2,6 +2,7 @@
 from PIL import Image
 from typing import Optional, Union, Dict, Any
 from pathlib import Path
+from http import HTTPStatus
 
 from ...operators.wan_2p5_operator import Wan2p5Operator
 from ...synthesis.visual_generation.wan.wan_2p5.wan_2p5_synthesis import Wan2p5Synthesis
@@ -104,12 +105,21 @@ class Wan2p5Pipeline:
         """
         if self.operator is None:
             raise ValueError("Operator is not initialized")
-        
-        processed_data = self.operator.process_perception(
+
+        processed_data:Dict[str, Any] = {}
+
+        processed_interaction = self.operator.process_interaction(
             prompt=prompt,
+            **kwargs
+        )  
+        processed_data['prompt'] = processed_interaction['processed_prompt']
+        
+        processed_perception = self.operator.process_perception(
             reference_image=reference_image,
             **kwargs
         )
+        processed_data['encoded_image'] = processed_perception['encoded_image']
+        processed_data['reference_image'] = processed_perception['reference_image']
         
         return processed_data
     
@@ -126,6 +136,8 @@ class Wan2p5Pipeline:
         prompt_extend: bool = True,
         watermark: bool = False,
         seed: Optional[int] = None,
+        save_content: bool = True,
+        output_dir: str = "./output/wan25",
         **kwargs
     ) -> Dict[str, Any]:
         """
@@ -150,6 +162,8 @@ class Wan2p5Pipeline:
                 - response: API响应对象
                 - task_type: 实际使用的任务类型
                 - prompt: 使用的提示词
+                - video_url: 视频URL（如果API调用成功）
+                - task_id: 任务ID（如果API调用成功）
         """
         if self.synthesis_model is None:
             raise ValueError("Synthesis model is not initialized")
@@ -178,6 +192,31 @@ class Wan2p5Pipeline:
             seed=seed,
             **kwargs
         )
+
+        # 提取视频信息（video_url 和 task_id）
+        response = result.get("response")
+        task_type = result.get("task_type")
+        
+        # 检查响应状态
+        if response and hasattr(response, 'status_code') and response.status_code == HTTPStatus.OK:
+            print(f"API调用成功，状态码: {response.status_code}")
+            
+            video_url = None
+            task_id = None
+            if hasattr(response, 'output') and response.output:
+                output_data = response.output
+                video_url = output_data.get('video_url')
+                task_id = output_data.get('task_id')
+            
+            result['video_url'] = video_url
+            result['task_id'] = task_id
+        else:
+            if response and hasattr(response, 'status_code'):
+                print(f"API调用失败，状态码: {response.status_code}")
+                if hasattr(response, 'message'):
+                    print(f"错误信息: {response.message}")
+            result['video_url'] = None
+            result['task_id'] = None
         
         return result
     
