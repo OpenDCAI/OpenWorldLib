@@ -48,6 +48,7 @@
 - **DA2** · [[Paper]](https://arxiv.org/pdf/2509.26618) [[Code]](https://github.com/EnVision-Research/DA-2) · citation: 1 · github star: 201
 - **EvoWorld** · [[Paper]](https://arxiv.org/pdf/2510.01183) [[Code]](https://github.com/JiahaoPlus/EvoWorld) · citation: 0 · github star: 49
 - **omniVGGT** · [[Paper]](https://arxiv.org/pdf/2511.10560) [[Code]](https://github.com/livioni/omnivggt-offcial) · citation: 0 · github star: 173
+- **MakeAnything** · [[Paper]](https://arxiv.org/pdf/2502.01572) [[Code]](https://github.com/showlab/MakeAnything) · citation: 0 · github star: 201
 
 </details>
 
@@ -68,9 +69,11 @@
 - **WorldMirror** · [[Paper]](https://arxiv.org/pdf/2510.10726) [[Code]](#) · citation: 0 · github star: 0
 - **Skyfall-GS** · [[Paper]](https://arxiv.org/pdf/2510.15869) [[Code]](https://github.com/jayin92/skyfall-gs) · citation: 0 · github star: 402
 - **Worldgrow** · [[Paper]](https://arxiv.org/pdf/2510.21682) [[Code]](https://github.com/world-grow/WorldGrow) · citation: 0 · github star: 356
+
 * **Continuous 3D Perception Model with Persistent State (CUT3R)** · [[Paper]](https://arxiv.org/pdf/2501.12387) [[Code]](https://github.com/CUT3R/CUT3R) · citation: – · github star: 1.2k
 
 #### 4D+physical knowledge
+
 - **PhysDreamer** · [[Paper]](https://arxiv.org/pdf/2404.13026) [[Code]](https://github.com/a1600012888/PhysDreamer) · citation: 114 · github star: 594
 - **Physics3D** · [[Paper]](https://arxiv.org/pdf/2406.04338) [[Code]](https://github.com/liuff19/Physics3D) · citation: 39 · github star: 223
 - **DriveDreamer4D** · [[Paper]](https://arxiv.org/pdf/2410.13571) [[Code]](https://github.com/GigaAI-research/DriveDreamer4D) · citation: 62 · github star: 258
@@ -187,6 +190,7 @@
 * **Learning from Videos for 3D World: Enhancing MLLMs with 3D Vision Geometry Priors** · [[Paper]](https://arxiv.org/pdf/2505.24625) [[Code]](https://github.com/LaVi-Lab/VG-LLM) · citation: – · github star: 172
 * **Thinking by Doing** · [[Paper]](https://arxiv.org/pdf/2511.23476) [[Code]](#) · citation: - · github star: -
 * 
+
 #### 世界建模，可控生成
 
 * **Cambrian-S** · [[Paper]](https://arxiv.org/pdf/2511.04670) [[Code]](https://github.com/cambrian-mllm/cambrian-s) · citation: – · github star: 404
@@ -431,6 +435,10 @@
 * **Mind the Gap: Benchmarking Spatial Reasoning in Vision-Language Models** · [[Paper]](https://arxiv.org/pdf/2503.19707) [[Code]](https://github.com/stogiannidis/srbench) · citation: 12 · github star: 16
 * **VisualTrans: A Benchmark for Real-World Visual Transformation Reasoning** · [[Paper]](https://arxiv.org/abs/2508.04043) [[Code]](#) · citation: 0 · github star: 0
 * **From Flatland to Space: Teaching Vision-Language Models to Perceive and Reason in 3D** · [[Paper]](https://arxiv.org/abs/2503.22976) [[Code]](https://github.com/LogosRoboticsGroup/SPAR) · citation: – · github star: 64
+
+#### reasoning
+
+* **Envision** · [[Paper]](https://arxiv.org/pdf/2512.01816) [[Code]](https://github.com/opendatalab-raiser/Envision) · citation: 0 · github star: 27
 
 #### physics
 
