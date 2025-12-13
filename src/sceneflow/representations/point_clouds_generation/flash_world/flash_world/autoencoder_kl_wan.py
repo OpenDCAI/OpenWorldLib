@@ -30,10 +30,113 @@ from diffusers.models.autoencoders.vae import DecoderOutput, DiagonalGaussianDis
 
 import einops
 
+# Import base components from wan_2p1 to avoid code duplication
+try:
+    # Use absolute import to avoid relative import complexity
+    from sceneflow.synthesis.visual_generation.wan.wan_2p1.modules.vae import (
+        CausalConv3d,
+        RMS_norm,
+        Upsample,
+        CACHE_T as WAN_CACHE_T,
+    )
+    # Use CACHE_T from wan_2p1 if available
+    CACHE_T = WAN_CACHE_T
+except ImportError:
+    # Fallback to local definitions if import fails
+    CACHE_T = 2
+    CausalConv3d = None
+    RMS_norm = None
+    Upsample = None
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
-CACHE_T = 2
+# Adapter classes to make wan_2p1 components compatible with autoencoder_kl_wan interface
+if CausalConv3d is not None:
+    class WanCausalConv3d(CausalConv3d):
+        """Adapter for CausalConv3d from wan_2p1 with compatibility improvements."""
+        def forward(self, x, cache_x=None):
+            padding = list(self._padding)
+            if cache_x is not None and self._padding[4] > 0:
+                cache_x = cache_x.to(x.device)
+                x = torch.cat([cache_x, x], dim=2)
+                padding[4] -= cache_x.shape[2]
+            if any(padding):
+                x = F.pad(x, padding)
+            return super().forward(x)
+else:
+    # Fallback: define WanCausalConv3d locally if import failed
+    class WanCausalConv3d(nn.Conv3d):
+        r"""
+        A custom 3D causal convolution layer with feature caching support.
+        """
+        def __init__(
+            self,
+            in_channels: int,
+            out_channels: int,
+            kernel_size: Union[int, Tuple[int, int, int]],
+            stride: Union[int, Tuple[int, int, int]] = 1,
+            padding: Union[int, Tuple[int, int, int]] = 0,
+        ) -> None:
+            super().__init__(
+                in_channels=in_channels,
+                out_channels=out_channels,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
+            )
+            self._padding = (self.padding[2], self.padding[2], self.padding[1], self.padding[1], 2 * self.padding[0], 0)
+            self.padding = (0, 0, 0)
+
+        def forward(self, x, cache_x=None):
+            padding = list(self._padding)
+            if cache_x is not None and self._padding[4] > 0:
+                cache_x = cache_x.to(x.device)
+                x = torch.cat([cache_x, x], dim=2)
+                padding[4] -= cache_x.shape[2]
+            if any(padding):
+                x = F.pad(x, padding)
+            return super().forward(x)
+
+if RMS_norm is not None:
+    class WanRMS_norm(RMS_norm):
+        """Adapter for RMS_norm from wan_2p1 with weight parameter support."""
+        def __init__(self, dim: int, channel_first: bool = True, images: bool = True, weight: bool = True, bias: bool = False) -> None:
+            super().__init__(dim, channel_first=channel_first, images=images, bias=bias)
+            if not weight:
+                self.gamma = 1.0
+        
+        def forward(self, x):
+            return F.normalize(x, dim=(1 if self.channel_first else -1)).mul_(self.scale * self.gamma).add_(self.bias)
+else:
+    # Fallback: define WanRMS_norm locally if import failed
+    class WanRMS_norm(nn.Module):
+        r"""
+        A custom RMS normalization layer.
+        """
+        def __init__(self, dim: int, channel_first: bool = True, images: bool = True, weight: bool = True, bias: bool = False) -> None:
+            super().__init__()
+            broadcastable_dims = (1, 1, 1) if not images else (1, 1)
+            shape = (dim, *broadcastable_dims) if channel_first else (dim,)
+            self.channel_first = channel_first
+            self.scale = dim**0.5
+            self.gamma = nn.Parameter(torch.ones(shape)) if weight else 1.0
+            self.bias = nn.Parameter(torch.zeros(shape)) if bias else 0.0
+
+        def forward(self, x):
+            return F.normalize(x, dim=(1 if self.channel_first else -1)).mul_(self.scale * self.gamma).add_(self.bias)
+
+if Upsample is not None:
+    class WanUpsample(Upsample):
+        """Adapter for Upsample from wan_2p1."""
+        pass
+else:
+    # Fallback: define WanUpsample locally if import failed
+    class WanUpsample(nn.Upsample):
+        r"""
+        Perform upsampling while ensuring the output tensor has the same data type as the input.
+        """
+        def forward(self, x):
+            return super().forward(x.float()).type_as(x)
 
 class AvgDown3D(nn.Module):
 
@@ -189,96 +292,6 @@ class DupUp3D(nn.Module):
                 x.size(6) * self.factor_s,
             )
             return x
-
-class WanCausalConv3d(nn.Conv3d):
-    r"""
-    A custom 3D causal convolution layer with feature caching support.
-
-    This layer extends the standard Conv3D layer by ensuring causality in the time dimension and handling feature
-    caching for efficient inference.
-
-    Args:
-        in_channels (int): Number of channels in the input image
-        out_channels (int): Number of channels produced by the convolution
-        kernel_size (int or tuple): Size of the convolving kernel
-        stride (int or tuple, optional): Stride of the convolution. Default: 1
-        padding (int or tuple, optional): Zero-padding added to all three sides of the input. Default: 0
-    """
-
-    def __init__(
-        self,
-        in_channels: int,
-        out_channels: int,
-        kernel_size: Union[int, Tuple[int, int, int]],
-        stride: Union[int, Tuple[int, int, int]] = 1,
-        padding: Union[int, Tuple[int, int, int]] = 0,
-    ) -> None:
-        super().__init__(
-            in_channels=in_channels,
-            out_channels=out_channels,
-            kernel_size=kernel_size,
-            stride=stride,
-            padding=padding,
-        )
-
-        # Set up causal padding
-        self._padding = (self.padding[2], self.padding[2], self.padding[1], self.padding[1], 2 * self.padding[0], 0)
-        self.padding = (0, 0, 0)
-
-    def forward(self, x, cache_x=None):
-        padding = list(self._padding)
-        if cache_x is not None and self._padding[4] > 0:
-            cache_x = cache_x.to(x.device)
-            x = torch.cat([cache_x, x], dim=2)
-            padding[4] -= cache_x.shape[2]
-
-        if any(padding):
-            x = F.pad(x, padding)
-        
-        # print(x.shape)
-        return super().forward(x)
-
-
-class WanRMS_norm(nn.Module):
-    r"""
-    A custom RMS normalization layer.
-
-    Args:
-        dim (int): The number of dimensions to normalize over.
-        channel_first (bool, optional): Whether the input tensor has channels as the first dimension.
-            Default is True.
-        images (bool, optional): Whether the input represents image data. Default is True.
-        bias (bool, optional): Whether to include a learnable bias term. Default is False.
-    """
-
-    def __init__(self, dim: int, channel_first: bool = True, images: bool = True, weight: bool = True, bias: bool = False) -> None:
-        super().__init__()
-        broadcastable_dims = (1, 1, 1) if not images else (1, 1)
-        shape = (dim, *broadcastable_dims) if channel_first else (dim,)
-
-        self.channel_first = channel_first
-        self.scale = dim**0.5
-        self.gamma = nn.Parameter(torch.ones(shape)) if weight else 1.0
-        self.bias = nn.Parameter(torch.zeros(shape)) if bias else 0.0
-
-    def forward(self, x):
-        return F.normalize(x, dim=(1 if self.channel_first else -1)).mul_(self.scale * self.gamma).add_(self.bias)
-
-
-class WanUpsample(nn.Upsample):
-    r"""
-    Perform upsampling while ensuring the output tensor has the same data type as the input.
-
-    Args:
-        x (torch.Tensor): Input tensor to be upsampled.
-
-    Returns:
-        torch.Tensor: Upsampled tensor with the same data type as the input.
-    """
-
-    def forward(self, x):
-        return super().forward(x.float()).type_as(x)
-
 
 class WanResample(nn.Module):
     r"""
