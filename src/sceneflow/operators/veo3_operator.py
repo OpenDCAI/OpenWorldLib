@@ -152,10 +152,13 @@ class Veo3Operator(BaseOperator):
             raise TypeError(f"Prompt must be a string, got {type(prompt)}")
         return True
     
-    def process_interaction(self, prompt: str, **kwargs) -> Dict[str, Any]:
-        self.get_interaction(prompt)
+    def process_interaction(self, **kwargs) -> Dict[str, Any]:
+        if len(self.current_interaction) == 0:
+            raise ValueError("No interaction to process")
+        now_interaction = self.current_interaction[-1]
+        self.interaction_history.append(now_interaction)
         return {
-            "processed_prompt": self.current_interaction[-1]
+            "processed_prompt": now_interaction
         }
         
     

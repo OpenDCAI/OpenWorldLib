@@ -126,10 +126,8 @@ class Veo3Pipeline:
 
         processed_data: Dict[str, Any] = {}
 
-        processed_interaction = self.operator.process_interaction(
-            prompt=prompt,
-            **kwargs
-        )
+        self.operator.get_interaction(prompt)
+        processed_interaction = self.operator.process_interaction()
         processed_data['prompt'] = processed_interaction['processed_prompt']
         
         processed_perception = self.operator.process_perception(
