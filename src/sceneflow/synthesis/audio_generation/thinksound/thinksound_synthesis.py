@@ -211,7 +211,6 @@ class ThinkSoundSynthesis:
     def predict(
         self, 
         processed_data: Dict[str, any], 
-        seed: Optional[int] = None,
         cfg_scale: float = 5.0,
         num_steps: int = 24,
         **kwargs
