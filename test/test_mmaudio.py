@@ -7,7 +7,7 @@ import torchaudio
 from loguru import logger
 
 
-def save_audio_result(result, output_dir, prompt, skip_video_composite=False):
+def save_audio_result(result, output_dir, skip_video_composite=False):
     """
     保存音频生成结果，可选合成视频
     
@@ -22,39 +22,26 @@ def save_audio_result(result, output_dir, prompt, skip_video_composite=False):
     """
     audio = result["audio"]
     sampling_rate = result["sampling_rate"]
-    video_info = result.get("video_info")
-    video_path_input = result.get("video_path_input")
+    video_info = result["video_info"]
+    video_path_input = result["video_path_input"]
     
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
+    audio_save_path = output_path / f"mmaudio_testoutput.flac"
     
-    
-    # 确定音频文件名
-    if video_path_input is not None:
-        video_stem = Path(video_path_input).stem
-        audio_save_path = output_path / f"{video_stem}.flac"
-    else:
-        # 使用 prompt 生成文件名（安全处理）
-        safe_filename = prompt.replace(' ', '_').replace('/', '_').replace('.', '')[:50]
-        audio_save_path = output_path / f"{safe_filename}.flac"
-    
-    # 保存音频
     torchaudio.save(str(audio_save_path), audio, sampling_rate)
     logger.info(f"Audio saved to {audio_save_path}")
     
     # 合成视频（如果有视频输入且未跳过）
     if video_info is not None and video_path_input is not None and not skip_video_composite:
-        video_stem = Path(video_path_input).stem
-        video_save_path = output_path / f"{video_stem}.mp4"
+        video_save_path = output_path / f"mmaudio_testoutput.mp4"
         make_video(video_info, str(video_save_path), audio, sampling_rate=sampling_rate)
         logger.info(f"Video with audio saved to {video_save_path}")
     
 
-
-
 # 视频路径（可选，如果不提供则为 text-to-audio 模式）则设置为None
 video_path = "./data/test_case1/test_video.mp4"  
-test_prompt = "A man plays guitar"
+test_prompt = "A man plays guitar."
 output_dir = "./output/mmaudio"
 
 args = MMAudioArgs(
@@ -68,9 +55,8 @@ args = MMAudioArgs(
 
 pipeline = MMAudioPipeline.from_pretrained(
     synthesis_args=args,
-    device=None,  # 自动检测设备 (cuda/mps/cpu)
+    device='cuda',  # 可以填写None则进入自动检测设备（cuda/mps/cpu），如果填写了则使用填写的设备
 )
-
 
 # mmaudio支持t2a和v2a下面分别是两种情况
 if video_path and Path(video_path).exists():
@@ -79,7 +65,7 @@ if video_path and Path(video_path).exists():
         video=video_path,
         prompt=test_prompt,
         negative_prompt="",
-        duration=5.0,
+        duration=8.0,
         cfg_strength=4.5,
         num_steps=25,
         seed=42,
@@ -91,7 +77,7 @@ else:
         video=None,
         prompt=test_prompt,
         negative_prompt="",
-        duration=5.0,
+        duration=8.0,
         cfg_strength=4.5,
         num_steps=25,
         seed=42,
@@ -100,6 +86,5 @@ else:
 save_audio_result(
     result=result,
     output_dir=output_dir,
-    prompt=test_prompt,
     skip_video_composite=False  # 是否跳过视频合成
 )

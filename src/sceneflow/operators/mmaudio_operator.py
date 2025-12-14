@@ -217,11 +217,56 @@ class MMAudioOperator(BaseOperator):
         neg_prompts = [negative_prompt] if isinstance(negative_prompt, str) else negative_prompt
         return prompts, neg_prompts
 
+    def check_interaction(
+        self,
+        prompt: str,
+        negative_prompt: str
+    ) -> bool:
+        """
+        检查交互输入
+        """
+        if not isinstance(prompt, str):
+            raise TypeError(f"Prompt must be string, got {type(prompt)}")
+        if not isinstance(negative_prompt, str):
+            raise TypeError(f"Negative prompt must be string, got {type(negative_prompt)}")
+        return True
+
+
+    def get_interaction(
+        self,
+        prompt: str,
+        negative_prompt: str
+    ) -> dict[str, str]:
+        """
+        获取交互输入
+        """
+
+        self.check_interaction(prompt, negative_prompt)
+        self.current_interaction.append({
+            "prompt": prompt,
+            "negative_prompt": negative_prompt,
+        })
+        return self.current_interaction
+
+    def process_interaction(self) -> dict[str, str]:
+        """
+        处理交互输入
+        """
+        if len(self.current_interaction) == 0:
+            raise ValueError("No interaction to process")
+        now_interaction = self.current_interaction[-1]
+        self.interaction_history.append(now_interaction)
+        prompt = now_interaction["prompt"]
+        negative_prompt = now_interaction["negative_prompt"]
+        prompts, neg_prompts = self.process_text(prompt, negative_prompt)
+        return {
+            "prompt":prompts,
+            "negative_prompt": neg_prompts,
+        }
+
     def process_perception(
         self, 
         video: Optional[Union[str, Path]] = None,
-        prompt: str = "",
-        negative_prompt: str = "",
         duration: float = 8.0,
         mask_away_clip: bool = False,
         load_all_frames: bool = True,
@@ -259,10 +304,6 @@ class MMAudioOperator(BaseOperator):
                 raise FileNotFoundError(f"Video file not found: {video}")
         if duration <= 0:
             raise ValueError(f"Duration must be positive, got {duration}")
-        if not isinstance(prompt, str):
-            raise TypeError(f"Prompt must be string, got {type(prompt)}")
-        if not isinstance(negative_prompt, str):
-            raise TypeError(f"Negative prompt must be string, got {type(negative_prompt)}")
         extra_kwargs = kwargs or {}
 
         # 处理视频（如果有）
@@ -286,15 +327,10 @@ class MMAudioOperator(BaseOperator):
             clip_frames = None
             sync_frames = None
         
-        # 处理文本
-        prompts, neg_prompts = self.process_text(prompt, negative_prompt)
-        
         # 构建返回数据
         processed_data = {
             "clip_frames": clip_frames,
             "sync_frames": sync_frames,
-            "prompt": prompts,
-            "negative_prompt": neg_prompts,
             "duration": duration,
             "video_info": video_info,  # 保存以便后续视频合成
         }

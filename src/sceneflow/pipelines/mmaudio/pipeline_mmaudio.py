@@ -123,15 +123,20 @@ class MMAudioPipeline:
         if self.operator is None:
             raise ValueError("Operator is not initialized")
         
-        # 通过 operator 处理输入
-        processed_data = self.operator.process_perception(
+        processed_data:Dict[str, Any] = {}
+
+        self.operator.get_interaction(prompt, negative_prompt)
+        processed_interaction = self.operator.process_interaction()
+        processed_data['prompt'] = processed_interaction['prompt']
+        processed_data['negative_prompt'] = processed_interaction['negative_prompt']
+
+        processed_perception = self.operator.process_perception(
             video=video,
-            prompt=prompt,
-            negative_prompt=negative_prompt,
             duration=duration,
             mask_away_clip=mask_away_clip,
             **kwargs
         )
+        processed_data.update(processed_perception)
         
         return processed_data
     
