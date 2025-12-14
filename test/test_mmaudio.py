@@ -7,7 +7,7 @@ import torchaudio
 from loguru import logger
 
 
-def save_audio_result(result, output_dir, skip_video_composite=False):
+def save_audio_result(result, skip_video_composite=False):
     """
     保存音频生成结果，可选合成视频
     
@@ -25,24 +25,18 @@ def save_audio_result(result, output_dir, skip_video_composite=False):
     video_info = result["video_info"]
     video_path_input = result["video_path_input"]
     
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    audio_save_path = output_path / f"mmaudio_testoutput.flac"
-    
+    audio_save_path = f"./output/mmaudio/mmaudio_testoutput.flac"
     torchaudio.save(str(audio_save_path), audio, sampling_rate)
-    logger.info(f"Audio saved to {audio_save_path}")
     
     # 合成视频（如果有视频输入且未跳过）
     if video_info is not None and video_path_input is not None and not skip_video_composite:
-        video_save_path = output_path / f"mmaudio_testoutput.mp4"
+        video_save_path = f"./output/mmaudio/mmaudio_testoutput.mp4"
         make_video(video_info, str(video_save_path), audio, sampling_rate=sampling_rate)
-        logger.info(f"Video with audio saved to {video_save_path}")
     
 
 # 视频路径（可选，如果不提供则为 text-to-audio 模式）则设置为None
 video_path = "./data/test_case1/test_video.mp4"  
 test_prompt = "A man plays guitar."
-output_dir = "./output/mmaudio"
 
 args = MMAudioArgs(
     variant='large_44k_v2', # 可选: 'small_16k', 'small_44k', 'medium_44k', 'large_44k', 'large_44k_v2'
@@ -85,6 +79,5 @@ else:
 
 save_audio_result(
     result=result,
-    output_dir=output_dir,
     skip_video_composite=False  # 是否跳过视频合成
 )
