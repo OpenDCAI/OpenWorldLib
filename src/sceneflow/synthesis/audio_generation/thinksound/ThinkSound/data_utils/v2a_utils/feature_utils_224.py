@@ -62,54 +62,17 @@ class FeaturesUtils(nn.Module):
     ):
         super().__init__()
 
-        # if enable_conditions:
-        #     self.clip_model = AutoModel.from_pretrained("facebook/metaclip-h14-fullcc2.5b")
-        #     self.clip_model = patch_clip(self.clip_model)
-        #     self.t5_tokenizer = AutoTokenizer.from_pretrained("google/t5-v1_1-xl")
-        #     self.t5_model = T5EncoderModel.from_pretrained("google/t5-v1_1-xl")
-        #     self.clip_processor = AutoProcessor.from_pretrained("facebook/metaclip-h14-fullcc2.5b")
-        #     # self.clip_preprocess = Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
-        #     #                                  std=[0.26862954, 0.26130258, 0.27577711])
-        #     self.synchformer = Synchformer()
-        #     self.synchformer.load_state_dict(
-        #         torch.load(synchformer_ckpt, weights_only=True, map_location='cpu'))
-
         if enable_conditions:
-            # >>> 本地路径配置 <<<
-            metaclip_path = "/data0/hdl/sceneflow/thinkclip"
-            t5_path = "/data0/hdl/sceneflow/t5"
-
-            # Load CLIP model and processor from local path
-            self.clip_model = AutoModel.from_pretrained(
-                metaclip_path,
-                local_files_only=True,
-                trust_remote_code=False  # unless required
-            )
+            self.clip_model = AutoModel.from_pretrained("facebook/metaclip-h14-fullcc2.5b")
             self.clip_model = patch_clip(self.clip_model)
-
-            # Load T5 tokenizer and model from local path
-            self.t5_tokenizer = AutoTokenizer.from_pretrained(
-                t5_path,
-                local_files_only=True
-            )
-            self.t5_model = T5EncoderModel.from_pretrained(
-                t5_path,
-                local_files_only=True
-            )
-
-            # Load CLIP processor (for image preprocessing)
-            # self.clip_processor = AutoProcessor.from_pretrained(
-            #     metaclip_path,
-            #     local_files_only=True
-            # )
-
-            self.clip_processor = AutoProcessor.from_pretrained("/data0/hdl/sceneflow/thinkclip/clip",local_files_only=True)
-
-            # Load Synchformer checkpoint (already local)
+            self.t5_tokenizer = AutoTokenizer.from_pretrained("google/t5-v1_1-xl")
+            self.t5_model = T5EncoderModel.from_pretrained("google/t5-v1_1-xl")
+            self.clip_processor = AutoProcessor.from_pretrained("openai/clip-vit-large-patch14")
+            # self.clip_preprocess = Normalize(mean=[0.48145466, 0.4578275, 0.40821073],
+            #                                  std=[0.26862954, 0.26130258, 0.27577711])
             self.synchformer = Synchformer()
             self.synchformer.load_state_dict(
-                torch.load(synchformer_ckpt, weights_only=True, map_location='cpu')
-            )
+                torch.load(synchformer_ckpt, weights_only=True, map_location='cpu'))
 
             # self.tokenizer = open_clip.get_tokenizer('ViT-H-14-378-quickgelu')  # same as 'ViT-H-14'
         else:

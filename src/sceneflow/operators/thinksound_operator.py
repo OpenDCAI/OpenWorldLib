@@ -128,12 +128,30 @@ class ThinkSoundOperator(BaseOperator):
         metadata["relpath"] = "demo.npz"
         
         return audio, metadata
+
+    def check_interaction(self, title: str, description: str):
+        if not isinstance(title, str) or not title.strip():
+            raise ValueError("title must be a non-empty string")
+        if not isinstance(description, str) or not description.strip():
+            raise ValueError("description must be a non-empty string")
+        return True
+
+    def get_interaction(self, title: str, description: str):
+        self.check_interaction(title, description)
+        self.current_interaction.append({"title": title, "description": description})
+        self._write_cot(title, description)
+        return self.current_interaction
+
+    def process_interaction(self):
+        if len(self.current_interaction) == 0:
+            raise ValueError("No interaction to process")
+        now_interaction = self.current_interaction[-1]
+        self.interaction_history.append(now_interaction)
+        return now_interaction
     
     def process_perception(
         self, 
         video_path: Union[str, Path],
-        title: str,
-        description: str,
         use_half: bool = False,
         device: str = "cuda",
         **kwargs
@@ -145,14 +163,8 @@ class ThinkSoundOperator(BaseOperator):
         if not video_path.exists():
             raise FileNotFoundError(f"video_path not found: {video_path}")
 
-        if not isinstance(title, str) or not title.strip():
-            raise ValueError("title must be a non-empty string")
-        if not isinstance(description, str) or not description.strip():
-            raise ValueError("description must be a non-empty string")
-
         # 下面逻辑保持原有功能：视频准备、写 COT、提取特征、加载 npz
         temp_video, duration_sec = self._prepare_video(video_path)
-        self._write_cot(title, description)
         self._run_feature_extraction(duration_sec, use_half=use_half)
         audio, metadata = self._load_npz(duration_sec)
         

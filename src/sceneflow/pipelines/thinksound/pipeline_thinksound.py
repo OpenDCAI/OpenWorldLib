@@ -123,11 +123,15 @@ class ThinkSoundPipeline:
 
         if self.operator is None:
             raise ValueError("Operator is not initialized")
+
+        processed_data:Dict[str, Any] = {}
+        
+
+        self.operator.get_interaction(title, description)
+        self.operator.process_interaction()
         
         processed_data = self.operator.process_perception(
             video_path=video_path,
-            title=title,
-            description=description,
             use_half=use_half,
             device=self.device,
             **kwargs
