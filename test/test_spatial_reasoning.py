@@ -9,7 +9,6 @@ sys.path.append(".")
 
 from src.sceneflow.reasoning.spatial_reasoning.spatial_ladder.spatial_ladder import SpatialLadder
 from src.sceneflow.reasoning.spatial_reasoning.spatial_reasoner.spatial_reasoner import SpatialReasoner
-from src.sceneflow.reasoning.spatial_reasoning.cambrian_s.cambrian_s import CambrianS
 
 model_path=""
 #spatialladder=SpatialLadder.from_pretrained("")
