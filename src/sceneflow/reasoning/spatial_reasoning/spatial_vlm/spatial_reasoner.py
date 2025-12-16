@@ -1,10 +1,3 @@
-"""
-SpatialReasoner wrapper aligned with SpatialLadder.
-
-Provides a BaseReasoning-compatible interface with optional image/video inputs
-and batched chat templates.
-"""
-
 from typing import List, Optional, Sequence, Union
 
 import torch
@@ -19,6 +12,10 @@ VideoLike = Union[str, bytes]
 
 
 class SpatialReasoner(BaseReasoning):
+    """
+    SpatialReasoner:https://arxiv.org/abs/2504.20024
+    """
+    
     def __init__(
         self,
         model: Qwen2_5_VLForConditionalGeneration,
