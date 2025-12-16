@@ -1,8 +1,8 @@
 """
-SpatialLadder reasoning wrapper.
+SpatialReasoner wrapper aligned with SpatialLadder.
 
-This module follows the BaseReasoning interface and exposes a simple helper
-around the Hugging Face SpatialLadder checkpoint.
+Provides a BaseReasoning-compatible interface with optional image/video inputs
+and batched chat templates.
 """
 
 from typing import List, Optional, Sequence, Union
@@ -18,11 +18,7 @@ ImageLike = Union[str, bytes]
 VideoLike = Union[str, bytes]
 
 
-class SpatialLadder(BaseReasoning):
-    """
-    Thin wrapper that mirrors the reference SpatialLadder (Qwen2.5-VL) usage.
-    """
-
+class SpatialReasoner(BaseReasoning):
     def __init__(
         self,
         model: Qwen2_5_VLForConditionalGeneration,
@@ -37,18 +33,13 @@ class SpatialLadder(BaseReasoning):
     @classmethod
     def from_pretrained(
         cls,
-        pretrained_model_path: str = "hongxingli/SpatialLadder-3B",
+        pretrained_model_path: str = "ccvl/SpatialReasoner",
         device: Optional[Union[str, torch.device]] = None,
         torch_dtype: torch.dtype = torch.bfloat16,
         attn_implementation: Optional[str] = None,
         device_map: Union[str, dict] = "auto",
         **kwargs,
-    ) -> "SpatialLadder":
-        """
-        Load SpatialLadder model and processor.
-
-        Extra kwargs are forwarded to transformers.from_pretrained.
-        """
+    ) -> "SpatialReasoner":
         model = Qwen2_5_VLForConditionalGeneration.from_pretrained(
             pretrained_model_path,
             torch_dtype=torch_dtype,
@@ -60,11 +51,9 @@ class SpatialLadder(BaseReasoning):
         return cls(model=model, processor=processor, device=device)
 
     def api_init(self, api_key, endpoint):
-        # API-based inference is not implemented for SpatialLadder yet.
-        raise NotImplementedError("API init is not supported for SpatialLadder.")
+        raise NotImplementedError("API init is not supported for SpatialReasoner.")
 
     def _get_default_device(self) -> torch.device:
-        # Prefer model's device when device_map is set, otherwise fall back to CUDA/CPU.
         if hasattr(self.model, "device"):
             return self.model.device
         if torch.cuda.is_available():
@@ -77,7 +66,6 @@ class SpatialLadder(BaseReasoning):
         video_paths: Optional[Union[VideoLike, Sequence[VideoLike]]],
         instruction: str,
     ):
-        # Normalize inputs to lists and allow empty.
         if image_paths is None:
             image_paths = []
         if video_paths is None:
@@ -103,23 +91,10 @@ class SpatialLadder(BaseReasoning):
         generation_kwargs: Optional[dict] = None,
     ) -> List[str]:
         """
-        Run SpatialLadder generation. Supports batched messages when `messages`
+        Run SpatialReasoner generation. Supports batched messages when `messages`
         is provided as list[list[dict]]; otherwise builds a single-sample batch
-        from image_paths/video_paths + instruction. Either images or videos
-        can be empty.
-
-        Args:
-            image_paths: Single path/bytes or a sequence for multi-image inputs (optional).
-            video_paths: Single path/bytes or a sequence for multi-video inputs (optional).
-            instruction: Text instruction appended after the images.
-            max_new_tokens: Default generation length for convenience.
-            messages: Optional raw chat template; when provided, image_paths/instruction
-                      are ignored and messages is used directly. Supports a single
-                      conversation (list[dict]) or a batch (list[list[dict]]).
-            generation_kwargs: Extra kwargs forwarded to model.generate.
-
-        Returns:
-            List of decoded strings (one per batch element).
+        from image_paths/video_paths + instruction. Either images or videos can
+        be empty.
         """
         if messages is None:
             batched_messages = [
