@@ -18,6 +18,7 @@ pyarrow==14.0.1
 tensorboard==2.19.0
 pyexr==0.5.0
 xformer==1.0.1
+qwen_vl_utils==0.0.14
 easydict
 ftfy
 dashscope

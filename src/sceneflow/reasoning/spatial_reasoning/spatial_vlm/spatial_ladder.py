@@ -1,9 +1,3 @@
-"""
-SpatialLadder reasoning wrapper.
-
-This module follows the BaseReasoning interface and exposes a simple helper
-around the Hugging Face SpatialLadder checkpoint.
-"""
 
 from typing import List, Optional, Sequence, Union
 
@@ -20,7 +14,7 @@ VideoLike = Union[str, bytes]
 
 class SpatialLadder(BaseReasoning):
     """
-    Thin wrapper that mirrors the reference SpatialLadder (Qwen2.5-VL) usage.
+    SpatialLadder:https://arxiv.org/abs/2510.08531
     """
 
     def __init__(
