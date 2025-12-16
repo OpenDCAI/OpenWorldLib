@@ -7,6 +7,9 @@ class PipelineABC:
     def from_pretrained(cls):
         return cls()
     
+    def process(self, *args, **kwds):
+        pass
+    
     def __call__(self, *args, **kwds):
         pass
 
