@@ -12,19 +12,19 @@ from typing import Optional, Any, Dict, List
 import cv2
 import onnxruntime
 
-from ...representations.point_clouds_generation.hunyuan_mirror.mirror_src.models.models.worldmirror import WorldMirror
-from ...representations.point_clouds_generation.hunyuan_mirror.mirror_src.utils.inference_utils import prepare_images_to_tensor
-from ...representations.point_clouds_generation.hunyuan_mirror.mirror_src.utils.save_utils import save_depth_png, save_depth_npy, save_normal_png
-from ...representations.point_clouds_generation.hunyuan_mirror.mirror_src.utils.save_utils import save_scene_ply, save_gs_ply
-from ...representations.point_clouds_generation.hunyuan_mirror.mirror_src.utils.render_utils import render_interpolated_video
-from ...representations.point_clouds_generation.hunyuan_mirror.mirror_src.utils.geometry import depth_edge, normals_edge
-from ...representations.point_clouds_generation.hunyuan_mirror.mirror_src.utils.visual_util import segment_sky, download_file_from_url
+from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_world_mirror_representation import HunyuanWorldMirrorRepresentation
+from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.inference_utils import prepare_images_to_tensor
+from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.save_utils import save_depth_png, save_depth_npy, save_normal_png
+from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.save_utils import save_scene_ply, save_gs_ply
+from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.render_utils import render_interpolated_video
+from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.geometry import depth_edge, normals_edge
+from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.visual_util import segment_sky, download_file_from_url
 
 
 class HunyuanMirrorPipeline:
     def __init__(self,
                  operators: Optional[Any] = None,
-                 represent_model: Optional[WorldMirror] = None,
+                 represent_model: Optional[HunyuanWorldMirrorRepresentation] = None,
                  output_path: str = "./output/hunyuan_mirror",
                  device: str = 'cuda'):
         self.operators = operators
@@ -65,16 +65,8 @@ class HunyuanMirrorPipeline:
         print(f"Loading HunyuanWorld-Mirror model from {actual_model_path}")
         device_torch = torch.device(device if torch.cuda.is_available() else "cpu")
         
-        try:
-            represent_model = WorldMirror.from_pretrained(actual_model_path, local_files_only=True).to(device_torch)
-            represent_model.eval()
-        except Exception as e:
-            print(f"Failed to load model from {actual_model_path}: {e}")
-            # Try fallback path
-            fallback_path = "/opt/tiger/WMflow/ckpts"
-            print(f"Trying fallback path: {fallback_path}")
-            represent_model = WorldMirror.from_pretrained(fallback_path, local_files_only=True).to(device_torch)
-            represent_model.eval()
+        represent_model = HunyuanWorldMirrorRepresentation.from_pretrained(actual_model_path, local_files_only=True).to(device_torch)
+        represent_model.eval()
         
         # Create pipeline instance
         pipeline = cls(
