@@ -1,46 +1,53 @@
-import os
-import sys
-import torch
-import imageio
-import numpy as np
-from PIL import Image
+from argparse import ArgumentParser
+from omegaconf import OmegaConf
 
-sys.path.append(os.path.join(os.path.dirname(__file__), '../src'))
-
-from sceneflow.pipelines.wonder_journey.pipeline import WonderJourneyPipeline
+from pipeline import WonderJourneyPipeline
 
 def main():
-    input_image_path = "sceneflow/representations/assets/00_alice_1.png" 
-    if not os.path.exists(input_image_path):
-        os.makedirs("assets", exist_ok=True)
-        Image.new('RGB', (512, 512), color='blue').save(input_image_path)
-    start_image = Image.open(input_image_path).convert("RGB").resize((512, 512))
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--base-config",
+        default="../../../../examples/wonder_journey/base-config.yaml",
+        help="Config path",
+    )
+    parser.add_argument(
+        "--example_config",
+        default="../../../../examples/wonder_journey/village.yaml",
+        help="Example config path e.g. config/village.yaml"
+    )
+    # 增加参数以支持 HuggingFace 模型路径输入
+    parser.add_argument(
+        "--oneformer_path",
+        default="./oneformer_chk",
+        help="Path to OneFormer model (local or HF repo_id)"
+    )
+    parser.add_argument(
+        "--sd_path",
+        default="./stabilityai/stable-diffusion-2-inpainting",
+        help="Path to Stable Diffusion model (local or HF repo_id)"
+    )
+    parser.add_argument(
+        "--depth_model_path",
+        default="dpt_beit_large_512.pt",
+        help="Path to depth model checkpoint"
+    )
     
-    prompt = "A futuristic cyberpunk city"
+    args = parser.parse_args()
     
-    interactions = [
-        {"type": "movement", "content": "straight", "frames": 30},
-        {"type": "movement", "content": "turn_right", "frames": 30}
-    ]
+    base_config = OmegaConf.load(args.base_config)
+    example_config = OmegaConf.load(args.example_config)
+    config = OmegaConf.merge(base_config, example_config)
 
-    # 加载 Pipeline 
-    pipe = WonderJourneyPipeline.from_pretrained(
-        pretrained_model_path='sceneflow/representations/models/wonder_journey/pretrained_models',
-        device="cuda" if torch.cuda.is_available() else "cpu"
+    pipeline = WonderJourneyPipeline.from_pretrained(
+        config=config,
+        oneformer_path=args.oneformer_path,
+        sd_path=args.sd_path,
+        depth_model_path=args.depth_model_path
     )
 
-    print("Running Pipeline...")
-    output_frames = pipe(
-        initial_image=start_image,
-        prompt=prompt,
-        num_frames=60,
-        interactions=interactions,
-        enable_visibility_check=True 
-    )
-
-    print("Saving...")
-    frames_np = [np.array(f) for f in output_frames]
-    imageio.mimsave("test_final_result.mp4", frames_np, fps=20)
+    operator = pipeline.create_operator(config)
+    
+    pipeline(operator)
 
 if __name__ == "__main__":
     main()
