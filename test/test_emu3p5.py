@@ -1,10 +1,8 @@
-import sys 
-sys.path.append("..") 
-from src.sceneflow.pipelines.emu.pipeline_emu3p5 import Emu3p5Pipeline
+from sceneflow.pipelines.emu.pipeline_emu3p5 import Emu3p5Pipeline
 from PIL import Image
 
 image_path = "/YOUR/IMAGE/PATH"
-model_path = "/YOUR/MODEL/PATH"
+model_path = "BAAI/Emu3.5"
 test_prompt = "Translate this house into a school."
 
 pipeline = Emu3p5Pipeline.from_pretrained(
