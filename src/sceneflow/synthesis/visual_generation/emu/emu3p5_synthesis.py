@@ -31,7 +31,7 @@ def load_models(args, device, logger_obj, pretrained_model_path):
         model, tokenizer, vq_model
     """
     model_path = getattr(args, 'model_path', None) or pretrained_model_path
-    tokenizer_path = getattr(args, 'tokenizer_path', None) or f"sceneflow/synthesis/visual_generation/emu/emu3p5/tokenizer_emu3_ibq"
+    tokenizer_path = getattr(args, 'tokenizer_path', None) or "sceneflow/synthesis/visual_generation/emu/emu3p5/tokenizer_emu3_ibq"
     vq_path = getattr(args, 'vq_path', None) or "BAAI/Emu3.5-VisionTokenizer"
     vq_type = getattr(args, 'vq_type', 'ibq')
     model_device = getattr(args, 'model_device', 'auto') or device
