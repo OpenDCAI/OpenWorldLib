@@ -1,7 +1,7 @@
 from sceneflow.pipelines.emu.pipeline_emu3p5 import Emu3p5Pipeline
 from PIL import Image
 
-image_path = "/YOUR/IMAGE/PATH"
+image_path = "./data/test_case1/ref_image.png"
 model_path = "BAAI/Emu3.5"
 test_prompt = "Translate this house into a school."
 
