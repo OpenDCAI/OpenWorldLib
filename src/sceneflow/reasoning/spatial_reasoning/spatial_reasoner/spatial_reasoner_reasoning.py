@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import torch
 from transformers import AutoProcessor, Qwen2_5_VLForConditionalGeneration
