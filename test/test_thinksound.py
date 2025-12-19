@@ -1,5 +1,4 @@
 import sys
-sys.path.append("..") 
 from sceneflow.pipelines.thinksound.pipeline_thinksound import ThinkSoundPipeline, ThinkSoundArgs
 import torchaudio
 from pathlib import Path
