@@ -1,8 +1,5 @@
 
 
-
-
-from re import M
 from sceneflow.pipelines.spatial_reasoner.pipeline_spatial_reasoner import (
     SpatialReasonerPipeline,
 )
@@ -24,7 +21,7 @@ def test_spatial_reasoner_pipeline_image(MODEL_PATH):
 
 
 def test_spatial_reasoner_pipeline_video(MODEL_PATH):
-    pipe = SpatialReasonerPipeline.from_pretrained()
+    pipe = SpatialReasonerPipeline.from_pretrained(MODEL_PATH)
     video_path = "./data/test_video_case1/talking_man.mp4"
     instruction = "Summarize the video content."
     output = pipe(
