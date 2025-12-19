@@ -4,6 +4,7 @@ import soundfile as sf
 #support more than one image/video/audio input
 images = "./data/test_case1/ref_image.png" 
 videos = "./data/test_video_case1/talking_man.mp4"
+audios=None
 return_audio=False
 test_prompt = "Describe this video"
 
