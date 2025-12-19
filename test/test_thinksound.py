@@ -1,8 +1,7 @@
 import sys
 sys.path.append("..") 
-from src.sceneflow.pipelines.thinksound.pipeline_thinksound import ThinkSoundPipeline, ThinkSoundArgs
+from sceneflow.pipelines.thinksound.pipeline_thinksound import ThinkSoundPipeline, ThinkSoundArgs
 import torchaudio
-import torch
 from pathlib import Path
 from loguru import logger
 
@@ -12,7 +11,7 @@ def save_audio_result(result):
     sampling_rate = result["sampling_rate"]
     waveform = audio[0]
 
-    save_path = f"./output/thinksound/thinksound_testoutput.wav"
+    save_path = f"./thinksound_testoutput.wav"
     torchaudio.save(str(save_path), waveform, sampling_rate)
 
 
