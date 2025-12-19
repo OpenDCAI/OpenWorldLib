@@ -185,8 +185,11 @@ class Qwen2p5_OmniReasoning(BaseReasoning):
         # Generate
         if return_audio:
             text_ids, audio = self.model.generate(**inputs, **gen_kwargs)
+            generated_ids_trimmed = [
+                out_ids[len(in_ids):] for in_ids, out_ids in zip(inputs.input_ids, text_ids)
+            ]
             output_text = self.processor.batch_decode(
-                text_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False
+                generated_ids_trimmed, skip_special_tokens=True, clean_up_tokenization_spaces=False
             )[0]
             return output_text, audio
         else:
