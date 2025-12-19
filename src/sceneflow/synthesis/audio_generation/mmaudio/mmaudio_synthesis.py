@@ -13,6 +13,7 @@ from .mmaudio.eval_utils import (ModelConfig, all_model_cfg, generate, make_vide
 from .mmaudio.model.flow_matching import FlowMatching
 from .mmaudio.model.networks import MMAudio, get_my_mmaudio
 from .mmaudio.model.utils.features_utils import FeaturesUtils
+from ...base_synthesis import BaseSynthesis
 
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -71,7 +72,7 @@ def load_models(args, device, logger_obj):
     return net, feature_utils, fm, seq_cfg, model
     
 
-class MMAudioSynthesis:
+class MMAudioSynthesis(BaseSynthesis):
     """
     MMAudio 生成合成类，提供统一的接口用于音频生成
     """
