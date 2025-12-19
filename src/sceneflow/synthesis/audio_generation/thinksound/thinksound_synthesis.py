@@ -20,6 +20,7 @@ from huggingface_hub import snapshot_download, hf_hub_download
 from .ThinkSound.ThinkSound.models import create_model_from_config
 from .ThinkSound.ThinkSound.models.utils import load_ckpt_state_dict, remove_weight_norm_from_model
 from .ThinkSound.ThinkSound.inference.sampling import sample, sample_discrete_euler
+from ...base_synthesis import BaseSynthesis
 
 
 def load_models(args, device, logger_obj):
@@ -64,7 +65,7 @@ def load_models(args, device, logger_obj):
     return model, model_config
    
 
-class ThinkSoundSynthesis:
+class ThinkSoundSynthesis(BaseSynthesis):
     def __init__(self, args, model_config, model, device, logger_obj):
         """
         初始化 ThinkSoundSynthesis
