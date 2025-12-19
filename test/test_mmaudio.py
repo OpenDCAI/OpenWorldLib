@@ -1,5 +1,4 @@
 import sys
-sys.path.append("..") 
 from sceneflow.pipelines.mmaudio.pipeline_mmaudio import MMAudioPipeline, MMAudioArgs
 from sceneflow.synthesis.audio_generation.mmaudio.mmaudio.eval_utils import make_video
 from pathlib import Path
