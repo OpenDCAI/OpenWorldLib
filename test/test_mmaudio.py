@@ -25,14 +25,15 @@ def save_audio_result(result, skip_video_composite=False):
     video_info = result["video_info"]
     video_path_input = result["video_path_input"]
     
-    audio_save_path = f"./output/mmaudio/mmaudio_testoutput.flac"
+    audio_save_path = f"./mmaudio_testoutput.flac"
     torchaudio.save(str(audio_save_path), audio, sampling_rate)
+    logger.info(f"Audio saved to {audio_save_path}")
     
     # 合成视频（如果有视频输入且未跳过）
     if video_info is not None and video_path_input is not None and not skip_video_composite:
-        video_save_path = f"./output/mmaudio/mmaudio_testoutput.mp4"
+        video_save_path = f"./mmaudio_testoutput.mp4"
         make_video(video_info, str(video_save_path), audio, sampling_rate=sampling_rate)
-    
+        logger.info(f"Video saved to {video_save_path}")
 
 # 视频路径（可选，如果不提供则为 text-to-audio 模式）则设置为None
 video_path = "./data/test_case1/test_video.mp4"  
