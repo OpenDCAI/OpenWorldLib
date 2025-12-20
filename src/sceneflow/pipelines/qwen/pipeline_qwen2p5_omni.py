@@ -11,11 +11,11 @@ from typing import Optional, Any, Union, Dict, List
 from pathlib import Path
 from PIL import Image
 import soundfile as sf
-from ...operators.qwen2p5_omni_operator import Qwen2p5_OmniOperator
-from ...reasoning.general_reasoning.qwen_omni.qwen2p5_omni import Qwen2p5_OmniReasoning
+from ...operators.qwen2p5_omni_operator import Qwen2p5OmniOperator
+from ...reasoning.general_reasoning.qwen.qwen2p5_omni_reasoning import Qwen2p5OmniReasoning
 
 
-class Qwen2p5_OmniPipeline:
+class Qwen2p5OmniPipeline:
     """
     Pipeline for Qwen2.5-Omni multimodal reasoning.
     
@@ -24,8 +24,8 @@ class Qwen2p5_OmniPipeline:
     
     def __init__(
         self,
-        operator: Optional[Qwen2p5_OmniOperator] = None,
-        reasoning_model: Optional[Qwen2p5_OmniReasoning] = None,
+        operator: Optional[Qwen2p5OmniOperator] = None,
+        reasoning_model: Optional[Qwen2p5OmniReasoning] = None,
         device: str = 'cuda',
         use_audio_in_video: bool = True,
     ):
@@ -55,7 +55,7 @@ class Qwen2p5_OmniPipeline:
         system_prompt: Optional[str] = None,
         logger=None,
         **kwargs
-    ) -> 'Qwen2p5_OmniPipeline':
+    ) -> 'Qwen2p5OmniPipeline':
         """
         Load complete pipeline from pretrained model
         
@@ -80,7 +80,7 @@ class Qwen2p5_OmniPipeline:
         if logger:
             logger.info("Loading Qwen2.5-Omni reasoning model...")
         
-        reasoning_model = Qwen2p5_OmniReasoning.from_pretrained(
+        reasoning_model = Qwen2p5OmniReasoning.from_pretrained(
             pretrained_model_path=pretrained_model_path,
             device=device,
             torch_dtype=torch_dtype,
@@ -93,7 +93,7 @@ class Qwen2p5_OmniPipeline:
         if logger:
             logger.info("Initializing Qwen2.5-Omni operator...")
         
-        operator = Qwen2p5_OmniOperator(
+        operator = Qwen2p5OmniOperator(
             processor=reasoning_model.processor,
             use_audio_in_video=use_audio_in_video,
             system_prompt=system_prompt,
@@ -148,17 +148,35 @@ class Qwen2p5_OmniPipeline:
         if self.operator is None:
             raise ValueError("Operator is not initialized")
         
-        # Process through operator
-        processed_data = self.operator.process_interaction(
+        # Process text interaction
+        interaction_data = self.operator.process_interaction(
             text=text,
-            images=images,
-            audios=audios,
-            videos=videos,
             messages=messages,
             **kwargs
         )
         
-        return processed_data
+        # Process perception inputs
+        perception_data = self.operator.process_perception(
+            images=images,
+            audios=audios,
+            videos=videos,
+            **kwargs
+        )
+        
+        # Merge messages
+        final_messages = interaction_data.get("messages", [])
+        perception_messages = perception_data.get("messages", [])
+        
+        for msg in final_messages:
+            if msg.get("role") == "user":
+                for p_msg in perception_messages:
+                    if p_msg.get("role") == "user":
+                        msg["content"].extend(p_msg["content"])
+        
+        return {
+            "messages": final_messages,
+            "use_audio_in_video": perception_data.get("use_audio_in_video", self.use_audio_in_video)
+        }
     
     def __call__(
         self,
@@ -270,10 +288,10 @@ class Qwen2p5_OmniPipeline:
         if self.operator:
             self.operator.update_config(**kwargs)
     
-    def get_operator(self) -> Optional[Qwen2p5_OmniOperator]:
+    def get_operator(self) -> Optional[Qwen2p5OmniOperator]:
         """Get operator instance"""
         return self.operator
     
-    def get_reasoning_model(self) -> Optional[Qwen2p5_OmniReasoning]:
+    def get_reasoning_model(self) -> Optional[Qwen2p5OmniReasoning]:
         """Get reasoning model instance"""
         return self.reasoning_model

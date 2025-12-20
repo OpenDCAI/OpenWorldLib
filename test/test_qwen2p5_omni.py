@@ -1,4 +1,4 @@
-from sceneflow.pipelines.qwen_omni.pipeline_qwen2p5_omni import Qwen2p5_OmniPipeline
+from sceneflow.pipelines.qwen.pipeline_qwen2p5_omni import Qwen2p5OmniPipeline
 import soundfile as sf
 
 #support more than one image/video/audio input
@@ -9,7 +9,7 @@ return_audio=False
 test_prompt = "Describe this video"
 
 model_path = "Qwen/Qwen2.5-Omni-7B"
-pipeline = Qwen2p5_OmniPipeline.from_pretrained(
+pipeline = Qwen2p5OmniPipeline.from_pretrained(
     pretrained_model_path=model_path,
     use_audio_in_video=False,
 )
