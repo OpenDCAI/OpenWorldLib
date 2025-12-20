@@ -18,7 +18,7 @@ ImageLike = Union[str, bytes]
 AudioLike = Union[str, bytes]
 
 
-class Qwen2p5_OmniReasoning(BaseReasoning):
+class Qwen2p5OmniReasoning(BaseReasoning):
     """
     Thin wrapper for Qwen2.5-Omni multimodal model.
     Supports text, image, audio, and video inputs with optional audio output.

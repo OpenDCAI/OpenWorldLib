@@ -14,7 +14,7 @@ from pathlib import Path
 from .base_operator import BaseOperator
 
 
-class Qwen2p5_OmniOperator(BaseOperator):
+class Qwen2p5OmniOperator(BaseOperator):
     """
     Operator for Qwen2.5-Omni multimodal preprocessing.
     
@@ -132,26 +132,87 @@ class Qwen2p5_OmniOperator(BaseOperator):
         """
         return str(video_input)
     
-    def build_messages(
+    def process_interaction(
         self,
         text: Optional[str] = None,
+        messages: Optional[List[Dict]] = None,
+        include_system_prompt: bool = True,
+        **kwargs
+    ) -> Dict[str, Any]:
+        """
+        Process text interaction inputs
+        
+        Args:
+            text: Text prompt
+            messages: Pre-built messages (if provided, text is ignored)
+            include_system_prompt: Whether to include system prompt
+            **kwargs: Additional parameters
+            
+        Returns:
+            Dict containing:
+                - messages: Processed messages with text
+                - text: Original text prompt
+        """
+        # Store current interaction
+        self.get_interaction(text or messages)
+        
+        result = {}
+        
+        # Build or use provided messages
+        if messages is not None:
+            result["messages"] = messages
+            result["text"] = None
+        else:
+            built_messages = []
+            
+            # Add system prompt if requested
+            if include_system_prompt and self.system_prompt:
+                built_messages.append({
+                    "role": "system",
+                    "content": [
+                        {"type": "text", "text": self.system_prompt}
+                    ]
+                })
+            
+            # Build user message content with text only
+            content = []
+            if text:
+                content.append({"type": "text", "text": text})
+            
+            # Add user message
+            if content:
+                built_messages.append({
+                    "role": "user",
+                    "content": content
+                })
+            
+            result["messages"] = built_messages
+            result["text"] = text
+        
+        return result
+    
+    def process_perception(
+        self,
         images: Optional[Union[str, Path, Image.Image, List]] = None,
         audios: Optional[Union[str, Path, bytes, List]] = None,
         videos: Optional[Union[str, Path, List]] = None,
         include_system_prompt: bool = True,
-    ) -> List[Dict]:
+        **kwargs
+    ) -> Dict[str, Any]:
         """
-        Build message list for Qwen2.5-Omni
+        Process perception inputs (images, audios, videos)
         
         Args:
-            text: Text prompt
             images: Single image or list of images
             audios: Single audio or list of audios
             videos: Single video or list of videos
             include_system_prompt: Whether to include system prompt
+            **kwargs: Additional parameters
             
         Returns:
-            List of message dictionaries
+            Dict containing:
+                - messages: Processed messages with perception data
+                - use_audio_in_video: Whether to use audio in video
         """
         messages = []
         
@@ -191,10 +252,6 @@ class Qwen2p5_OmniOperator(BaseOperator):
                 processed_video = self.load_video(video)
                 content.append({"type": "video", "video": processed_video})
         
-        # Add text
-        if text:
-            content.append({"type": "text", "text": text})
-        
         # Add user message
         if content:
             messages.append({
@@ -202,54 +259,10 @@ class Qwen2p5_OmniOperator(BaseOperator):
                 "content": content
             })
         
-        return messages
-    
-    def process_interaction(
-        self,
-        text: Optional[str] = None,
-        images: Optional[Union[str, Path, Image.Image, List]] = None,
-        audios: Optional[Union[str, Path, bytes, List]] = None,
-        videos: Optional[Union[str, Path, List]] = None,
-        messages: Optional[List[Dict]] = None,
-        **kwargs
-    ) -> Dict[str, Any]:
-        """
-        Process multimodal interaction inputs
-        
-        Args:
-            text: Text prompt
-            images: Image inputs
-            audios: Audio inputs
-            videos: Video inputs
-            messages: Pre-built messages (if provided, other inputs are ignored)
-            **kwargs: Additional parameters
-            
-        Returns:
-            Dict containing:
-                - messages: Processed messages
-                - text: Original text prompt
-                - use_audio_in_video: Whether to use audio in video
-        """
-        # Store current interaction
-        self.get_interaction(text or messages)
-        
         result = {
+            "messages": messages,
             "use_audio_in_video": self.use_audio_in_video,
         }
-        
-        # Build or use provided messages
-        if messages is not None:
-            result["messages"] = messages
-            result["text"] = None
-        else:
-            result["messages"] = self.build_messages(
-                text=text,
-                images=images,
-                audios=audios,
-                videos=videos,
-                include_system_prompt=kwargs.get("include_system_prompt", True)
-            )
-            result["text"] = text
         
         return result
     
