@@ -82,7 +82,6 @@ JSON 格式包含两类任务：
 * 输出：选 A 或 B
 * `GT` 由 pos/neg 定义（pos 的正确 caption 是顺序正确的那句）
 
-
 ### **Type B — Concatenated Video（Segment A vs B）**
 
 ```json
@@ -149,9 +148,6 @@ JSON 格式包含两类任务：
 | Category-wise Video Score | Same as Video Score but computed per category                  |
 | Category-wise Group Score | Same as Group Score but computed per category                  |
 
----
-
-下面是更流畅、结构更清晰、读起来更像正式 benchmark 文档的版本，顺便保持一点轻松语气：
 
 ---
 
@@ -213,4 +209,3 @@ python evaluate_all_models.py \
 * 并最终导出一个 `vinoground_evaluation_results.xlsx`
 
 获得全面评分。
-

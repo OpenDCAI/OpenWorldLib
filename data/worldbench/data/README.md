@@ -1,0 +1,3 @@
+i2v可以用worldscore的指标加MLVU（还有motionbench）的判断时序关系，判断时序关系要设计prompt跟答案顺序
+
+vinoground是可以用来判断时间顺序的
