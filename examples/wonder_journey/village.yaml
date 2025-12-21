@@ -1,0 +1,26 @@
+runs_dir: data/test_wonder_journey/56_village
+
+example_name: village
+
+seed: -1
+frames: 10
+
+finetune_decoder_gen: True
+finetune_decoder_interp: False  # Turn on this for higher-quality rendered video
+finetune_depth_model: True
+
+num_scenes: 1
+num_keyframes: 2
+use_gpt: True
+kf2_upsample_coef: 4
+skip_interp: False
+skip_gen: False
+enable_regenerate: True
+
+debug: True
+inpainting_resolution_gen: 1024
+
+rotation_range: 0.45
+rotation_path: [0, 0, 0, 1, 1, 0, 0, 0]
+camera_speed_multiplier_rotation: 0.2
+save_fps: 10
