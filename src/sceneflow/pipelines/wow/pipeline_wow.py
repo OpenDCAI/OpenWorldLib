@@ -15,8 +15,8 @@ class WoWArgs:
         seed: int = 42,
         num_frames: int = 41,
         no_tiled: bool = False,
-        disable_vram: bool = False,
-        custom_checkpoint_name: Optional[str] = None,
+        enable_vram_management: bool = True,
+        no_vram_management: bool = False,
         persistent_param_gb: int = 70
     ):
 
@@ -25,8 +25,8 @@ class WoWArgs:
         self.seed = seed
         self.num_frames = num_frames
         self.no_tiled = no_tiled
-        self.disable_vram = disable_vram
-        self.custom_checkpoint_name = custom_checkpoint_name
+        self.enable_vram_management = enable_vram_management
+        self.no_vram_management = no_vram_management
         self.persistent_param_gb = persistent_param_gb
 
 
@@ -50,7 +50,7 @@ class WoWPipeline:
         cls, 
         synthesis_model_path: str = 'WoW-world-model/WoW-1-Wan-1.3B-2M', 
         synthesis_args: Optional[WoWArgs] = None,
-        device: str = "cuda",
+        device: Optional[str] = None,
         **kwargs):
         """
         从预训练模型路径创建 WoWPipeline
@@ -67,6 +67,10 @@ class WoWPipeline:
         """
         if synthesis_args is None:
             synthesis_args = WoWArgs()
+
+        # 若未显式指定 device，则使用 WoWArgs 中的 gpu 选择 GPU
+        if device is None:
+            device = f"cuda:{synthesis_args.gpu}"
         
         synthesis_model = WoWSynthesis.from_pretrained(
             pretrained_model_path=synthesis_model_path,
