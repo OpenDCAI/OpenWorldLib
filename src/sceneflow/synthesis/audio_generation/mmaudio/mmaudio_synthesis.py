@@ -1,13 +1,12 @@
 # python demo.py --duration=8 --video=<path to video> --prompt "your prompt" 
 from typing import Union, Optional, List, Tuple, Dict
 from pathlib import Path
-import os
-import time
-import random
 import logging
 
 import torch
+import os
 from loguru import logger
+from huggingface_hub import snapshot_download
 
 from .mmaudio.eval_utils import (ModelConfig, all_model_cfg, generate, make_video)
 from .mmaudio.model.flow_matching import FlowMatching
@@ -21,7 +20,7 @@ torch.backends.cudnn.allow_tf32 = True
 
 log = logging.getLogger()
 
-def load_models(args, device, logger_obj):
+def load_models(args, pretrained_model_path, device, logger_obj):
     """
     加载 MMAudio 模型
     
@@ -40,8 +39,26 @@ def load_models(args, device, logger_obj):
     if logger_obj:
         logger_obj.info(f"Loading MMAudio model variant: {args.variant}")
     
-    model: ModelConfig = all_model_cfg[args.variant]
-    model.download_if_needed()
+
+    if os.path.isdir(pretrained_model_path):
+        model_root = Path(pretrained_model_path)
+    else:
+        repo_id = pretrained_model_path
+        folder_name = repo_id.split("/")[-1]
+        download_dir = Path(os.getcwd()) / folder_name
+        model_root = Path(
+            snapshot_download(
+                repo_id,
+                local_dir=str(download_dir),
+                local_dir_use_symlinks=False,
+            )
+        )
+    
+    # 基于 model_root 解析出当前使用的 ModelConfig，使所有权重路径都在 model_root 下
+    base_model: ModelConfig = all_model_cfg[args.variant]
+    model: ModelConfig = base_model.with_root(model_root)
+    
+    # 序列配置只依赖于模式，不依赖具体路径
     seq_cfg = model.seq_cfg
 
     dtype = torch.float32 if args.full_precision else torch.bfloat16
@@ -106,11 +123,12 @@ class MMAudioSynthesis(BaseSynthesis):
             self.logger.info("MMAudioSynthesis initialized successfully")
         
     @classmethod
-    def from_pretrained(cls, args, device=None, logger_obj=None, **kwargs):
+    def from_pretrained(cls, pretrained_model_path, args, device=None, logger_obj=None, **kwargs):
         """
         从预训练模型路径加载 MMAudioSynthesis
         
         Args:
+            pretrained_model_path: 预训练模型路径，可以是本地路径或者hugid路径
             args: 配置参数，包含 variant 等
             device: 设备，默认为 None（自动检测）
             logger_obj: 日志记录器，默认为 None
@@ -119,6 +137,7 @@ class MMAudioSynthesis(BaseSynthesis):
         Returns:
             MMAudioSynthesis 实例
         """
+        
         logger_inst = logger_obj
         
         if device is None:
@@ -134,7 +153,7 @@ class MMAudioSynthesis(BaseSynthesis):
         torch.set_grad_enabled(False)
         
         # 加载模型组件
-        net, feature_utils, fm, seq_cfg, model_config = load_models(args, device, logger_inst)
+        net, feature_utils, fm, seq_cfg, model_config = load_models(args, pretrained_model_path, device, logger_inst)
         
         return cls(
             args=args,

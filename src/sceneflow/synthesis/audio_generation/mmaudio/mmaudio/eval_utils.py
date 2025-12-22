@@ -28,6 +28,22 @@ class ModelConfig:
     mode: str
     synchformer_ckpt: Path = Path('./ext_weights/synchformer_state_dict.pth')
 
+    def with_root(self, model_root: Path) -> "ModelConfig":
+        """
+        返回一个新的 ModelConfig，其中所有权重相关路径都基于给定的 model_root 解析。
+        这样可以支持：
+        - 本地目录：model_root 为你传入的本地路径
+        - 远程模型：model_root 为 snapshot_download 下载到的目录
+        """
+        return ModelConfig(
+            model_name=self.model_name,
+            model_path=model_root / self.model_path,
+            vae_path=model_root / self.vae_path,
+            bigvgan_16k_path=model_root / self.bigvgan_16k_path if self.bigvgan_16k_path is not None else None,
+            mode=self.mode,
+            synchformer_ckpt=model_root / self.synchformer_ckpt,
+        )
+
     @property
     def seq_cfg(self) -> SequenceConfig:
         if self.mode == '16k':

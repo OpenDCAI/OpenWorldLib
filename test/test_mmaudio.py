@@ -1,24 +1,13 @@
 import sys
-from sceneflow.pipelines.mmaudio.pipeline_mmaudio import MMAudioPipeline, MMAudioArgs
-from sceneflow.synthesis.audio_generation.mmaudio.mmaudio.eval_utils import make_video
+sys.path.append("..")
+from src.sceneflow.pipelines.mmaudio.pipeline_mmaudio import MMAudioPipeline, MMAudioArgs
+from src.sceneflow.synthesis.audio_generation.mmaudio.mmaudio.eval_utils import make_video
 from pathlib import Path
 import torchaudio
 from loguru import logger
 
 
 def save_audio_result(result, skip_video_composite=False):
-    """
-    保存音频生成结果，可选合成视频
-    
-    Args:
-        result: pipeline 返回的结果字典
-        output_dir: 输出目录
-        prompt: 文本提示（用于生成文件名）
-        skip_video_composite: 是否跳过视频合成
-    
-    Returns:
-        保存的文件路径字典
-    """
     audio = result["audio"]
     sampling_rate = result["sampling_rate"]
     video_info = result["video_info"]
@@ -28,7 +17,7 @@ def save_audio_result(result, skip_video_composite=False):
     torchaudio.save(str(audio_save_path), audio, sampling_rate)
     logger.info(f"Audio saved to {audio_save_path}")
     
-    # 合成视频（如果有视频输入且未跳过）
+    # 可选保存视频
     if video_info is not None and video_path_input is not None and not skip_video_composite:
         video_save_path = f"./mmaudio_testoutput.mp4"
         make_video(video_info, str(video_save_path), audio, sampling_rate=sampling_rate)
@@ -37,6 +26,7 @@ def save_audio_result(result, skip_video_composite=False):
 # 视频路径（可选，如果不提供则为 text-to-audio 模式）则设置为None
 video_path = "./data/test_case1/test_video.mp4"  
 test_prompt = "A man plays guitar."
+pretrained_model_path = "/data0/hdl/sceneflow/SceneFlow" # 可以提供本地路径或者hugid路径
 
 args = MMAudioArgs(
     variant='large_44k_v2', # 可选: 'small_16k', 'small_44k', 'medium_44k', 'large_44k', 'large_44k_v2'
@@ -48,6 +38,7 @@ args = MMAudioArgs(
 )
 
 pipeline = MMAudioPipeline.from_pretrained(
+    pretrained_model_path=pretrained_model_path,
     synthesis_args=args,
     device='cuda',  # 可以填写None则进入自动检测设备（cuda/mps/cpu），如果填写了则使用填写的设备
 )

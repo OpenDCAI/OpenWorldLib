@@ -48,6 +48,7 @@ class MMAudioPipeline:
     @classmethod
     def from_pretrained(
         cls, 
+        pretrained_model_path: str,
         synthesis_args=None, 
         device: str = None, 
         logger_obj=None,
@@ -57,7 +58,7 @@ class MMAudioPipeline:
         从预训练模型加载完整的 pipeline
 
         Args:
-            pretrained_model_path: 预训练模型路径
+            pretrained_model_path: 预训练模型路径，可以是本地路径或者hugid路径
             synthesis_args: synthesis 模型参数，如果为 None 则使用默认 Args
             device: 设备，如果为 None 则自动检测
             logger_obj: 日志记录器
@@ -74,6 +75,7 @@ class MMAudioPipeline:
             logger_obj.info("Loading MMAudio synthesis model...")
         
         synthesis_model = MMAudioSynthesis.from_pretrained(
+            pretrained_model_path=pretrained_model_path,
             args=synthesis_args,
             device=device,
             logger_obj=logger_obj,
@@ -89,7 +91,7 @@ class MMAudioPipeline:
             operator=operator,
             synthesis_model=synthesis_model,
             synthesis_args=synthesis_args,
-            device=synthesis_model.device  # 使用 synthesis_model 的设备
+            device=synthesis_model.device 
         )
 
         if logger_obj:
