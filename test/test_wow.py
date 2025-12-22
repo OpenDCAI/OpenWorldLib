@@ -28,7 +28,8 @@ args = WoWArgs(
     seed=42,
     num_frames=81,
     no_tiled=False,
-    disable_vram=False
+    enable_vram_management=True,
+    no_vram_management=False,
 )
 
 # 模型路径（可以是本地路径或HuggingFace repo_id）
@@ -38,7 +39,7 @@ pretrained_model_path = "/data0/hdl/sceneflow/SceneFlow/ WoW-1-Wan-1.3B-2M"  # �
 pipeline = WoWPipeline.from_pretrained(
     synthesis_model_path=pretrained_model_path,
     synthesis_args=args,
-    device="cuda",
+    device=f"cuda:{args.gpu}",
 )
 
 # 生成视频

@@ -66,7 +66,6 @@ class WoWSynthesis(BaseSynthesis):
         if os.path.isdir(pretrained_model_path):
             model_root = Path(pretrained_model_path)
         else:
-            # 从 repo_id 提取目录名（例如 "WoW-world-model/WoW-1-Wan-1.3B-2M" -> "WoW-1-Wan-1.3B-2M"）
             repo_name = pretrained_model_path.split("/")[-1]
             local_dir = Path.cwd() / repo_name
             local_dir.mkdir(parents=True, exist_ok=True)
@@ -82,7 +81,6 @@ class WoWSynthesis(BaseSynthesis):
         vae_model_path = model_root / "Wan2.1_VAE.pth"
         dit_paths = [
             str(model_root / f"diffusion_pytorch_model.safetensors")
-            # for i in range(1, 8)
         ]
 
         # 加载模型 - 与原始demo保持一致：明确指定torch_dtype=torch.bfloat16
@@ -93,55 +91,33 @@ class WoWSynthesis(BaseSynthesis):
             torch_dtype=torch.bfloat16,
         )
 
-        # 获取 DiT 模型并加载checkpoint（在创建pipeline之前）- 与原始demo保持一致
         dit_model = mm.fetch_model("wan_video_dit")
         
-        # 检查并加载checkpoint（优先使用custom_checkpoint_name，否则尝试WoW_video_dit.pt）
-        checkpoint_loaded = False
-        if synthesis_args and hasattr(synthesis_args, 'custom_checkpoint_name') and synthesis_args.custom_checkpoint_name:
-            custom_checkpoint = model_root / synthesis_args.custom_checkpoint_name
-            if custom_checkpoint.exists():
-                try:
-                    state_dict = torch.load(str(custom_checkpoint), map_location="cpu")
-                    if dit_model is not None:
-                        ensure_in_channels_36_for_image_input(dit_model)
-                        dit_model.load_state_dict(state_dict, strict=False)
-                        dit_model.has_image_input = True
-                        checkpoint_loaded = True
-                        print("✅ 自定义 checkpoint 加载成功")
-                except Exception as e:
-                    print(f"⚠️  加载自定义 checkpoint 失败: {e}")
-        
-        # 如果没有加载自定义checkpoint，尝试加载默认的WoW_video_dit.pt
-        if not checkpoint_loaded:
-            default_checkpoint = model_root / "WoW_video_dit.pt"
-            if default_checkpoint.exists():
-                try:
-                    state_dict = torch.load(str(default_checkpoint), map_location="cpu")
-                    if dit_model is not None:
-                        ensure_in_channels_36_for_image_input(dit_model)
-                        dit_model.load_state_dict(state_dict, strict=False)
-                        dit_model.has_image_input = True
-                        checkpoint_loaded = True
-                        print("✅ 默认 checkpoint (WoW_video_dit.pt) 加载成功")
-                except Exception as e:
-                    print(f"⚠️  加载默认 checkpoint 失败: {e}")
+        default_checkpoint = model_root / "WoW_video_dit.pt"
+        state_dict = torch.load(str(default_checkpoint), map_location="cpu")
+        if dit_model is not None:
+            ensure_in_channels_36_for_image_input(dit_model)
+            dit_model.load_state_dict(state_dict, strict=False)
+            dit_model.has_image_input = True
+            print("checkpoint (WoW_video_dit.pt) 加载成功")
         
         # 创建pipeline（在checkpoint加载之后）
         pipeline = WanVideoPipeline.from_model_manager(mm, torch_dtype=torch.bfloat16, device=device)
-        
-        # 启用图像输入模式（I2V模式）- 与原始demo保持一致
-        if dit_model is not None:
-            # 无论是否有checkpoint，都需要扩展输入通道数以支持图像输入
-            ensure_in_channels_36_for_image_input(dit_model)
-            dit_model.has_image_input = True
-            pipeline.denoising_model().has_image_input = True
 
-        # 启用VRAM管理（如果未禁用）
-        if synthesis_args and hasattr(synthesis_args, 'disable_vram') and not synthesis_args.disable_vram:
+        # 启用VRAM管理（通过 enable_vram_management / no_vram_management 控制）
+        enable_vram = True
+        if synthesis_args:
+            enable_vram = (
+                getattr(synthesis_args, 'enable_vram_management', True)
+                and not getattr(synthesis_args, 'no_vram_management', False)
+            )
+
+        if enable_vram:
             persistent_param_gb = getattr(synthesis_args, 'persistent_param_gb', 70)
             num_persistent_params = int(persistent_param_gb * 10**9)
             pipeline.enable_vram_management(num_persistent_param_in_dit=num_persistent_params)
+
+        pipeline.denoising_model().has_image_input = True
 
         return cls(pipeline=pipeline, device=device)
 
@@ -156,12 +132,12 @@ class WoWSynthesis(BaseSynthesis):
             steps = 50
             seed = 42
             tiled = True
-            num_frames = 41
+            num_frames = 81
         else:
             steps = getattr(synthesis_args, 'steps', 50)
             seed = getattr(synthesis_args, 'seed', 42)
             tiled = not getattr(synthesis_args, 'no_tiled', False)
-            num_frames = getattr(synthesis_args, 'num_frames', 41)
+            num_frames = getattr(synthesis_args, 'num_frames', 81)
         
         print(f"[WoWSynthesis] 准备生成视频，输入图片尺寸: {input_image.size if input_image else 'None'}")
         output_video = self.pipeline(
