@@ -5,6 +5,7 @@ from qwen_vl_utils import process_vision_info
 from ...reasoning.spatial_reasoning.spatial_ladder.spatial_ladder_reasoning import (
     SpatialLadderReasoning,
 )
+from ...operators.spatial_ladder_operator import SpatialLadderOperator
 
 
 ImageLike = Union[str, bytes]
@@ -13,11 +14,13 @@ VideoLike = Union[str, bytes]
 
 class SpatialLadderPipeline:
     """
-    Minimal pipeline that wraps SpatialLadderReasoning for single-call inference.
+    Pipeline that builds vision/text inputs and calls SpatialLadderReasoning directly.
     """
 
-    def __init__(self, reasoning: SpatialLadderReasoning):
+    def __init__(self, reasoning: SpatialLadderReasoning, operator: SpatialLadderOperator):
         self.reasoning = reasoning
+        self.operator = operator
+        self.processor = reasoning.processor
 
     @classmethod
     def from_pretrained(
@@ -29,7 +32,8 @@ class SpatialLadderPipeline:
             pretrained_model_path=pretrained_model_path,
             **kwargs,
         )
-        return cls(reasoning=reasoning)
+        operator = SpatialLadderOperator.from_pretrained()
+        return cls(reasoning=reasoning, operator=operator)
 
     def _build_messages(
         self,
@@ -60,6 +64,10 @@ class SpatialLadderPipeline:
         messages: Optional[list] = None,
         generation_kwargs: Optional[dict] = None,
     ) -> List[str]:
+        # Record interaction for interface consistency
+        self.operator.get_interaction(instruction)
+        self.operator.process_interaction()
+
         if messages is None:
             batched_messages = [
                 self._build_messages(
@@ -74,7 +82,7 @@ class SpatialLadderPipeline:
             batched_messages = [messages] if isinstance(messages[0], dict) else messages
 
         texts = [
-            self.reasoning.processor.apply_chat_template(
+            self.processor.apply_chat_template(
                 m, tokenize=False, add_generation_prompt=True
             )
             for m in batched_messages
@@ -90,7 +98,7 @@ class SpatialLadderPipeline:
         if all(v is None for v in video_inputs):
             video_inputs = None
 
-        inputs = self.reasoning.processor(
+        inputs = self.processor(
             text=texts,
             images=image_inputs,
             videos=video_inputs,
@@ -98,8 +106,11 @@ class SpatialLadderPipeline:
             return_tensors="pt",
         )
 
-        return self.reasoning.inference(
+        outputs = self.reasoning.inference(
             inputs=inputs,
             max_new_tokens=max_new_tokens,
             generation_kwargs=generation_kwargs,
         )
+        # Clean up current interaction entry
+        self.operator.delete_last_interaction()
+        return outputs

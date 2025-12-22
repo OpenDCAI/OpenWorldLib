@@ -5,6 +5,7 @@ from qwen_vl_utils import process_vision_info
 from ...reasoning.spatial_reasoning.spatial_reasoner.spatial_reasoner_reasoning import (
     SpatialReasonerReasoning,
 )
+from ...operators.spatial_reasoner_operator import SpatialReasonerOperator
 
 
 ImageLike = Union[str, bytes]
@@ -13,11 +14,12 @@ VideoLike = Union[str, bytes]
 
 class SpatialReasonerPipeline:
     """
-    Minimal pipeline that wraps SpatialReasonerReasoning for single-call inference.
+    Pipeline that builds vision/text inputs and calls SpatialReasonerReasoning; keeps a lightweight operator for interface.
     """
 
-    def __init__(self, reasoning: SpatialReasonerReasoning):
+    def __init__(self, reasoning: SpatialReasonerReasoning, operator: SpatialReasonerOperator):
         self.reasoning = reasoning
+        self.operator = operator
 
     @classmethod
     def from_pretrained(
@@ -29,7 +31,8 @@ class SpatialReasonerPipeline:
             pretrained_model_path=pretrained_model_path,
             **kwargs,
         )
-        return cls(reasoning=reasoning)
+        operator = SpatialReasonerOperator.from_pretrained()
+        return cls(reasoning=reasoning, operator=operator)
 
     def _build_messages(
         self,
@@ -60,6 +63,9 @@ class SpatialReasonerPipeline:
         messages: Optional[list] = None,
         generation_kwargs: Optional[dict] = None,
     ) -> List[str]:
+        self.operator.get_interaction(instruction)
+        self.operator.process_interaction()
+
         if messages is None:
             batched_messages = [
                 self._build_messages(
@@ -98,8 +104,10 @@ class SpatialReasonerPipeline:
             return_tensors="pt",
         )
 
-        return self.reasoning.inference(
+        outputs = self.reasoning.inference(
             inputs=inputs,
             max_new_tokens=max_new_tokens,
             generation_kwargs=generation_kwargs,
         )
+        self.operator.delete_last_interaction()
+        return outputs
