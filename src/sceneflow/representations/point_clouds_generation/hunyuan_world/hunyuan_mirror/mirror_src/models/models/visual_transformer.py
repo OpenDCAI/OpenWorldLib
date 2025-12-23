@@ -6,10 +6,10 @@ import torch
 import torch.nn as nn
 from torch.utils.checkpoint import checkpoint
 
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.layers import PatchEmbed, PatchEmbed_Mlp
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.layers.block import Block
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.layers.rope import RotaryPositionEmbedding2D, PositionGetter
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.layers.vision_transformer import vit_small, vit_base, vit_large, vit_giant2
+from ..layers import PatchEmbed, PatchEmbed_Mlp
+from ..layers.block import Block
+from ..layers.rope import RotaryPositionEmbedding2D, PositionGetter
+from ..layers.vision_transformer import vit_small, vit_base, vit_large, vit_giant2
 
 logger = logging.getLogger(__name__)
 

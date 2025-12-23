@@ -4,7 +4,7 @@ from torchvision import transforms
 
 import glob
 import os
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.video_utils import video_to_image_frames
+from .video_utils import video_to_image_frames
 
 IMAGE_EXTS = ['*.png', '*.jpg', '*.jpeg', '*.bmp', '*.tiff', '*.webp']
 VIDEO_EXTS = ['.mp4', '.avi', '.mov', '.webm', '.gif']

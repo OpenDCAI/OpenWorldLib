@@ -15,7 +15,7 @@ except AttributeError:
     lanczos = PIL.Image.LANCZOS
     bicubic = PIL.Image.BICUBIC
 
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.geometry import (
+from .geometry import (
     colmap_to_opencv_intrinsics,
     opencv_to_colmap_intrinsics,
 )

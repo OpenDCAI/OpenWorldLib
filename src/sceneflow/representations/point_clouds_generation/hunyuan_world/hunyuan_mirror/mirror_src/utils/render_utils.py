@@ -4,10 +4,10 @@ import numpy as np
 import torch
 import moviepy.editor as mpy
 
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.models.rasterization import GaussianSplatRenderer
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils.sh_utils import RGB2SH, SH2RGB
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.gs_effects import GSEffects
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.color_map import apply_color_map_to_image
+from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.models.rasterization import GaussianSplatRenderer
+from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils.sh_utils import RGB2SH, SH2RGB
+from .gs_effects import GSEffects
+from .color_map import apply_color_map_to_image
 from tqdm import tqdm
 
 

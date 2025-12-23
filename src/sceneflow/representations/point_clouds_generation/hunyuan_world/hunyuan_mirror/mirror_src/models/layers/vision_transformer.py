@@ -12,7 +12,7 @@ import torch.nn as nn
 from torch.utils.checkpoint import checkpoint
 from torch.nn.init import trunc_normal_
 from . import Mlp, PatchEmbed, SwiGLUFFNFused, MemEffAttention, NestedTensorBlock as Block
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.logger import RankedLogger
+from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.logger import RankedLogger
 
 log = RankedLogger(__name__, rank_zero_only=True)
 
