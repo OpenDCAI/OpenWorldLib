@@ -1,8 +1,7 @@
 from pathlib import Path
 import sys
-sys.path.append("..") 
-from src.sceneflow.pipelines.wow.pipeline_wow import WoWPipeline, WoWArgs
-from src.sceneflow.base_models.diffusion_model.video.diffsynth_wan import save_video
+from sceneflow.pipelines.wow.pipeline_wow import WoWPipeline, WoWArgs
+from sceneflow.base_models.diffusion_model.video.diffsynth_wan import save_video
 
 
 def save_video_to_file(
