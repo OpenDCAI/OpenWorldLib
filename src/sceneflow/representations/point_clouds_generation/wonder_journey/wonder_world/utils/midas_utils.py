@@ -1,7 +1,7 @@
 import numpy as np
 import torch.nn.functional as F
 from torchvision.transforms import Compose, Normalize
-from midas_module.midas.transforms import NormalizeImage
+from ......base_models.three_dimensions.depth.midas.transforms import NormalizeImage
 import cv2
 
 

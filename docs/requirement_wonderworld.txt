@@ -1,0 +1,4 @@
+pytorch3d @ git+https://github.com/facebookresearch/pytorch3d.git@stable
+pip install submodules/diff-gaussian-rasterization
+pip install submodules/simple-knn
+cd submodules/sam_repvit && pip install -e . && cd ../..
