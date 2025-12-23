@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.layers import Mlp
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.layers.block import Block
+from ..layers import Mlps
+from ..layers.block import Block
 
 
 class CameraHead(nn.Module):

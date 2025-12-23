@@ -5,13 +5,13 @@ import torch.nn as nn
 import torch.nn.functional as F
 import os
 
-from src.sceneflow.representations.base_representation import BaseRepresentation
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.models.visual_transformer import VisualGeometryTransformer
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.heads.camera_head import CameraHead
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.heads.dense_head import DPTHead
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.models.rasterization import GaussianSplatRenderer
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils.camera_utils import vector_to_camera_matrices, extrinsics_to_vector
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils.priors import normalize_depth, normalize_poses
+from ...base_representation import BaseRepresentation
+from .hunyuan_mirror.mirror_src.models.models.visual_transformer import VisualGeometryTransformer
+from .hunyuan_mirror.mirror_src.models.heads.camera_head import CameraHead
+from .hunyuan_mirror.mirror_src.models.heads.dense_head import DPTHead
+from .hunyuan_mirror.mirror_src.models.models.rasterization import GaussianSplatRenderer
+from .hunyuan_mirror.mirror_src.models.utils.camera_utils import vector_to_camera_matrices, extrinsics_to_vector
+from .hunyuan_mirror.mirror_src.models.utils.priors import normalize_depth, normalize_poses
 
 from huggingface_hub import PyTorchModelHubMixin
 

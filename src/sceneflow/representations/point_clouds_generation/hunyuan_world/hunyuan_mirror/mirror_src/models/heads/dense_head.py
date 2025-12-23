@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils.grid import create_uv_grid, position_grid_to_embed
+from ..utils.grid import create_uv_grid, position_grid_to_embed
 
 
 class DPTHead(nn.Module):

@@ -8,7 +8,7 @@ from numbers import Number
 from typing import Tuple, Union
 
 import numpy as np
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.warnings import no_warnings
+from .warnings import no_warnings
 
 
 def colmap_to_opencv_intrinsics(K):

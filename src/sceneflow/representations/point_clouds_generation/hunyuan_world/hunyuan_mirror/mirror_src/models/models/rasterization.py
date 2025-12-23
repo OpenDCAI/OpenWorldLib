@@ -8,9 +8,9 @@ from einops import rearrange
 from gsplat.rendering import rasterization
 from gsplat.strategy import DefaultStrategy
 
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils.frustum import calculate_unprojected_mask
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils.geometry import depth_to_world_coords_points
-from src.sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils import sh_utils, act_gs
+from ..utils.frustum import calculate_unprojected_mask
+from ..utils.geometry import depth_to_world_coords_points
+from ..utils import sh_utils, act_gs
 
 
 class Rasterizer:
