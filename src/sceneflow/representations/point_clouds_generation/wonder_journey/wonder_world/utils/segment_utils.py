@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from PIL import Image
 import torch
@@ -138,9 +139,9 @@ def create_mask_generator():
     )
     return mask_generator
 
-def create_mask_generator_repvit():
+def create_mask_generator_repvit(model_root_path):
     from repvit_sam import SamAutomaticMaskGenerator, sam_model_registry
-    sam_checkpoint = "repvit_sam.pt"
+    sam_checkpoint = os.path.join(model_root_path, "repvit_sam.pt")
     model_type = "repvit"
 
     repvit_sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)

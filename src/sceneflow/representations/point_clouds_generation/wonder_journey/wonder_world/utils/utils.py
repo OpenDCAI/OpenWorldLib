@@ -336,7 +336,6 @@ def save_depth_map(depth_map, file_name, vmin=None, vmax=None, save_clean=False)
     return img
 
 
-
 """
 Apache-2.0 license
 https://github.com/hafriedlander/stable-diffusion-grpcserver/blob/main/sdgrpcserver/services/generate.py
@@ -381,10 +380,6 @@ def soft_stitching(source_img, target_img, mask, blur_size=11, sigma=2.5):
     return stitched_img
 
 def prepare_scheduler(scheduler):
-    # if hasattr(scheduler.config, "steps_offset"):
-    #     new_config = dict(scheduler.config)
-    #     new_config["steps_offset"] = 0
-    #     scheduler._internal_dict = FrozenDict(new_config)
     if hasattr(scheduler, "is_scale_input_called"):
         scheduler.is_scale_input_called = True  # to surpress the warning
     return scheduler
