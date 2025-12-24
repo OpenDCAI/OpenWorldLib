@@ -6,7 +6,7 @@ from PIL import Image
 import json
 
 from ...operators.vggt_operator import VGGTOperator
-from ...base_models.three_dimensions.point_clouds.vggt.vggt_representation import (
+from ...representations.point_clouds_generation.vggt.vggt_representation import (
     VGGTRepresentation,
 )
 
