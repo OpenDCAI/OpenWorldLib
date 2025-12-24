@@ -5,7 +5,8 @@ from pathlib import Path
 import torch
 from torchvision.transforms import ToPILImage
 from omegaconf import OmegaConf
-
+from dataclasses import dataclass, field
+from typing import List, Optional, Union
 
 # sys.path.append("../../operators")
 # from wonder_journey_oprator import WonderJourneyOperator
@@ -28,49 +29,160 @@ from ...representations.models.wonder_journey.wonder_journey.util.finetune_utils
 from ...representations.models.wonder_journey.wonder_journey.util.general_utils import save_video
 from ...representations.models.wonder_journey.wonder_journey.util.utils import save_depth_map, merge_frames, merge_keyframes
 
+# 新增 WonderJourneyArgs 配置类
+@dataclass
+class WonderJourneyArgs:
+    # --- Paths & Basic Info ---
+    runs_dir: str = "runs"
+    example_name: str = "default_example"
+    seed: int = 2
+    device: str = "cuda"
+
+    image_filepath: str = ""          # 初始图片路径
+    content_prompt: str = ""          # 内容提示词 (例如: "Scene Name, entity1, entity2...")
+    style_prompt: str = ""            # 风格提示词
+    background_prompt: str = ""       # 背景提示词 (可选)
+
+    # --- Model Paths (External) ---
+    # 这些通常在 test.py 中根据环境指定绝对路径
+    oneformer_path: str = ""
+    sd_path: str = ""
+    depth_model_path: str = ""
+
+    # --- API Keys ---
+    api_key: str = ""
+    api_base: str = ""
+
+    # --- Frame & Scene Settings ---
+    frames: int = 1
+    num_scenes: int = 1
+    num_keyframes: int = 2
+    save_fps: int = 10
+    
+    # --- Generation & Logic Switches ---
+    use_gpt: bool = False
+    skip_interp: bool = False
+    skip_gen: bool = False
+    enable_regenerate: bool = False
+    regenerate_times: int = 3
+    debug: bool = False
+    
+    # --- Resolution ---
+    inpainting_resolution_gen: int = 512
+    inpainting_resolution_interp: int = 512
+    
+    # --- Depth Model Settings ---
+    depth_model: str = "midas_v3.1" # choice: [MiDaS, ZoeDepth]
+    fg_depth_range: float = 0.0015
+    depth_shift: float = 0.0001
+    
+    # --- Motion Parameters ---
+    motion: str = "rotations" # predefined, rotations, round
+    extrinsics: Optional[str] = None
+    intrinsics: Optional[str] = None
+    camera_speed: float = 0.0005
+    no_rotations_steps: int = 0
+    rotation_steps: int = 10
+    rotation_range: float = 0.00
+    rotate_radius: str = "median"
+    camera_speed_multiplier_rotation: float = 0.0
+    # Rotation path (list of ints)
+    rotation_path: List[int] = field(default_factory=lambda: [])
+    
+    # --- Camera Intrinsics ---
+    init_focal_length: int = 500
+    
+    # --- Finetuning Parameters ---
+    finetune_decoder_gen: bool = True
+    finetune_decoder_interp: bool = True
+    decoder_learning_rate: float = 0.0001
+    num_finetune_decoder_steps: int = 100
+    num_finetune_decoder_steps_interp: int = 30
+    preservation_weight: float = 10.0
+    
+    finetune_depth_model: bool = True
+    depth_model_learning_rate: float = 1e-6
+    num_finetune_depth_model_steps: int = 200
+    
+    # --- Point Cloud Settings ---
+    point_size: float = 0.003
+    point_size_min_ratio: float = 1.0
+    sky_hard_depth: float = 0.025
+    sky_point_size_multiplier: float = 1.5
+    sky_erode_kernel_size: int = 10
+    
+    # --- Inpainting & Masking ---
+    use_postmask: bool = True
+    dilate_mask_decoder_ft: int = 3
+    inconsistency_threshold: int = 1
+    negative_inpainting_prompt: str = "collage, text, writings, signs, text, white border, photograph border, artifacts, blur, blurry, foggy, fog, bad quality, distortions, distorted image, watermark, signature, fisheye look"
+    
+    # --- Upsample ---
+    kf2_upsample_coef: int = 4
+
+    # --- Control Text (Optional) ---
+    control_text: Optional[List[str]] = None
+
+    # 为了兼容旧代码 (operator/representation 等期望 config 是个字典)
+    # 我们让这个类表现得像个字典
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def get(self, item, default=None):
+        return getattr(self, item, default)
+        
+    def __setitem__(self, key, value):
+        setattr(self, key, value)
+    
+    def __contains__(self, item):
+        return hasattr(self, item)
+
+
 class WonderJourneyPipeline:
-    def __init__(self, representation_model, reasoning_model, synthesis_model, config):
+    def __init__(self, representation_model, reasoning_model, synthesis_model, args: WonderJourneyArgs):
         self.representation_model = representation_model
         self.reasoning_model = reasoning_model
         self.synthesis_model = synthesis_model
-        self.config = config
+        self.args = args # Renamed config to args
 
     @classmethod
-    def from_pretrained(cls, config, oneformer_path, sd_path, depth_model_path="dpt_beit_large_512.pt"):
+    def from_pretrained(cls, args: WonderJourneyArgs):
         """
-        加载所有子模块
+        加载所有子模块，接受 WonderJourneyArgs 对象
         """
-        device = config["device"]
+        device = args.device
 
         print("Loading Representation Models...")
         representation_model = WonderJourneyRepresentation.from_pretrained(
-            oneformer_path=oneformer_path,
-            depth_model_path=depth_model_path,
+            oneformer_path=args.oneformer_path,
+            depth_model_path=args.depth_model_path,
             device=device
         )
 
         print("Loading Synthesis Models...")
         synthesis_model = WonderJourneySynthesis.from_pretrained(
-            pretrained_model_path=sd_path,
+            pretrained_model_path=args.sd_path,
             device=device
         )
 
         print("Loading Reasoning Models...")
         reasoning_model = PromptReasoning.from_pretrained(
-            runs_dir=config['runs_dir'],
-            control=False,
-            model_name="gpt-4" , api_key=config["api_key"], api_base=config["api_base"],
+            runs_dir=args.runs_dir,
+            control=False, # 可以根据 args.control_text 判断
+            model_name="gpt-4", 
+            api_key=args.api_key, 
+            api_base=args.api_base,
         )
 
-        return cls(representation_model, reasoning_model, synthesis_model, config)
+        return cls(representation_model, reasoning_model, synthesis_model, args)
 
     @staticmethod
-    def create_operator(config):
+    def create_operator(args: WonderJourneyArgs):
         """
-        辅助函数：帮助 test.py 创建 Operator，而不需要 test.py 导入 Operator 类
+        辅助函数：帮助 test.py 创建 Operator
         """
-        operator = WonderJourneyOperator(config)
-        operator.seeding(config["seed"])
+        operator = WonderJourneyOperator(args) # args 表现得像字典，可以直接传给 operator
+        operator.seeding(args.seed)
         return operator
 
     def evaluate(self, model):
@@ -108,15 +220,16 @@ class WonderJourneyPipeline:
             (save_root / "outter_masks").mkdir(exist_ok=True, parents=True)
             ToPILImage()(model.outter_masks[epoch]).save(save_root / "outter_masks" / f"{epoch}.png")
         if epoch == 0:
-            with open(Path(model.run_dir) / "config.yaml", "w") as f:
-                OmegaConf.save(model.config, f)
+            # save args as text or json instead of OmegaConf
+            with open(Path(model.run_dir) / "config.txt", "w") as f:
+                f.write(str(self.args))
 
     def empty_cache(self):
         torch.cuda.empty_cache()
         gc.collect()
 
     def process(self, operator):
-        config = self.config
+        config = self.args # Use args everywhere
         
         if config['skip_gen']:
             kfgen_save_folder = Path(config['runs_dir']) / f"{config['kfgen_load_dt_string']}_kfgen"

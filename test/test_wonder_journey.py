@@ -14,85 +14,70 @@ if PROJECT_ROOT not in sys.path:
 
 print(f"Project Root: {PROJECT_ROOT}")
 
-from sceneflow.pipelines.wonder_journey.pipeline_wonder_journey import WonderJourneyPipeline
+from src.sceneflow.pipelines.wonder_journey.pipeline_wonder_journey import WonderJourneyPipeline, WonderJourneyArgs
 
 def make_abs(path):
-    """
-    辅助函数：如果路径是相对的，将其转换为基于项目根目录的绝对路径
-    """
-    if os.path.isabs(path):
-        return path
+    if os.path.isabs(path): return path
     return os.path.join(PROJECT_ROOT, path)
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument(
-        "--base-config",
-        default="examples/wonder_journey/base-config.yaml",
-        help="Config path",
-    )
-    parser.add_argument(
-        "--example_config",
-        default="examples/wonder_journey/village.yaml",
-        help="Example config path e.g. config/village.yaml"
-    )
-    # 增加参数以支持 HuggingFace 模型路径输入
-    parser.add_argument(
-        "--oneformer_path",
-        default="oneformer_chk",
-        help="Path to OneFormer model (local or HF repo_id)"
-    )
-    parser.add_argument(
-        "--sd_path",
-        default="stabilityai/stable-diffusion-2-inpainting",
-        help="Path to Stable Diffusion model (local or HF repo_id)"
-    )
-    parser.add_argument(
-        "--depth_model_path",
-        default="dpt_beit_large_512.pt",
-        help="Path to depth model checkpoint"
-    )
+    # 只需要路径参数了，config 参数可以去掉了（或者留着不用）
+    parser.add_argument("--oneformer_path", default="oneformer_chk")
+    parser.add_argument("--sd_path", default="stabilityai/stable-diffusion-2-inpainting")
+    parser.add_argument("--depth_model_path", default="dpt_beit_large_512.pt")
+    # 额外加一个图片路径参数，方便测试
+    parser.add_argument("--image_path", default="data/test_case1/ref_image.png")
     
-    args = parser.parse_args()
+    args_cmd = parser.parse_args()
     
-    # 1. 转换所有路径为绝对路径 (这是解决报错的关键！！！)
-    abs_base_config = make_abs(args.base_config)
-    abs_example_config = make_abs(args.example_config)
-    abs_oneformer_path = make_abs(args.oneformer_path)
-    abs_sd_path = make_abs(args.sd_path)
-    abs_depth_model_path = make_abs(args.depth_model_path)
+    # 1. 初始化 Args
+    args = WonderJourneyArgs()
 
-    print(f"Loading OneFormer from: {abs_oneformer_path}")
-    print(f"Loading SD from: {abs_sd_path}")
+    # 2. 【关键】在这里填入原本 YAML 里的数据
+    args.example_name = "village"
+    args.runs_dir = make_abs(f"data/test_wonder_journey/56_{args.example_name}")
+    
+    # ======== 🔴 这里是原本 examples.yaml 的内容 ========
+    args.content_prompt = "Mountain Pass Entrance, rocky path, wooden signpost, pine trees"
+    args.style_prompt = "Style: DSLR 35mm landscape"
+    args.background_prompt = "Passing beyond the quaint village, a winding path leads travelers towards the foot of the mountains."
+    
+    # 绝对路径图片
+    args.image_filepath = make_abs(args_cmd.image_path)
+    # 下面这个放到operator里面input的地方：
+    # input_image = Image.open(image_path).convert('RGB').resize((512, 512))
+    # =================================================
+    
+    # 场景参数
+    args.num_scenes = 1
+    args.num_keyframes = 2
+    args.rotation_path = [0, 0, 0, 1, 1, 0, 0, 0]
+    args.rotation_range = 0.45
+    args.camera_speed_multiplier_rotation = 0.2
+    
+    # 模型路径
+    args.oneformer_path = make_abs(args_cmd.oneformer_path)
+    args.sd_path = make_abs(args_cmd.sd_path)
+    args.depth_model_path = make_abs(args_cmd.depth_model_path)
+    
+    # API & GPT
+    args.api_key = "sk-Wnv0VFqre5WleXvBGVmr7UqtwBBvuI5p5ZT8SujVTtldvUsZ"
+    args.api_base = "https://sg.uiuiapi.com/v1"
+    args.use_gpt = False  # 暂时关闭 GPT
+    
+    # 生成参数
+    args.frames = 10
+    args.inpainting_resolution_gen = 1024
+    args.finetune_decoder_interp = False
+    args.seed = -1
+    
+    print(f"Running Example: {args.example_name}")
+    print(f"Image Path: {args.image_filepath}")
 
-    # 2. 加载配置
-    base_config = OmegaConf.load(abs_base_config)
-    example_config = OmegaConf.load(abs_example_config)
-    config = OmegaConf.merge(base_config, example_config)
-# ======== 🔴 新增修复代码 开始 ========
-    # 从 example_config 的路径中提取文件名作为 example_name
-    # # 例如：config/village.yaml -> village
-    # import os
-    # example_filename = os.path.basename(args.example_config) # 得到 "village.yaml"
-    # example_name = os.path.splitext(example_filename)[0]     # 得到 "village"
-    
-    # # 允许修改 config 结构（OmegaConf 默认可能是锁定的）
-    # OmegaConf.set_struct(config, False)
-    
-    # # 将名字注入配置中
-    # config["example_name"] = example_name
-    # print(f"Set example_name to: {example_name}")
-    # ======== 🟢 新增修复代码 结束 ========
-    # 3. 传入绝对路径初始化 Pipeline
-    pipeline = WonderJourneyPipeline.from_pretrained(
-        config=config,
-        oneformer_path=abs_oneformer_path,
-        sd_path=abs_sd_path,
-        depth_model_path=abs_depth_model_path
-    )
-
-    operator = pipeline.create_operator(config)
-    
+    # 3. 初始化 & 运行
+    pipeline = WonderJourneyPipeline.from_pretrained(args)
+    operator = pipeline.create_operator(args)
     pipeline(operator)
 
 if __name__ == "__main__":
