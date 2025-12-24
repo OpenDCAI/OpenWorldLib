@@ -7,10 +7,11 @@ from typing import Dict, Any, Optional, Union
 from huggingface_hub import snapshot_download
 
 # Import VGGT model components from SceneFlow's vggt directory
-from .vggt.models.vggt import VGGT
-from .vggt.utils.load_fn import load_and_preprocess_images, load_and_preprocess_images_square
-from .vggt.utils.pose_enc import pose_encoding_to_extri_intri
-from .vggt.utils.geometry import unproject_depth_map_to_point_map
+from ....base_models.three_dimensions.point_clouds.vggt.vggt.models.vggt import VGGT
+from ....base_models.three_dimensions.point_clouds.vggt.vggt.utils.load_fn import load_and_preprocess_images, load_and_preprocess_images_square
+from ....base_models.three_dimensions.point_clouds.vggt.vggt.utils.pose_enc import pose_encoding_to_extri_intri
+from ....base_models.three_dimensions.point_clouds.vggt.vggt.utils.geometry import unproject_depth_map_to_point_map
+
 
 
 class VGGTRepresentation:
