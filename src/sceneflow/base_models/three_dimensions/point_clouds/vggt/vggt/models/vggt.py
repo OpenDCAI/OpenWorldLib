@@ -8,10 +8,10 @@ import torch
 import torch.nn as nn
 from huggingface_hub import PyTorchModelHubMixin  # used for model hub
 
-from vggt.models.aggregator import Aggregator
-from vggt.heads.camera_head import CameraHead
-from vggt.heads.dpt_head import DPTHead
-from vggt.heads.track_head import TrackHead
+from .aggregator import Aggregator
+from ..heads.camera_head import CameraHead
+from ..heads.dpt_head import DPTHead
+from ..heads.track_head import TrackHead
 
 
 class VGGT(nn.Module, PyTorchModelHubMixin):
