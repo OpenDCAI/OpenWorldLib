@@ -1,12 +1,14 @@
 import sys
 sys.path.append("..")
 
-from src.sceneflow.pipelines.vggt.pipeline_vggt import VGGTPipeline
+from sceneflow.pipelines.vggt.pipeline_vggt import VGGTPipeline
 
 # Configure before running
-DATA_PATH = "/YOUR/IMAGE/OR/DIRECTORY/PATH"
+DATA_PATH = "../data/test_case1/ref_image.png"
 MODEL_PATH = "facebook/VGGT-1B"
-OUTPUT_DIR = None
+OUTPUT_DIR = "output"
+INTERACTION = "single_view_reconstruction"  # Options: "single_view_reconstruction", "multi_view_reconstruction", "camera_pose_estimation", "depth_estimation", "point_cloud_generation", "point_tracking"
+
 
 
 pipeline = VGGTPipeline.from_pretrained(
@@ -15,6 +17,7 @@ pipeline = VGGTPipeline.from_pretrained(
 
 results = pipeline(
     DATA_PATH,
+    interaction=INTERACTION,
     return_visualization=True,
 )
 
