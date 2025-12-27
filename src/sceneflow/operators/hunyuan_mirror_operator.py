@@ -8,7 +8,7 @@ It processes user commands like camera control, object manipulation, etc.
 import numpy as np
 import torch
 from .base_operator import BaseOperator
-from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils.camera_utils import vector_to_camera_matrices
+from ..representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.models.utils.camera_utils import vector_to_camera_matrices
 
 class HunyuanMirrorOperator(BaseOperator):
     def __init__(self, 
