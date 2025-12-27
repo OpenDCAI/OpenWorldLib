@@ -12,13 +12,13 @@ from typing import Optional, Any, Dict, List
 import cv2
 import onnxruntime
 
-from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_world_mirror_representation import HunyuanWorldMirrorRepresentation
-from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.inference_utils import prepare_images_to_tensor
-from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.save_utils import save_depth_png, save_depth_npy, save_normal_png
-from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.save_utils import save_scene_ply, save_gs_ply
-from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.render_utils import render_interpolated_video
-from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.geometry import depth_edge, normals_edge
-from sceneflow.representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.visual_util import segment_sky, download_file_from_url
+from ...representations.point_clouds_generation.hunyuan_world.hunyuan_world_mirror_representation import HunyuanWorldMirrorRepresentation
+from ...representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.inference_utils import prepare_images_to_tensor
+from ...representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.save_utils import save_depth_png, save_depth_npy, save_normal_png
+from ...representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.save_utils import save_scene_ply, save_gs_ply
+from ...representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.render_utils import render_interpolated_video
+from ...representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.geometry import depth_edge, normals_edge
+from ...representations.point_clouds_generation.hunyuan_world.hunyuan_mirror.mirror_src.utils.visual_util import segment_sky, download_file_from_url
 
 
 class HunyuanMirrorPipeline:
