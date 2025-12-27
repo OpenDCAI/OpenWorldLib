@@ -3,7 +3,7 @@ from sceneflow.pipelines.hunyuan_mirror.pipeline_hunyuan_mirror import HunyuanMi
 
 # 设置输入输出路径
 input_path = "data/test_case/test_image_seq_case1"
-output_path = "output/hunyuan_mirror_simple"
+output_path = "output/hunyuan_mirror_mirror"
 
 # 获取所有图片文件
 image_extensions = ['.jpg', '.jpeg', '.png', '.webp']
