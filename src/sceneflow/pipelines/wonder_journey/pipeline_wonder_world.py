@@ -100,8 +100,9 @@ class WonderWorldPipeline(PipelineABC):
                 prompt_list=prompt_list,
                 interactions=interactions
             )
-            rendered_image = self.representation_model.render_interaction_sequence(
-                rotation_list=view_matrices
+            rendered_image = self.representation_model.get_representation(
+                rotation_list=view_matrices,
+                is_gaussian_train=False
             )
         output_dict["point_cloud"] = pc if is_gaussian_train else None
         output_dict["rendered_image"] = rendered_image if not is_gaussian_train else None

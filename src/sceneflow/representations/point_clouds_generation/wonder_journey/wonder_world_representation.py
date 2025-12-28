@@ -293,7 +293,8 @@ class WonderWorldRepresentation(BaseRepresentation):
             )
             
             # 获取相机位姿
-            current_pt3d_cam = kf_gen.cameras[i]
+            current_pt3d_cam = self._get_camera_by_js_view_matrix(rotation_list[i], xyz_scale=xyz_scale,
+                                                                  init_focal_length=kf_gen.init_focal_length)
             tdgs_cam = convert_pt3d_cam_to_3dgs_cam(current_pt3d_cam, xyz_scale=xyz_scale)
             kf_gen.set_current_camera(current_pt3d_cam, archive_camera=True)
             
@@ -457,8 +458,7 @@ class WonderWorldRepresentation(BaseRepresentation):
                         gaussian_ply_path="",
                         ):
         """
-        渲染高斯泼溅模型
-        
+        render the 3DGS model
         Args:
             camera_viewpoint: 相机视角矩阵 (16元素列表或4x4张量)
             gaussian_pc: 高斯模型实例 (可选)
@@ -508,11 +508,15 @@ class WonderWorldRepresentation(BaseRepresentation):
         return pil_image
 
 
-    def _get_camera_by_js_view_matrix(self, view_matrix, xyz_scale=1.0, big_view=False):
+    @torch.no_grad()
+    def _get_camera_by_js_view_matrix(self, view_matrix, xyz_scale=1.0, big_view=False, init_focal_length = 960):
         """
         辅助函数: 从视图矩阵创建相机
         """
-        view_matrix = torch.tensor(view_matrix, device=self.device, dtype=torch.float).reshape(4, 4)
+        if isinstance(view_matrix, torch.Tensor):
+            view_matrix = view_matrix.reshape(4, 4).to(self.device)
+        else:
+            view_matrix = torch.tensor(view_matrix, device=self.device, dtype=torch.float).reshape(4, 4)
         xy_negate_matrix = torch.tensor([[-1, 0, 0, 0], [0, -1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]], 
                                         device=self.device, dtype=torch.float)
         view_matrix_negate_xy = view_matrix @ xy_negate_matrix
@@ -520,8 +524,7 @@ class WonderWorldRepresentation(BaseRepresentation):
         T = view_matrix_negate_xy[3, :3].unsqueeze(0)
         
         from pytorch3d.renderer import PerspectiveCameras
-        
-        init_focal_length = 960
+
         K = torch.zeros((1, 4, 4), device=self.device)
         K[0, 0, 0] = init_focal_length
         K[0, 1, 1] = init_focal_length

@@ -47,6 +47,7 @@ def convert_pt3d_cam_to_3dgs_cam(pt3d_cam: PerspectiveCameras, xyz_scale=1):
     tdgs_cam = Camera(R=R, T=T, FoVx=fovx, FoVy=fovy)
     return tdgs_cam
 
+
 def rotate_pytorch3d_camera(camera:PerspectiveCameras, angle_rad:float, axis='x'):
     """
     Rotate a PyTorch3D camera object around the specified axis by the given angle.

@@ -1,0 +1,4 @@
+1. 修改key_frame_gen里面的generation_sky
+2. test文件中加入不同操作的角度
+3. operator的角度应该加上前后左右平移
+4. wonderworld里面training（是否初始化，）是否使用rendering切换应该更加自如

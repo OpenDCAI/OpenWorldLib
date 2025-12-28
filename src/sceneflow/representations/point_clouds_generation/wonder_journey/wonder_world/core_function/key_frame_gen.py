@@ -709,39 +709,16 @@ class KeyframeGen(torch.nn.Module):
         
         return train_data, train_data_layer
 
-    def generate_sky_pointcloud(self, syncdiffusion_model=None, image=None, mask=None, gen_sky=False, style=None):
+    def generate_sky_pointcloud(self, syncdiffusion_model=None, image=None, mask=None, gen_sky=False, style=None,
+                                image_height=512, image_width=6144, sky_text_prompt="blue sky",):
         # Simplified sky generation logic
-        image_height, image_width = 512, 6144
         w_start = 256
         example_name = self.config["example_name"]
         imgs = []
         
-        # Logic to generate or load sky layers (simplified for brevity, keeping core flow)
-        for layer in range(2):
-            if layer == 0 and (gen_sky or not os.path.exists(f'./examples/sky_images/{example_name}/sky_0.png')):
-                init_image = torch.zeros((1, 3, image_height, image_width)).to(self.device)
-                init_image[:, :, :, w_start:w_start+image_height] = image
-                mask_image = torch.ones((1, 1, image_height, image_width)).to(self.device)
-                mask_image[:, :, :, w_start:w_start+image_height] = 1-mask
-                
-                mask_image_eroded = dilation(mask_image, kernel=torch.ones(10, 10).cuda())
-                init_image = inpaint_cv2(init_image, mask_image_eroded).to(self.device)
-                
-                prompts = f"sky, blue sky, horizon, distant hills. style: {style}"
-                img = syncdiffusion_model.sample(prompts=prompts, negative_prompts='tree, text', height=image_height, width=image_width,
-                                                 num_inference_steps=50, guidance_scale=7.5, sync_weight=80.0, stride=8, loop_closure=True,
-                                                 condition=True, inpaint_mask=mask_image, rendered_image=init_image, anchor_view_idx=w_start // 64)
-                
-                new_img_ = torch.cat((ToTensor()(img)[:, :, w_start:], ToTensor()(img)[:, :, :w_start]), dim=-1) # Shift
-                img = ToPILImage()(new_img_)
-                os.makedirs(f'./examples/sky_images/{example_name}', exist_ok=True)
-                img.save(f'./examples/sky_images/{example_name}/sky_{layer}.png')
-            else:
-                img = Image.open(f'./examples/sky_images/{example_name}/sky_{layer}.png')
-            imgs.append(img)
-
-        # Linear blending logic (simplified)
-        img = imgs[0] # Placeholder for full blending logic if needed
+        # This function has contained linear blending
+        img = self.wonder_world_synthesis.generation_360_data(input_image=image, sky_text_prompt=sky_text_prompt,
+                            width=image_width, height=image_height, num_inference_steps=50, guidance_scale=7.5)
         
         # Point Cloud Generation from Panorama
         equatorial_radius = 0.02
