@@ -78,7 +78,7 @@ class WonderWorldOperator(BaseOperator):
             [0, -1, 0, 0],
             [0, 0, 1, 0],
             [0, 0, 0, 1]
-        ], device=self.device, dtype=torch.float32)
+        ], device=self.device, dtype=torch.float)
         
         # 3. 从初始矩阵反推出原始的R和T
         # 因为 view_matrix_final = view_matrix @ xy_negate
@@ -88,7 +88,7 @@ class WonderWorldOperator(BaseOperator):
             [0, -1, 0, 0], 
             [0, 0, 1, 0], 
             [0, 0, 0, 1]
-        ], device=self.device, dtype=torch.float32)
+        ], device=self.device, dtype=torch.float)
         
         # xy_negate 的逆矩阵就是它自己（对角矩阵且对角元素为±1）
         initial_matrix_before_negate = initial_view_matrix @ xy_negate_matrix
@@ -140,7 +140,7 @@ class WonderWorldOperator(BaseOperator):
                     [torch.cos(theta), 0, torch.sin(theta)],
                     [0, 1, 0],
                     [-torch.sin(theta), 0, torch.cos(theta)]
-                ], device=self.device, dtype=torch.float32)
+                ], device=self.device, dtype=torch.float)
                 current_R = rotation_matrix @ current_R
             
             # Camera left/right (code: ±2)
@@ -163,7 +163,7 @@ class WonderWorldOperator(BaseOperator):
                     [torch.cos(theta), 0, torch.sin(theta)],
                     [0, 1, 0],
                     [-torch.sin(theta), 0, torch.cos(theta)]
-                ], device=self.device, dtype=torch.float32)
+                ], device=self.device, dtype=torch.float)
                 current_R = rotation_matrix @ current_R
             
             # Backward (code: 3)
@@ -190,7 +190,7 @@ class WonderWorldOperator(BaseOperator):
                     [1, 0, 0],
                     [0, torch.cos(theta), -torch.sin(theta)],
                     [0, torch.sin(theta), torch.cos(theta)]
-                ], device=self.device, dtype=torch.float32)
+                ], device=self.device, dtype=torch.float)
                 current_R = rotation_matrix @ current_R
             
             else:
@@ -200,11 +200,11 @@ class WonderWorldOperator(BaseOperator):
             # Apply translation
             move_dir = torch.tensor([
                 [-right_multiplier, -up_multiplier, -forward_speed_multiplier]
-            ], device=self.device, dtype=torch.float32)
+            ], device=self.device, dtype=torch.float)
             current_T = current_T + camera_speed * move_dir
             
             # 构建4x4视图矩阵
-            view_matrix = torch.eye(4, device=self.device, dtype=torch.float32)
+            view_matrix = torch.eye(4, device=self.device, dtype=torch.float)
             view_matrix[:3, :3] = current_R
             view_matrix[3, :3] = current_T.squeeze() * self.xyz_scale
             

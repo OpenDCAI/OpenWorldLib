@@ -44,7 +44,6 @@ wonder_world_config = {
     
     # Inpainting参数
     "negative_inpainting_prompt": "collage, text, writings, signs, text, white border, photograph border, artifacts, blur, blurry, foggy, fog, person, bad quality, distortions, distorted image, watermark, signature, fisheye look",
-    "stable_diffusion_checkpoint": "stabilityai/stable-diffusion-2-inpainting",
     "inpainting_resolution_interp": 512,
     "inpainting_resolution_gen": 512,
     

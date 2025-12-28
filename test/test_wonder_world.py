@@ -30,6 +30,7 @@ prompt_list = [
     "a forest path with tall trees",
     "a lake with reflections"
 ]
+sky_prompt = ""
 
 ## Run the pipeline
 output_dict = pipeline(
