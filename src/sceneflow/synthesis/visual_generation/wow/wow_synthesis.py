@@ -2,7 +2,7 @@ from typing import Optional
 from PIL import Image
 import logging
 from pathlib import Path
-from ....base_models.diffusion_model.video.diffsynth_wan import ModelManager, WanVideoPipeline
+from ....base_models.diffusion_model.diffsynth import ModelManager, WanVideoPipeline
 from ...base_synthesis import BaseSynthesis
 from huggingface_hub import snapshot_download
 import os
