@@ -23,7 +23,7 @@ from datetime import datetime
 from diffusers.configuration_utils import FrozenDict
 import torch.nn.functional as F
 from torchvision.transforms.functional import gaussian_blur
-from ......base_models.three_dimensions.point_clouds.gaussian_splatting.scene.cameras import Camera
+from ..scene.cameras import Camera
 
 
 def convert_pt3d_cam_to_3dgs_cam(pt3d_cam: PerspectiveCameras, xyz_scale=1):

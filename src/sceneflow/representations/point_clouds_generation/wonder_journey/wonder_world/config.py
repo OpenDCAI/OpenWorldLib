@@ -31,7 +31,7 @@ wonder_world_config = {
     # 天空和图层生成
     "gen_sky_image": False,
     "gen_sky": False,
-    "gen_layer": False,
+    "gen_layer": True,
     
     # 加载配置
     "load_gen": False,

@@ -5,7 +5,7 @@
 ###
 import random
 
-from arguments import GSParams
+from ..arguments import GSParams
 from .dataset_readers import readDataInfo
 from .gaussian_model import WonderWorldGaussianModel as GaussianModel
 

@@ -111,7 +111,7 @@ class KeyframeGen(torch.nn.Module):
         self.segment_processor = segment_processor
         
         # --- Parameters ---
-        self.inpainting_resolution = inpainting_resolution
+        self.inpainting_resolution = config["inpainting_resolution_gen"]
         self.init_focal_length = config["init_focal_length"]
         self.depth_shift = config['depth_shift']
         self.very_far_depth = config['sky_hard_depth'] * 2
@@ -156,6 +156,8 @@ class KeyframeGen(torch.nn.Module):
         self.mask_latest = torch.zeros(1, 1, 512, 512)
         self.post_mask_latest = torch.zeros(1, 1, 512, 512)
         self.mask_disocclusion = torch.zeros(1, 1, 512, 512)
+        self.border_mask = None
+        self.border_image = None
         
         # --- Initialization ---
         dt_string = datetime.now().strftime("%d-%m_%H-%M-%S")
@@ -336,11 +338,14 @@ class KeyframeGen(torch.nn.Module):
     @torch.no_grad()
     def inpaint(self, rendered_image, inpaint_mask, fill_mask=None, fill_mode='cv2_telea', self_guidance=False, inpainting_prompt=None, negative_prompt=None, mask_strategy=np.min, diffusion_steps=50):
         # Handle resolution padding
+        self.wonder_world_synthesis.negative_inpainting_prompt = self.negative_inpainting_prompt
         inpainted_image = self.wonder_world_synthesis.inpaint(
-            rendered_image, inpaint_mask, fill_mask, fill_mode,
-            self_guidance, inpainting_prompt, negative_prompt,
-            mask_strategy, diffusion_steps
+            rendered_image=rendered_image, inpaint_mask=inpaint_mask, fill_mask=fill_mask, fill_mode=fill_mode,
+            self_guidance=self_guidance, inpainting_prompt=inpainting_prompt, negative_prompt=negative_prompt,
+            mask_strategy=mask_strategy, diffusion_steps=diffusion_steps, inpainting_resolution=self.inpainting_resolution,
+            border_mask=self.border_mask, border_image=self.border_image, 
         )
+        self.inpaint_input_image_latest = self.wonder_world_synthesis.inpaint_input_image_latest
         return inpainted_image
 
     # ------------------------------------------------------------------------ #

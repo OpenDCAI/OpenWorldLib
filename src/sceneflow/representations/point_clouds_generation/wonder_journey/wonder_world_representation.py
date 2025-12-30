@@ -118,6 +118,7 @@ class WonderWorldRepresentation(BaseRepresentation):
             segment_model=self.segment_model,
             segment_processor=self.segment_processor,
             normal_estimator=self.normal_estimator,
+            rotation_path=config["rotation_path"],   # for 360 camera-view generation
         )
 
     def train_gaussian(self,
@@ -214,7 +215,7 @@ class WonderWorldRepresentation(BaseRepresentation):
             sky_mask = kf_gen.generate_sky_mask().float()
             kf_gen.generate_sky_pointcloud(
                 syncdiffusion_model=None,
-                image=kf_gen.image_latest,
+                image=image,
                 mask=sky_mask,
                 gen_sky=False,
                 style=""
@@ -240,7 +241,7 @@ class WonderWorldRepresentation(BaseRepresentation):
             opt_sky.iterations = 399
             
             scene_sky = Scene(traindata_sky, gaussians_sky, opt_sky, is_sky=True)
-            self.train_gaussian(gaussians_sky, scene_sky, opt_sky, background, kf_gen, xyz_scale, initialize_scaling=False)
+            self.train_gaussian(gaussians_sky, scene_sky, opt_sky, background, xyz_scale, initialize_scaling=False)
             
             # 设置天空过滤器
             gaussians_sky.visibility_filter_all = torch.zeros(gaussians_sky.get_xyz_all.shape[0], dtype=torch.bool, device=self.device)
@@ -257,7 +258,7 @@ class WonderWorldRepresentation(BaseRepresentation):
                 self.gaussians = GaussianModel(sh_degree=0, previous_gaussian=gaussians_sky)
                 scene_layer = Scene(traindata_layer, self.gaussians, opt)
                 print("Training Base Layer for First Frame...")
-                self.train_gaussian(self.gaussians, scene_layer, opt, background, kf_gen, xyz_scale)
+                self.train_gaussian(self.gaussians, scene_layer, opt, background, xyz_scale)
             else:
                 traindata = kf_gen.convert_to_3dgs_traindata_latest(xyz_scale=xyz_scale, use_no_loss_mask=False)
             
@@ -265,7 +266,7 @@ class WonderWorldRepresentation(BaseRepresentation):
             self.gaussians = GaussianModel(sh_degree=0, previous_gaussian=self.gaussians if gen_layer else gaussians_sky)
             scene = Scene(traindata, self.gaussians, opt)
             print("Training Main Scene for First Frame...")
-            self.train_gaussian(self.gaussians, scene, opt, background, kf_gen, xyz_scale)
+            self.train_gaussian(self.gaussians, scene, opt, background, xyz_scale)
             
             # 设置可见性
             tdgs_cam = convert_pt3d_cam_to_3dgs_cam(kf_gen.get_camera_at_origin(), xyz_scale=xyz_scale)
@@ -287,7 +288,7 @@ class WonderWorldRepresentation(BaseRepresentation):
             
             # 设置关键帧参数
             kf_gen.set_kf_param(
-                inpainting_resolution=512,
+                inpainting_resolution=kf_gen.inpainting_resolution,
                 inpainting_prompt=inpainting_prompt,
                 adaptive_negative_prompt=""
             )
@@ -432,7 +433,7 @@ class WonderWorldRepresentation(BaseRepresentation):
                 scene_layer = Scene(traindata_layer, self.gaussians, opt)
                 
                 print(f"Training Layer {i}...")
-                self.train_gaussian(self.gaussians, scene_layer, opt, background, kf_gen, xyz_scale)
+                self.train_gaussian(self.gaussians, scene_layer, opt, background, xyz_scale)
             else:
                 traindata = kf_gen.convert_to_3dgs_traindata_latest(xyz_scale=xyz_scale, use_no_loss_mask=False)
             
@@ -441,7 +442,7 @@ class WonderWorldRepresentation(BaseRepresentation):
             scene = Scene(traindata, self.gaussians, opt)
             
             print(f"Training Main Scene {i}...")
-            self.train_gaussian(self.gaussians, scene, opt, background, kf_gen, xyz_scale)
+            self.train_gaussian(self.gaussians, scene, opt, background, xyz_scale)
             
             self.gaussians.set_inscreen_points_to_visible(tdgs_cam)
             kf_gen.increment_kf_idx()

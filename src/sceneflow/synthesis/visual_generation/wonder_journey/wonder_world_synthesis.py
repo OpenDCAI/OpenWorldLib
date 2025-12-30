@@ -12,9 +12,14 @@ from ....representations.point_clouds_generation.wonder_journey.wonder_world.uti
 
 
 class WonderWorldSynthesis(BaseSynthesis):
-    def __init__(self, inpaint_pipeline):
+    def __init__(self, inpaint_pipeline, device):
         super().__init__()
         self.inpaint_pipeline = inpaint_pipeline
+        self.device = device
+
+        self.inpainting_prompt=""
+        self.adaptive_negative_prompt=""
+        self.negative_inpainting_prompt=""
 
     @classmethod
     def from_pretrained(cls,
@@ -39,16 +44,18 @@ class WonderWorldSynthesis(BaseSynthesis):
                 torch_dtype=torch.bfloat16,
             ).to(device)
 
-        return cls(inpaint_pipeline)
+        return cls(inpaint_pipeline, device)
 
     @torch.no_grad()
-    def inpaint(self, rendered_image, inpaint_mask, fill_mask=None, fill_mode='cv2_telea', self_guidance=False, inpainting_prompt=None, negative_prompt=None, mask_strategy=np.min, diffusion_steps=50):
+    def inpaint(self, rendered_image, inpaint_mask, fill_mask=None, fill_mode='cv2_telea', self_guidance=False, inpainting_prompt=None,
+                negative_prompt=None, mask_strategy=np.min, diffusion_steps=50, inpainting_resolution=512, border_mask=None, border_image=None,):
         # Handle resolution padding
-        if self.inpainting_resolution > 512 and rendered_image.shape[-1] == 512:
-            padded_inpainting_mask = self.border_mask.clone()
-            padded_inpainting_mask[:, :, self.border_size:-self.border_size, self.border_size:-self.border_size] = inpaint_mask
-            padded_rendered_image = self.border_image.clone()
-            padded_rendered_image[:, :, self.border_size:-self.border_size, self.border_size:-self.border_size] = rendered_image
+        if inpainting_resolution > 512 and rendered_image.shape[-1] == 512:
+            border_size=(inpainting_resolution - 512) // 2
+            padded_inpainting_mask = border_mask.clone()
+            padded_inpainting_mask[:, :, border_size:-border_size, border_size:-border_size] = inpaint_mask
+            padded_rendered_image = border_image.clone()
+            padded_rendered_image[:, :, border_size:-border_size, border_size:-border_size] = rendered_image
         else:
             padded_inpainting_mask = inpaint_mask
             padded_rendered_image = rendered_image
@@ -75,13 +82,13 @@ class WonderWorldSynthesis(BaseSynthesis):
         prompt = inpainting_prompt if inpainting_prompt is not None else self.inpainting_prompt
         neg_prompt = negative_prompt if negative_prompt is not None else (self.adaptive_negative_prompt + self.negative_inpainting_prompt if self.adaptive_negative_prompt else self.negative_inpainting_prompt)
 
-        inpainted_image = self.inpainting_pipeline(
+        inpainted_image = self.inpaint_pipeline(
             prompt=prompt, negative_prompt=neg_prompt,
             image=init_image.resize((1024, 1024)), mask_image=mask_image.resize((1024, 1024)),
             num_inference_steps=diffusion_steps, guidance_scale=8.0, height=1024, width=1024, self_guidance=self_guidance
         ).images[0]
 
-        inpainted_image = inpainted_image.resize((self.inpainting_resolution, self.inpainting_resolution))
+        inpainted_image = inpainted_image.resize((inpainting_resolution, inpainting_resolution))
         inpainted_image = ToTensor()(inpainted_image).to(self.device)
         inpainted_image = (inpainted_image / 2 + 0.5).clamp(0, 1).to(torch.float32)[None]
 
@@ -93,6 +100,7 @@ class WonderWorldSynthesis(BaseSynthesis):
     def linear_blend(self, images, overlap=100):
         # create blending field
         alpha = np.linspace(0, 1, overlap).reshape(overlap, 1, 1)
+        target_width, target_height = images[0].size
         
         for i, img in enumerate(images):
             img_new = np.array(img)
@@ -111,7 +119,7 @@ class WonderWorldSynthesis(BaseSynthesis):
             bottom_img = img_old[overlap:, :, :]
         
         blended_image = (blended_image).astype(np.uint8)
-        return Image.fromarray(blended_image)
+        return Image.fromarray(blended_image).resize((target_width, target_height))
 
     def generation_360_data(self,
                             input_image, 
