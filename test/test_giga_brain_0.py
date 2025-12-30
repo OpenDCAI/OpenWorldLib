@@ -4,106 +4,38 @@ import os
 import matplotlib
 import numpy as np
 import torch
-import tyro
+from PIL import Image
+from torchvision.transforms import functional as TF
 
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt  # noqa: E402
 
-from giga_datasets import load_dataset
 from sceneflow.pipelines.giga_brain_0.pipeline_giga_brain_0 import GigaBrain0Pipeline
 
 
-def inference_giga_brain_0(
-    model_path: str,
-    data_path: str,
-    output_path: str,
-    norm_stats_path: str,
-    delta_mask: list[bool],
-    embodiment_id: int,
-    original_action_dim: int,
-    action_chunk: int = 50,
-    enable_2d_traj_output: bool = False,
-    tokenizer_model_path: str = 'google/paligemma-3b-pt-224',
-    fast_tokenizer_path: str = 'physical-intelligence/fast',
-    depth_img_prefix_name: str | None = None,
-    device: str = 'cuda:0',
-):
-    """示例：调用 GigaBrain0Pipeline 做推理并保存可视化结果。"""
-    os.makedirs(output_path, exist_ok=True)
+MODEL_PATH = 'path/to/your/giga_brain_0_model'
+NORM_STATS_PATH = 'data/test_vla/norm_stats.json'
+MAIN_VIEW_PATH = 'data/test_vla/main_view.png'
+WRIST_VIEW_PATH = 'data/test_vla/wrist_view.png'
+META_PATH = 'data/test_vla/meta.json'
+OUTPUT_PATH = 'outputs/giga_brain_0_demo.png'
 
-    with open(norm_stats_path, 'r') as f:
-        norm_stats_data = json.load(f)['norm_stats']
-
-    pipe = GigaBrain0Pipeline.from_pretrained(
-        model_path=model_path,
-        tokenizer_model_path=tokenizer_model_path,
-        fast_tokenizer_path=fast_tokenizer_path,
-        embodiment_id=embodiment_id,
-        state_norm_stats=norm_stats_data['observation.state'],
-        action_norm_stats=norm_stats_data['action'],
-        delta_mask=delta_mask,
-        original_action_dim=original_action_dim,
-        depth_img_prefix_name=depth_img_prefix_name,
-        device=device,
-    )
-    pipe.compile()
-
-    dataset = load_dataset(
-        [
-            {
-                '_class_name': 'LeRobotDataset',
-                'data_path': data_path,
-                'delta_info': {'action': action_chunk},
-                'meta_name': 'meta',
-            }
-        ]
-    )
-
-    for idx in range(0, min(len(dataset), 1000), 100):
-        data = dataset[idx]
-
-        images = {
-            'observation.images.cam_high': data['observation.images.cam_high'],
-            'observation.images.cam_left_wrist': data['observation.images.cam_left_wrist'],
-            'observation.images.cam_right_wrist': data['observation.images.cam_right_wrist'],
-        }
-        if pipe.operator.image_transform.enable_depth_img:
-            images[f'{depth_img_prefix_name}.cam_high'] = data[f'{depth_img_prefix_name}.cam_high']
-            images[f'{depth_img_prefix_name}.cam_left_wrist'] = data[f'{depth_img_prefix_name}.cam_left_wrist']
-            images[f'{depth_img_prefix_name}.cam_right_wrist'] = data[f'{depth_img_prefix_name}.cam_right_wrist']
-
-        task = data['task']
-        state = data['observation.state']
-
-        if enable_2d_traj_output:
-            pred_action, traj_pred = pipe(images, task, state, enable_2d_traj_output=True)
-        else:
-            pred_action = pipe(images, task, state)
-
-        # 可视化
-        action_names = None
-        if 'meta' in data and 'names' in data['meta'].info['features']['action']:
-            action_names = data['meta'].info['features']['action']['names']
-
-        visualize_action(
-            data['action'].numpy(),
-            pred_action.detach().cpu().numpy(),
-            os.path.join(output_path, f'{idx}.png'),
-            action_names,
-        )
-        if enable_2d_traj_output:
-            visualize_traj(
-                images['observation.images.cam_high'],
-                traj_pred.detach().cpu().numpy(),
-                os.path.join(output_path, f'{idx}_traj.png'),
-            )
+# 基础配置
+ORIGINAL_ACTION_DIM = 14
+DELTA_MASK = [True] * ORIGINAL_ACTION_DIM  # 如有准确掩码可替换
+EMBODIMENT_ID = 0
+TOKENIZER_MODEL_PATH = 'google/paligemma-3b-pt-224'
+FAST_TOKENIZER_PATH = 'physical-intelligence/fast'
+DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 
-def visualize_action(gt_action: np.ndarray, pred_action: np.ndarray, out_path: str, action_names: list[str] | None = None) -> None:
-    """动作轨迹对比可视化。"""
-    pred_action = pred_action[:, :14]
-    gt_action = gt_action[:, :14]
-    num_ts, num_dim = gt_action.shape
+
+def visualize_action(pred_action: np.ndarray, out_path: str, action_names: list[str] | None = None) -> None:
+    """仅可视化模型生成的动作轨迹。"""
+    if pred_action.ndim == 1:
+        pred_action = pred_action[None, :]
+    pred_action = pred_action[:, :ORIGINAL_ACTION_DIM]
+    num_ts, num_dim = pred_action.shape
     fig, axs = plt.subplots(num_dim, 1, figsize=(10, 2 * num_dim))
     time_axis = np.arange(num_ts) / 30.0
     colors = plt.cm.viridis(np.linspace(0, 1, num_dim))
@@ -111,8 +43,7 @@ def visualize_action(gt_action: np.ndarray, pred_action: np.ndarray, out_path: s
 
     for ax_idx in range(num_dim):
         ax = axs[ax_idx]
-        ax.plot(time_axis, gt_action[:, ax_idx], label='GT', color=colors[ax_idx], linewidth=2, linestyle='-')
-        ax.plot(time_axis, pred_action[:, ax_idx], label='Pred', color=colors[ax_idx], linewidth=2, linestyle='--')
+        ax.plot(time_axis, pred_action[:, ax_idx], label='Pred', color=colors[ax_idx], linewidth=2, linestyle='-')
         ax.set_title(f'Joint {ax_idx}: {action_names[ax_idx]}')
         ax.set_xlabel('Time (s)')
         ax.set_ylabel('Position (rad)')
@@ -120,38 +51,44 @@ def visualize_action(gt_action: np.ndarray, pred_action: np.ndarray, out_path: s
         ax.legend(loc='upper right')
 
     plt.tight_layout()
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
     plt.savefig(out_path, dpi=150)
     plt.close(fig)
 
 
-def visualize_traj(images: np.ndarray, traj_pred: np.ndarray, out_path: str) -> None:
-    """在图像上绘制 2D 轨迹。"""
-    img = images
-    if torch.is_tensor(img):
-        img = img.detach().cpu().numpy()
-    img = np.transpose(img, (1, 2, 0))
-    img = (img * 255.0).clip(0, 255).astype(np.uint8)
-    H, W = img.shape[:2]
-
-    traj = traj_pred if isinstance(traj_pred, np.ndarray) else np.asarray(traj_pred)
-    if traj.ndim == 1:
-        traj = traj.reshape(1, 4)
-
-    x1, y1, x2, y2 = traj[:, 0], traj[:, 1], traj[:, 2], traj[:, 3]
-    mask1 = np.isfinite(x1) & np.isfinite(y1)
-    mask2 = np.isfinite(x2) & np.isfinite(y2)
-
-    fig, ax = plt.subplots(figsize=(W / 100.0, H / 100.0), dpi=100)
-    ax.imshow(img)
-    ax.scatter(x1[mask1], y1[mask1], c='red', s=10)
-    ax.scatter(x2[mask2], y2[mask2], c='red', s=10)
-    ax.set_xlim(0, W)
-    ax.set_ylim(H, 0)
-    ax.set_axis_off()
-    plt.tight_layout(pad=0)
-    plt.savefig(out_path, bbox_inches='tight', pad_inches=0)
-    plt.close(fig)
-
-
 if __name__ == '__main__':
-    tyro.cli(inference_giga_brain_0)
+    with open(NORM_STATS_PATH, 'r') as f:
+        norm_stats_data = json.load(f)['norm_stats']
+
+    pipe = GigaBrain0Pipeline.from_pretrained(
+        model_path=MODEL_PATH,
+        tokenizer_model_path=TOKENIZER_MODEL_PATH,
+        fast_tokenizer_path=FAST_TOKENIZER_PATH,
+        embodiment_id=EMBODIMENT_ID,
+        state_norm_stats=norm_stats_data['state'],
+        action_norm_stats=norm_stats_data['actions'],
+        delta_mask=DELTA_MASK,
+        original_action_dim=ORIGINAL_ACTION_DIM,
+        depth_img_prefix_name=None,
+        device=DEVICE,
+        present_img_keys=['observation.images.cam_high', 'observation.images.cam_wrist'],
+    )
+    pipe.compile()
+
+    images = {
+        'observation.images.cam_high': TF.to_tensor(Image.open(MAIN_VIEW_PATH).convert('RGB')),
+        'observation.images.cam_wrist': TF.to_tensor(Image.open(WRIST_VIEW_PATH).convert('RGB')),
+    }
+
+    with open(META_PATH, 'r') as f:
+        meta_data = json.load(f)
+    task = meta_data['task']
+    state = torch.tensor(meta_data['observation']['state'], dtype=torch.float32)
+
+    pred_action = pipe(images, task, state)
+    print(pred_action)
+    visualize_action(
+        pred_action.detach().cpu().numpy(),
+        OUTPUT_PATH,
+        action_names=None,
+    )

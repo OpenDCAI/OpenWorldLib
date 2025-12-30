@@ -41,6 +41,7 @@ class GigaBrain0Pipeline:
         autoregressive_inference_mode: bool = False,
         depth_img_prefix_name: str | None = None,
         device: str | torch.device | None = None,
+        present_img_keys: list[str] | None = None,
         **policy_kwargs: Any,
     ) -> 'GigaBrain0Pipeline':
         policy = GigaBrain0Policy.from_pretrained(model_path, **policy_kwargs)
@@ -57,6 +58,7 @@ class GigaBrain0Pipeline:
             discrete_state_input=discrete_state_input,
             autoregressive_inference_mode=autoregressive_inference_mode,
             text_max_length=200,
+            present_img_keys=present_img_keys,
         )
         return cls(
             policy=policy,

@@ -4,8 +4,7 @@ from .base_operator import BaseOperator
 class SpatialLadderOperator(BaseOperator):
     """
     Lightweight operator placeholder for SpatialLadder.
-    It tracks interactions to keep a consistent interface with BaseOperator,
-    but does not alter inputs or perform reasoning.
+    It tracks interactions and encapsulates vision/text preprocessing for the pipeline.
     """
 
     def __init__(self, operation_types=None, interaction_template=None):
@@ -28,5 +27,25 @@ class SpatialLadderOperator(BaseOperator):
             self.interaction_history.append(interaction)
 
     def process_interaction(self, *args, **kwargs):
-        # No processing needed; keep for interface compatibility.
         return self.current_interaction
+
+    def process_perception(self, batched_messages, texts, processor):
+        """Process vision info and pack model inputs via processor."""
+        vision_info = [processor.process_vision_info(m) for m in batched_messages]
+        image_inputs, video_inputs = [], []
+        for imgs, vids in vision_info:
+            image_inputs.append(imgs if imgs else None)
+            video_inputs.append(vids if vids else None)
+        if all(v is None for v in image_inputs):
+            image_inputs = None
+        if all(v is None for v in video_inputs):
+            video_inputs = None
+
+        inputs = processor(
+            text=texts,
+            images=image_inputs,
+            videos=video_inputs,
+            padding=True,
+            return_tensors="pt",
+        )
+        return inputs
