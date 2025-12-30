@@ -1,11 +1,20 @@
 import torch
 import numpy as np
 from PIL import Image
-from ......base_models.three_dimensions.point_clouds.gaussian_splatting.scene.cameras import Camera
+from .cameras import Camera
 from ......base_models.three_dimensions.point_clouds.gaussian_splatting.utils.graphics_utils import fov2focal, focal2fov
 from ......base_models.three_dimensions.point_clouds.gaussian_splatting.scene.dataset_readers import (
-    getNerfppNorm, BasicPointCloud, SceneInfo
+    getNerfppNorm, BasicPointCloud, NamedTuple
 )
+
+
+class SceneInfo(NamedTuple):
+    point_cloud: BasicPointCloud
+    train_cameras: list
+    test_cameras: list
+    preset_cameras: list
+    nerf_normalization: dict
+    ply_path: str
 
 
 def loadCamerasFromData(traindata, white_background):

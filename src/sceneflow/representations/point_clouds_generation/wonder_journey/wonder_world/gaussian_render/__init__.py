@@ -11,8 +11,8 @@
 
 import torch
 import math
-from diff_gaussian_rasterization import GaussianRasterizationSettings, GaussianRasterizer
-from ......base_models.three_dimensions.point_clouds.gaussian_splatting.scene.gaussian_model import GaussianModel
+from depth_diff_gaussian_rasterization_wonderworld import GaussianRasterizationSettings, GaussianRasterizer
+from ..scene.gaussian_model import WonderWorldGaussianModel as GaussianModel
 
 
 def render(viewpoint_camera, pc: GaussianModel, opt, bg_color: torch.Tensor, scaling_modifier=1.0, override_color=None, render_visible=False, exclude_sky=False):
