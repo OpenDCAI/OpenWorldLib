@@ -13,14 +13,10 @@ from ...operators.flash_world_operator import FlashWorldOperator
 from ...representations.point_clouds_generation.flash_world.flash_world_representation import (
     FlashWorldRepresentation,
 )
+from ...representations.point_clouds_generation.flash_world.flash_world.utils import (
+    export_gaussians,
+)
 
-# Import export_gaussians from FlashWorld utils
-import sys
-from pathlib import Path
-flash_world_dir = Path(__file__).parent.parent.parent / "representations" / "point_clouds_generation" / "flash_world" / "flash_world"
-if str(flash_world_dir) not in sys.path:
-    sys.path.insert(0, str(flash_world_dir))
-from utils import export_gaussians
 
 
 class FlashWorldPipeline:
