@@ -1,7 +1,6 @@
 import sys
-sys.path.append("..")
-from src.sceneflow.pipelines.mmaudio.pipeline_mmaudio import MMAudioPipeline, MMAudioArgs
-from src.sceneflow.synthesis.audio_generation.mmaudio.mmaudio.eval_utils import make_video
+from sceneflow.pipelines.mmaudio.pipeline_mmaudio import MMAudioPipeline, MMAudioArgs
+from sceneflow.synthesis.audio_generation.mmaudio.mmaudio.eval_utils import make_video
 from pathlib import Path
 import torchaudio
 from loguru import logger
