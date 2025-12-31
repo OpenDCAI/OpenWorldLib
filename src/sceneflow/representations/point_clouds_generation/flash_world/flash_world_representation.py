@@ -179,7 +179,30 @@ class FlashWorldRepresentation(BaseRepresentation):
         # Convert PIL Image to tensor if provided
         if image is not None:
             if isinstance(image, Image.Image):
-                image_array = np.array(image.convert('RGB'))
+                # Resize and center crop image to match target dimensions (same as FlashWorld/cli.py)
+                image = image.convert('RGB')
+                w, h = image.size
+                
+                # Calculate scale factor to maintain aspect ratio
+                if image_height / h > image_width / w:
+                    scale = image_height / h
+                else:
+                    scale = image_width / w
+                
+                # Calculate new dimensions for center crop
+                new_h = int(image_height / scale)
+                new_w = int(image_width / scale)
+                
+                # Center crop and resize to target dimensions
+                image = image.crop((
+                    (w - new_w) // 2, 
+                    (h - new_h) // 2, 
+                    new_w + (w - new_w) // 2, 
+                    new_h + (h - new_h) // 2
+                )).resize((image_width, image_height), Image.Resampling.BICUBIC)
+                
+                # Convert to tensor: (C, H, W) in range [-1, 1]
+                image_array = np.array(image)
                 image_tensor = torch.from_numpy(image_array).float().permute(2, 0, 1) / 255.0 * 2 - 1
             else:
                 image_tensor = image
