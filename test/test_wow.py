@@ -15,13 +15,13 @@ def save_video_to_file(
 
 
 
-input_path = "./data/test_case1/init_frame.png"  # 可以是图片或视频
+input_path = "./data/test_vla_image_case1/init_frame.png"  # 可以是图片或视频
 text_prompt = "Put the screw driver into the drawer."
 output_path = "./wow_output.mp4"
 
 # 创建参数对象
 args = WoWArgs(
-    gpu=7,
+    gpu=0,
     steps=50,
     seed=42,
     num_frames=81,
@@ -31,7 +31,7 @@ args = WoWArgs(
 )
 
 # 模型路径（可以是本地路径或HuggingFace repo_id）
-pretrained_model_path = "/data0/hdl/sceneflow/SceneFlow/ WoW-1-Wan-1.3B-2M"  # 注意：路径中有空格，如果路径不存在请去掉空格
+pretrained_model_path = "WoW-world-model/WoW-1-Wan-1.3B-2M" 
 
 # 创建pipeline
 pipeline = WoWPipeline.from_pretrained(
