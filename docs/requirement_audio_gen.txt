@@ -1,0 +1,15 @@
+[thinksound]
+lightning
+prefigure
+k_diffusion
+descript-audio-codec @ git+https://github.com/descriptinc/descript-audio-codec.git
+alias_free_torch
+vector_quantize_pytorch # 直接pip好像einops需要0.8.1
+google
+protobuf==3.20.3
+torch==2.6.0 # 低版本会触发安全检查
+torchvision==0.21.0
+torchaudio==2.6.0 
+
+[mmaudio]
+colorlog

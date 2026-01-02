@@ -25,7 +25,7 @@ def save_audio_result(result, skip_video_composite=False):
 # 视频路径（可选，如果不提供则为 text-to-audio 模式）则设置为None
 video_path = "./data/test_case1/test_video.mp4"  
 test_prompt = "A man plays guitar."
-pretrained_model_path = "/data0/hdl/sceneflow/SceneFlow" # 可以提供本地路径或者hugid路径
+pretrained_model_path = "hkchengrex/MMAudio" # 可以提供本地路径或者hugid路径
 
 args = MMAudioArgs(
     variant='large_44k_v2', # 可选: 'small_16k', 'small_44k', 'medium_44k', 'large_44k', 'large_44k_v2'
