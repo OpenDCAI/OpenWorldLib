@@ -18,7 +18,6 @@ from ...representations.point_clouds_generation.flash_world.flash_world.utils im
 )
 
 
-
 class FlashWorldPipeline:
     """Pipeline for FlashWorld 3D scene generation."""
     
@@ -275,6 +274,7 @@ class FlashWorldPipeline:
         input_: Union[str, Image.Image, np.ndarray, torch.Tensor, None],
         text_prompt: str = "",
         cameras: Union[torch.Tensor, List[Dict[str, Any]]] = None,
+        interactions: Optional[List[str]] = None,
         num_frames: int = 16,
         image_height: int = 480,
         image_width: int = 704,
@@ -289,7 +289,9 @@ class FlashWorldPipeline:
         Args:
             input_: Input image (path, PIL Image, numpy array, tensor, or None)
             text_prompt: Text description for scene generation
-            cameras: Camera parameters (tensor or list of dicts)
+            cameras: Camera parameters (tensor or list of dicts). Ignored if interactions is provided.
+            interactions: List of interaction strings (e.g., ["camera_rotate_left", "camera_forward"]).
+                          If provided, cameras will be generated from these interactions.
             num_frames: Number of frames
             image_height: Output image height
             image_width: Output image width
@@ -301,8 +303,22 @@ class FlashWorldPipeline:
             If return_video=True: List[PIL.Image] of video frames
             Otherwise: Dict with scene_params, ref_w2c, T_norm
         """
-        # Create default cameras if not provided
-        if cameras is None:
+        # Process interactions if provided
+        if interactions is not None:
+            # Clear previous interactions
+            self.operator.current_interaction = []
+            # Add new interactions
+            for interaction in interactions:
+                self.operator.get_interaction(interaction)
+            # Process interactions to get camera parameters
+            interaction_result = self.operator.process_interaction(
+                num_frames=num_frames,
+                image_width=image_width,
+                image_height=image_height
+            )
+            cameras = interaction_result['cameras']
+        elif cameras is None:
+            # Create default cameras if not provided
             cameras = self._create_default_cameras(num_frames, image_width, image_height)
         
         interaction = {
