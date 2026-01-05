@@ -70,6 +70,7 @@ class WonderWorldPipeline(PipelineABC):
 
     def __call__(self,
                  input_image,
+                 sky_prompt="blue sky",
                  prompt_list=[],
                  interactions=[],
                  is_gaussian_train=True,
@@ -80,7 +81,6 @@ class WonderWorldPipeline(PipelineABC):
         支持用户对优化好的3dgs进行交互，直接利用representation内的渲染函数进行渲染
         """
         #### kwargs 还应该带有别的参数
-        output_dict = {}
         if is_gaussian_train:
             #### 训练3DGS
             view_matrices = self.process(
@@ -88,8 +88,9 @@ class WonderWorldPipeline(PipelineABC):
                 prompt_list=prompt_list,
                 interactions=interactions
             )
-            pc = self.representation_model.get_representation(
+            output_dict = self.representation_model.get_representation(
                 input_image=input_image,
+                sky_prompt=sky_prompt,
                 prompt_list=prompt_list,
                 rotation_list=view_matrices
             )
@@ -100,10 +101,8 @@ class WonderWorldPipeline(PipelineABC):
                 prompt_list=prompt_list,
                 interactions=interactions
             )
-            rendered_image = self.representation_model.get_representation(
+            output_dict = self.representation_model.get_representation(
                 rotation_list=view_matrices,
                 is_gaussian_train=False
             )
-        output_dict["point_cloud"] = pc if is_gaussian_train else None
-        output_dict["rendered_image"] = rendered_image if not is_gaussian_train else None
         return output_dict

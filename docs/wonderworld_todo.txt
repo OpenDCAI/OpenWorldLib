@@ -7,3 +7,4 @@
 小问题
 1. config里面的"gen_layer"考虑统一改成True，还是还是用config代替
 2. text prompt 管理需要确认下
+3. 需要加上pc到ply文件的save

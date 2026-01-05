@@ -30,11 +30,12 @@ prompt_list = [
     "a forest path with tall trees",
     "a lake with reflections"
 ]
-sky_prompt = ""
+sky_prompt = "A gloomy, overcast sky"
 
 ## Run the pipeline
 output_dict = pipeline(
     input_image=input_image,
+    sky_prompt=sky_prompt,
     prompt_list=prompt_list,
     interactions=interactions
 )

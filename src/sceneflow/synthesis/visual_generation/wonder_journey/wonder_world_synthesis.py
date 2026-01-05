@@ -78,7 +78,7 @@ class WonderWorldSynthesis(BaseSynthesis):
 
         init_image = Image.fromarray(img)
         mask_image = Image.fromarray(mask)
-        
+
         prompt = inpainting_prompt if inpainting_prompt is not None else self.inpainting_prompt
         neg_prompt = negative_prompt if negative_prompt is not None else (self.adaptive_negative_prompt + self.negative_inpainting_prompt if self.adaptive_negative_prompt else self.negative_inpainting_prompt)
 
@@ -101,7 +101,7 @@ class WonderWorldSynthesis(BaseSynthesis):
         # create blending field
         alpha = np.linspace(0, 1, overlap).reshape(overlap, 1, 1)
         target_width, target_height = images[0].size
-        
+
         for i, img in enumerate(images):
             img_new = np.array(img)
             if i != 0:
@@ -114,10 +114,10 @@ class WonderWorldSynthesis(BaseSynthesis):
                 img_old = blended_image
             else:
                 img_old = img_new
-            
+
             overlap_img1 = img_old[:overlap, :, :]
             bottom_img = img_old[overlap:, :, :]
-        
+
         blended_image = (blended_image).astype(np.uint8)
         return Image.fromarray(blended_image).resize((target_width, target_height))
 
@@ -161,9 +161,7 @@ class WonderWorldSynthesis(BaseSynthesis):
         print(f"[WonderWorld] Processing Layer 0 (Building Layer)...")
         
         # 1. Create large canvas with tiled input
-        init_image_layer0 = Image.new("RGB", (width, height))
-        for x in range(0, width, input_w):
-            init_image_layer0.paste(input_image, (x, 0))
+        init_image_layer0 = input_image.resize((width, height), Image.LANCZOS)
         
         # 2. Create mask - protect core region
         mask_image_layer0 = Image.new("L", (width, height), 255)  # White = inpaint
@@ -171,7 +169,7 @@ class WonderWorldSynthesis(BaseSynthesis):
         mask_image_layer0.paste(keep_mask, (w_start, 0))
         
         # 3. Generate Layer 0 with SyncDiffusion
-        prompt_layer0 = f"sky, blue sky, horizon, distant hills. style: {style}"
+        prompt_layer0 = f"horizon, distant hills, {sky_text_prompt}. {style}"
         layer0_image = self._syncdiff_generate(
             prompt=prompt_layer0,
             negative_prompt=negative_prompt or "tree, text, watermark, low quality, human",
@@ -232,9 +230,31 @@ class WonderWorldSynthesis(BaseSynthesis):
         SyncDiffusion block-based generation
         """
         
-        def cv2_telea(img, mask, radius=5):
-            ret = cv2.inpaint(img, mask, radius, cv2.INPAINT_TELEA)
-            return ret, mask
+        def apply_low_res_to_mask(img_np, mask_np, scale_factor=8, blur_sigma=5, mask_blur=81):
+            h, w = img_np.shape[:2]
+
+            small = cv2.resize(img_np, (w // scale_factor, h // scale_factor), interpolation=cv2.INTER_AREA)
+            low_res = cv2.resize(small, (w, h), interpolation=cv2.INTER_LINEAR)
+            
+            if blur_sigma > 0:
+                low_res = cv2.GaussianBlur(low_res, (0, 0), sigmaX=blur_sigma)
+
+            mask_float = mask_np.astype(np.float32) / 255.0
+            if len(mask_float.shape) == 2:
+                mask_float = np.expand_dims(mask_float, axis=-1)
+
+            if mask_blur > 0:
+                ksize = mask_blur if mask_blur % 2 == 1 else mask_blur + 1
+                mask_float = cv2.GaussianBlur(mask_float, (ksize, ksize), sigmaX=ksize/3)
+
+            if len(mask_float.shape) == 2:
+                mask_float = np.expand_dims(mask_float, axis=-1)
+
+            img_float = img_np.astype(np.float32)
+            low_res_float = low_res.astype(np.float32)
+            combined = img_float * (1.0 - mask_float) + low_res_float * mask_float
+            combined = np.clip(combined, 0, 255).astype(np.uint8)
+            return combined
         
         final_image = input_image.copy()
         final_mask = input_mask.copy()
@@ -257,6 +277,7 @@ class WonderWorldSynthesis(BaseSynthesis):
             current_mask_slice = final_mask.crop(crop_box)
             
             # Protect left overlap (except first block)
+            # i=1时mask需要修改
             if i > 0:
                 mask_np = np.array(current_mask_slice)
                 mask_np[:, :overlap] = 0  # Black = keep
@@ -268,9 +289,9 @@ class WonderWorldSynthesis(BaseSynthesis):
             init_image_np = np.array(init_image)
             mask_image_np = np.array(mask_image)
             
-            if mask_image_np.max() > 0 and layer_id == 0:
-                print(f"   [SyncDiffusion] Block {i+1}: Applying cv2 TELEA...")
-                init_image_np, _ = cv2_telea(init_image_np, mask_image_np, radius=5)
+            if mask_image_np.max() > 0:
+                print(f"   [SyncDiffusion] Block {i+1}: Applying Low resolution...")
+                init_image_np = apply_low_res_to_mask(init_image_np, mask_image_np, scale_factor=16, blur_sigma=8)
                 init_image = Image.fromarray(init_image_np)
             
             # Generate with inpainting pipeline
