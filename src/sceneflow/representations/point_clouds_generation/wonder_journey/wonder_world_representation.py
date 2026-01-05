@@ -178,6 +178,7 @@ class WonderWorldRepresentation(BaseRepresentation):
     
     def gaussian_training(self,
                         image,
+                        sky_prompt="blue sky",
                         prompt_list=[],
                         rotation_list=[],
                         transition_list=[],
@@ -215,6 +216,7 @@ class WonderWorldRepresentation(BaseRepresentation):
             sky_mask = kf_gen.generate_sky_mask().float()
             kf_gen.generate_sky_pointcloud(
                 syncdiffusion_model=None,
+                sky_text_prompt=sky_prompt,
                 image=image,
                 mask=sky_mask,
                 gen_sky=False,
@@ -553,22 +555,30 @@ class WonderWorldRepresentation(BaseRepresentation):
 
     def get_representation(self,
                            input_image,
+                           sky_prompt="blue sky",
                            prompt_list=[],
                            rotation_list=[],
                            transition_list=[],
                            is_gaussian_train=True,
                            ):
+        output_dict = {
+            "point_cloud": None,
+            "gen_background_image": None,
+            "rendered_image": None,
+        }
         if is_gaussian_train:
             gaussian_pc = self.gaussian_training(
                 image=input_image,
+                sky_prompt=sky_prompt,
                 prompt_list=prompt_list,
                 rotation_list=rotation_list,
                 transition_list=transition_list,
                 gen_layer=True,
             )
-            return gaussian_pc
+            output_dict["point_cloud"] = gaussian_pc
         else:
             image = self.gaussian_rendering(
                 camera_viewpoint=rotation_list[0],
             )
-            return image
+            output_dict["rendered_image"] = image
+        return output_dict
