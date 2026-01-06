@@ -1,4 +1,6 @@
-1. 修改key_frame_gen里面的generation_sky
+1. 修改key_frame_gen里面的generation_sky，sky生成有比较严重的问题，这里暂且不管，反正wonderworld就是一个烂的透顶的方法，我计划在框架里面辱骂他的代码
+
+
 2. test文件中加入不同操作的角度，后续的camera变化角度、速度，应该让用户可以进行调整
 3. operator的角度应该加上前后左右平移
 4. wonderworld里面training（是否初始化，）是否使用rendering切换应该更加自如
