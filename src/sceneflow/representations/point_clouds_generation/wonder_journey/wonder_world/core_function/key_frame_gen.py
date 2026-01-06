@@ -158,6 +158,7 @@ class KeyframeGen(torch.nn.Module):
         self.mask_disocclusion = torch.zeros(1, 1, 512, 512)
         self.border_mask = None
         self.border_image = None
+        self.background_image = None
         
         # --- Initialization ---
         dt_string = datetime.now().strftime("%d-%m_%H-%M-%S")
@@ -722,8 +723,12 @@ class KeyframeGen(torch.nn.Module):
         imgs = []
         
         # This function has contained linear blending
-        img = self.wonder_world_synthesis.generation_360_data(input_image=image, sky_text_prompt=sky_text_prompt,
-                            width=image_width, height=image_height, num_inference_steps=50, guidance_scale=7.5)
+        if self.background_image is None:
+            img = self.wonder_world_synthesis.generation_360_data(input_image=image, sky_text_prompt=sky_text_prompt,
+                                width=image_width, height=image_height, num_inference_steps=50, guidance_scale=7.5)
+            self.background_image = img
+        else:
+            img = self.background_image
         
         # Point Cloud Generation from Panorama
         equatorial_radius = 0.02

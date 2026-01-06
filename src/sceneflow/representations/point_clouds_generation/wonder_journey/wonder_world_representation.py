@@ -453,7 +453,7 @@ class WonderWorldRepresentation(BaseRepresentation):
             torch.cuda.empty_cache()
         
         print("Gaussian training completed successfully.")
-        return self.gaussians
+        return self.gaussians, kf_gen.background_image
 
     def gaussian_rendering(self,
                         camera_viewpoint,
@@ -567,7 +567,7 @@ class WonderWorldRepresentation(BaseRepresentation):
             "rendered_image": None,
         }
         if is_gaussian_train:
-            gaussian_pc = self.gaussian_training(
+            gaussian_pc, background_image = self.gaussian_training(
                 image=input_image,
                 sky_prompt=sky_prompt,
                 prompt_list=prompt_list,
@@ -576,6 +576,7 @@ class WonderWorldRepresentation(BaseRepresentation):
                 gen_layer=True,
             )
             output_dict["point_cloud"] = gaussian_pc
+            output_dict["gen_background_image"] = background_image
         else:
             image = self.gaussian_rendering(
                 camera_viewpoint=rotation_list[0],
