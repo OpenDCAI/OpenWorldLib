@@ -96,12 +96,14 @@ class WonderWorldPipeline(PipelineABC):
             )
         else:
             #### 直接渲染交互序列
-            self.process(
+            view_matrices = self.process(
                 input_image=None,
                 prompt_list=prompt_list,
-                interactions=interactions
+                interactions=interactions,
+                is_gaussian_train=False
             )
             output_dict = self.representation_model.get_representation(
+                input_image=None,
                 rotation_list=view_matrices,
                 is_gaussian_train=False
             )

@@ -1,4 +1,5 @@
 1. 修改key_frame_gen里面的generation_sky，sky生成有比较严重的问题，这里暂且不管，反正wonderworld就是一个烂的透顶的方法，我计划在框架里面辱骂他的代码
+同时最好也支持直接加载生成好的sky_image
 
 
 2. test文件中加入不同操作的角度，后续的camera变化角度、速度，应该让用户可以进行调整

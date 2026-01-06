@@ -39,3 +39,16 @@ output_dict = pipeline(
     prompt_list=prompt_list,
     interactions=interactions
 )
+background_image = output_dict["gen_background_image"]
+background_image.save("background_image.png")
+## need to support saving ply file
+
+## to refine following rendering part, need to define the camera-parameters
+## consider to enable load their own ply files
+output_dict_r = pipeline(
+    input_image=None,
+    interactions=["forward"],
+    is_gaussian_train=False
+)
+render_image = output_dict_r["rendered_image"]
+render_image.save("render_image.png")
