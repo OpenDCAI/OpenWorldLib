@@ -230,31 +230,31 @@ class WonderWorldSynthesis(BaseSynthesis):
         SyncDiffusion block-based generation
         """
         
-        def apply_low_res_to_mask(img_np, mask_np, scale_factor=8, blur_sigma=5, mask_blur=81):
+        def linear_mask_blend(img_np, mask_np, scale_factor=16, overlap=100):
             h, w = img_np.shape[:2]
 
             small = cv2.resize(img_np, (w // scale_factor, h // scale_factor), interpolation=cv2.INTER_AREA)
-            low_res = cv2.resize(small, (w, h), interpolation=cv2.INTER_LINEAR)
-            
-            if blur_sigma > 0:
-                low_res = cv2.GaussianBlur(low_res, (0, 0), sigmaX=blur_sigma)
+            low_res = cv2.resize(small, (w, h), interpolation=cv2.INTER_CUBIC)
 
-            mask_float = mask_np.astype(np.float32) / 255.0
-            if len(mask_float.shape) == 2:
-                mask_float = np.expand_dims(mask_float, axis=-1)
+            if len(mask_np.shape) == 3:
+                mask_gray = cv2.cvtColor(mask_np, cv2.COLOR_RGB2GRAY)
+            else:
+                mask_gray = mask_np.copy()
+            _, binary_mask = cv2.threshold(mask_gray, 128, 255, cv2.THRESH_BINARY)
 
-            if mask_blur > 0:
-                ksize = mask_blur if mask_blur % 2 == 1 else mask_blur + 1
-                mask_float = cv2.GaussianBlur(mask_float, (ksize, ksize), sigmaX=ksize/3)
+            dist_inside = cv2.distanceTransform(binary_mask, cv2.DIST_L2, 5)
+            dist_outside = cv2.distanceTransform(255 - binary_mask, cv2.DIST_L2, 5)
 
-            if len(mask_float.shape) == 2:
-                mask_float = np.expand_dims(mask_float, axis=-1)
+            sdf = dist_inside - dist_outside
+            alpha = np.clip(sdf / float(overlap) + 0.5, 0, 1)
+
+            alpha = alpha * alpha * (3 - 2 * alpha)
+            alpha = alpha[:, :, np.newaxis]
 
             img_float = img_np.astype(np.float32)
             low_res_float = low_res.astype(np.float32)
-            combined = img_float * (1.0 - mask_float) + low_res_float * mask_float
-            combined = np.clip(combined, 0, 255).astype(np.uint8)
-            return combined
+            blended = img_float * (1.0 - alpha) + low_res_float * alpha
+            return np.clip(blended, 0, 255).astype(np.uint8)
         
         final_image = input_image.copy()
         final_mask = input_mask.copy()
@@ -291,7 +291,7 @@ class WonderWorldSynthesis(BaseSynthesis):
             
             if mask_image_np.max() > 0:
                 print(f"   [SyncDiffusion] Block {i+1}: Applying Low resolution...")
-                init_image_np = apply_low_res_to_mask(init_image_np, mask_image_np, scale_factor=16, blur_sigma=8)
+                init_image_np = linear_mask_blend(init_image_np, mask_image_np)
                 init_image = Image.fromarray(init_image_np)
             
             # Generate with inpainting pipeline
