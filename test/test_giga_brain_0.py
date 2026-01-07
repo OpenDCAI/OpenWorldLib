@@ -60,13 +60,17 @@ if __name__ == '__main__':
     with open(NORM_STATS_PATH, 'r') as f:
         norm_stats_data = json.load(f)['norm_stats']
 
+    # 兼容不同键名
+    state_norm = norm_stats_data.get('observation.state', norm_stats_data.get('state'))
+    action_norm = norm_stats_data.get('action', norm_stats_data.get('actions'))
+
     pipe = GigaBrain0Pipeline.from_pretrained(
         model_path=MODEL_PATH,
         tokenizer_model_path=TOKENIZER_MODEL_PATH,
         fast_tokenizer_path=FAST_TOKENIZER_PATH,
         embodiment_id=EMBODIMENT_ID,
-        state_norm_stats=norm_stats_data['state'],
-        action_norm_stats=norm_stats_data['actions'],
+        state_norm_stats=state_norm,
+        action_norm_stats=action_norm,
         delta_mask=DELTA_MASK,
         original_action_dim=ORIGINAL_ACTION_DIM,
         depth_img_prefix_name=None,

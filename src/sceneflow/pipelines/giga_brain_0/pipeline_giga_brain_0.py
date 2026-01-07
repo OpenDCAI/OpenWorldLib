@@ -3,7 +3,8 @@ from typing import Any
 import torch
 
 from ...operators.giga_brain_0_operator import GigaBrain0Operator
-from .modeling_giga_brain_0 import GigaBrain0Policy
+from ...synthesis.vla_generation.giga_brain_0.giga_brain_0_synthesis import GigaBrain0Synthesis
+from ...synthesis.vla_generation.giga_brain_0.modeling_giga_brain_0 import GigaBrain0Policy
 
 
 class GigaBrain0Pipeline:
@@ -15,10 +16,13 @@ class GigaBrain0Pipeline:
         operator: GigaBrain0Operator,
         embodiment_id: int,
         original_action_dim: int,
+        synthesis: GigaBrain0Synthesis | None = None,
         device: str | torch.device | None = None,
     ):
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
-        self.policy = policy.to(self.device)
+        self.synthesis = synthesis or GigaBrain0Synthesis(policy=policy)
+        self.synthesis.to(self.device)
+        self.policy = self.synthesis.policy  # keep reference for AR utilities
         self.policy.eval()
         self.operator = operator.to(self.device)
         self.operator.set_action_dim(self.policy.max_action_dim)
@@ -60,17 +64,13 @@ class GigaBrain0Pipeline:
             text_max_length=200,
             present_img_keys=present_img_keys,
         )
-        return cls(
-            policy=policy,
-            operator=operator,
-            embodiment_id=embodiment_id,
-            original_action_dim=original_action_dim,
-            device=device,
-        )
+        synthesis = GigaBrain0Synthesis(policy=policy, device=device or ('cuda' if torch.cuda.is_available() else 'cpu'))
+        return cls(policy=policy, operator=operator, embodiment_id=embodiment_id, original_action_dim=original_action_dim, synthesis=synthesis, device=device)
 
     def to(self, device: str | torch.device):
         self.device = device
-        self.policy.to(device)
+        self.synthesis.to(device)
+        self.policy = self.synthesis.policy
         self.operator.to(device)
         return self
 
@@ -132,7 +132,14 @@ class GigaBrain0Pipeline:
             images, state, task, pad_state=True, add_batch_dim=True
         )
 
-        outputs = self.policy.sample_actions(images, img_masks, lang_tokens, lang_masks, emb_ids, enable_2d_traj_output=enable_2d_traj_output)
+        outputs = self.synthesis.predict(
+            images=images,
+            img_masks=img_masks,
+            lang_tokens=lang_tokens,
+            lang_masks=lang_masks,
+            emb_ids=emb_ids,
+            enable_2d_traj_output=enable_2d_traj_output,
+        )
         if enable_2d_traj_output:
             pred_action, traj_pred = outputs
         else:
