@@ -1,7 +1,6 @@
 import torch
 import numpy as np
 import random
-import sys
 import os
 from PIL import Image
 
@@ -69,34 +68,29 @@ class WonderJourneyOperator:
 
     def process_perception(self, multimodal_input=None):
         """
-        加载初始视觉信号 (Start Image)
+        加载初始视觉信号 (Start Image) 并统一尺寸
         """
         print(f"[Operator] Processing perception signals...")
         
         start_keyframe = None
 
-        # 1. 优先处理传入的动态信号 (如果有)
+        # 1. 尝试从动态输入获取图片
         if multimodal_input is not None:
             if "visual" in multimodal_input:
-                image = multimodal_input["visual"]
-                width = 512
-                # 处理 PIL Image
-                if hasattr(image, "size"): 
-                    width = image.size[0]
-                # 处理 Tensor / Numpy
-                elif hasattr(image, "shape"): 
-                    width = image.shape[-1]
-                
-                self.args.init_focal_length = width
-                print(f"  - Visual: Set focal length to {width}")
-                start_keyframe = image
+                print(f"  - Received visual input from external source.")
+                start_keyframe = multimodal_input["visual"]
 
+            # 处理文本控制速度的逻辑 (保持不变)
             if "text" in multimodal_input:
                 prompt = multimodal_input["text"].lower()
-                if "fast" in prompt: self.args.forward_speed_multiplier = 0.1
-                elif "slow" in prompt: self.args.forward_speed_multiplier = 0.02
+                if "fast" in prompt: 
+                    self.args.forward_speed_multiplier = 0.1
+                    print("  - Text: Set speed to FAST (0.1)")
+                elif "slow" in prompt: 
+                    self.args.forward_speed_multiplier = 0.02
+                    print("  - Text: Set speed to SLOW (0.02)")
 
-        # 2. 兜底逻辑：直接从 args 读取图片路径 
+        # 2. 兜底逻辑：如果没拿到图片，从 args 路径加载
         if start_keyframe is None:
             image_path = self.args.image_filepath
             
@@ -107,10 +101,18 @@ class WonderJourneyOperator:
                 raise FileNotFoundError(f"Image file not found at: {image_path}")
             
             print(f"  - Loading image from: {image_path}")
-            start_keyframe = Image.open(image_path).convert('RGB').resize((512, 512))
+            start_keyframe = Image.open(image_path).convert('RGB')
+
+        # 3. 【统一预处理】强制 Resize 到 512x512
+        if start_keyframe is not None:
+            # 确保是 PIL Image 才能 resize
+            if hasattr(start_keyframe, 'resize'):
+                # 使用 LANCZOS 算法进行高质量缩放 (旧版 PIL 对应 Image.ANTIALIAS)
+                start_keyframe = start_keyframe.resize((512, 512), Image.Resampling.LANCZOS)
             
-            # 设置默认焦距
+            # 关键：因为图片变成了 512，焦距也要对应设置为 512，否则透视会歪
             self.args.init_focal_length = 512
+            print(f"  - Preprocessing: Resized image to (512, 512) and set focal length to 512")
 
         return start_keyframe
 

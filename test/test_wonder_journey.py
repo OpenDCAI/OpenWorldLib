@@ -3,12 +3,9 @@ from omegaconf import OmegaConf
 import os
 import sys
 
-# 获取 test.py 所在的目录
 TEST_DIR = os.path.dirname(os.path.abspath(__file__))
-# 获取项目根目录 (即 sceneflow-main)
 PROJECT_ROOT = os.path.abspath(os.path.join(TEST_DIR, '..'))
 
-# 将项目根目录加入 sys.path，确保能 import src
 if PROJECT_ROOT not in sys.path:
     sys.path.append(PROJECT_ROOT)
 
@@ -31,23 +28,18 @@ def main():
     
     args_cmd = parser.parse_args()
     
-    # 1. 初始化 Args
+    # 初始化 Args
     args = WonderJourneyArgs()
 
-    # 2. 【关键】在这里填入原本 YAML 里的数据
     args.example_name = "village"
     args.runs_dir = make_abs(f"data/test_wonder_journey/56_{args.example_name}")
     
-    # ======== 🔴 这里是原本 examples.yaml 的内容 ========
     args.content_prompt = "Mountain Pass Entrance, rocky path, wooden signpost, pine trees"
     args.style_prompt = "Style: DSLR 35mm landscape"
     args.background_prompt = "Passing beyond the quaint village, a winding path leads travelers towards the foot of the mountains."
     
     # 绝对路径图片
     args.image_filepath = make_abs(args_cmd.image_path)
-    # 下面这个放到operator里面input的地方：
-    # input_image = Image.open(image_path).convert('RGB').resize((512, 512))
-    # =================================================
     
     # 场景参数
     args.num_scenes = 1
@@ -61,9 +53,6 @@ def main():
     args.sd_path = make_abs(args_cmd.sd_path)
     args.depth_model_path = make_abs(args_cmd.depth_model_path)
     
-    # API & GPT
-    args.api_key = "sk-Wnv0VFqre5WleXvBGVmr7UqtwBBvuI5p5ZT8SujVTtldvUsZ"
-    args.api_base = "https://sg.uiuiapi.com/v1"
     args.use_gpt = False  # 暂时关闭 GPT
     
     # 生成参数
