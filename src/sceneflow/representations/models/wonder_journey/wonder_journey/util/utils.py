@@ -214,7 +214,8 @@ def save_depth_map(depth_map, file_name, vmin=None, vmax=None, save_clean=False)
     buf.seek(0)
     img = Image.open(buf)
     img = img.convert('RGB')  # Convert to RGB
-    img = img.resize((depth_map.shape[1], depth_map.shape[0]), Image.ANTIALIAS)  # Resize to original dimensions
+# 修改后
+    img = img.resize((depth_map.shape[1], depth_map.shape[0]), Image.LANCZOS)
     img.save(file_name, format='png')
     buf.close()
     plt.close()
