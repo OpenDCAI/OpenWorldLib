@@ -4,7 +4,6 @@ import torch
 
 from ...operators.giga_brain_0_operator import GigaBrain0Operator
 from ...synthesis.vla_generation.giga_brain_0.giga_brain_0_synthesis import GigaBrain0Synthesis
-from ...synthesis.vla_generation.giga_brain_0.modeling_giga_brain_0 import GigaBrain0Policy
 
 
 class GigaBrain0Pipeline:
@@ -12,20 +11,16 @@ class GigaBrain0Pipeline:
 
     def __init__(
         self,
-        policy: GigaBrain0Policy,
+        synthesis: GigaBrain0Synthesis,
         operator: GigaBrain0Operator,
         embodiment_id: int,
         original_action_dim: int,
-        synthesis: GigaBrain0Synthesis | None = None,
         device: str | torch.device | None = None,
     ):
         self.device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
-        self.synthesis = synthesis or GigaBrain0Synthesis(policy=policy)
-        self.synthesis.to(self.device)
-        self.policy = self.synthesis.policy  # keep reference for AR utilities
-        self.policy.eval()
+        self.synthesis = synthesis.to(self.device)
         self.operator = operator.to(self.device)
-        self.operator.set_action_dim(self.policy.max_action_dim)
+        self.operator.set_action_dim(self.synthesis.max_action_dim)
         self.embodiment_id = embodiment_id
         self.original_action_dim = original_action_dim
         self.resize_imgs_with_padding = (224, 224)
@@ -48,7 +43,7 @@ class GigaBrain0Pipeline:
         present_img_keys: list[str] | None = None,
         **policy_kwargs: Any,
     ) -> 'GigaBrain0Pipeline':
-        policy = GigaBrain0Policy.from_pretrained(model_path, **policy_kwargs)
+        synthesis = GigaBrain0Synthesis.from_pretrained(model_path, device=device, **policy_kwargs)
         operator = GigaBrain0Operator(
             embodiment_id=embodiment_id,
             state_norm_stats=state_norm_stats,
@@ -57,38 +52,28 @@ class GigaBrain0Pipeline:
             tokenizer_model_path=tokenizer_model_path,
             fast_tokenizer_path=fast_tokenizer_path,
             resize_imgs_with_padding=(224, 224),
-            enable_depth_img=policy.vision_in_channels == 4,
+            enable_depth_img=synthesis.vision_in_channels == 4,
             depth_img_prefix_name=depth_img_prefix_name,
             discrete_state_input=discrete_state_input,
             autoregressive_inference_mode=autoregressive_inference_mode,
             text_max_length=200,
             present_img_keys=present_img_keys,
         )
-        synthesis = GigaBrain0Synthesis(policy=policy, device=device or ('cuda' if torch.cuda.is_available() else 'cpu'))
-        return cls(policy=policy, operator=operator, embodiment_id=embodiment_id, original_action_dim=original_action_dim, synthesis=synthesis, device=device)
+        return cls(synthesis=synthesis, operator=operator, embodiment_id=embodiment_id, original_action_dim=original_action_dim, device=device)
 
     def to(self, device: str | torch.device):
         self.device = device
         self.synthesis.to(device)
-        self.policy = self.synthesis.policy
         self.operator.to(device)
         return self
 
     def quantize(self) -> None:
-        """Apply dynamic float8 quantization to the Paligemma blocks only."""
-        from torchao.quantization import Float8DynamicActivationFloat8WeightConfig, quantize_
-
-        layers = self.policy.paligemma_with_expert.layers
-        for i in range(len(layers)):
-            quantize_(layers[i].mlps[0], Float8DynamicActivationFloat8WeightConfig())
-            quantize_(layers[i].self_attn.q_proj[0], Float8DynamicActivationFloat8WeightConfig())
-            quantize_(layers[i].self_attn.k_proj[0], Float8DynamicActivationFloat8WeightConfig())
-            quantize_(layers[i].self_attn.v_proj[0], Float8DynamicActivationFloat8WeightConfig())
-            quantize_(layers[i].self_attn.o_proj[0], Float8DynamicActivationFloat8WeightConfig())
+        """Quantize via synthesis wrapper."""
+        self.synthesis.quantize()
 
     def compile(self, **kwargs: Any) -> None:
         """Compile the `sample_actions` method using `torch.compile` for improved runtime speed."""
-        self.policy.sample_actions = torch.compile(self.policy.sample_actions, **kwargs)
+        self.synthesis.compile(**kwargs)
 
     def _prepare_action_inputs(
         self,
@@ -196,7 +181,7 @@ class GigaBrain0Pipeline:
 
         generated = self.generate_autoregressive_tokens(images, img_masks, lang_tokens, lang_masks, max_new_tokens=max_new_tokens)
 
-        pred_action = self.operator.extract_actions(generated, self.policy.n_action_steps, self.original_action_dim)
+        pred_action = self.operator.extract_actions(generated, self.synthesis.n_action_steps, self.original_action_dim)
         pred_action = pred_action.to(self.device)
         pred_action = self.operator.process_output(pred_action, state, self.original_action_dim)
         if isinstance(pred_action, tuple):
@@ -223,7 +208,7 @@ class GigaBrain0Pipeline:
         if lang_masks.ndim == 1:
             lang_masks = lang_masks[None, ...]
 
-        next_logits, gen_state = self.policy.init_lang_generation(images, img_masks, lang_tokens, lang_masks)
+        next_logits, gen_state = self.synthesis.init_lang_generation(images, img_masks, lang_tokens, lang_masks)
 
         tokenizer = self.operator.tokenizer
         eos_id = tokenizer.eos_token_id
@@ -240,6 +225,6 @@ class GigaBrain0Pipeline:
             if torch.all(finished):
                 break
             input_token = step_token.view(lang_tokens.shape[0], 1)
-            next_logits, gen_state = self.policy.next_lang_logits(gen_state, input_token)
+            next_logits, gen_state = self.synthesis.next_lang_logits(gen_state, input_token)
 
         return generated

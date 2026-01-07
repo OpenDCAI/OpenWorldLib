@@ -1,9 +1,7 @@
-from __future__ import annotations
-
 import torch
 
 from ...base_synthesis import BaseSynthesis
-from ....synthesis.vla_generation.giga_brain_0.giga_brain_0_policy import GigaBrain0Policy
+from .modeling_giga_brain_0 import GigaBrain0Policy
 
 
 class GigaBrain0Synthesis(BaseSynthesis):
@@ -26,6 +24,35 @@ class GigaBrain0Synthesis(BaseSynthesis):
         self.policy.to(device)
         return self
 
+    def compile(self, **kwargs):
+        """Compile sample_actions for speed."""
+        self.policy.sample_actions = torch.compile(self.policy.sample_actions, **kwargs)
+        return self
+
+    def quantize(self) -> None:
+        """Apply dynamic float8 quantization to the Paligemma blocks only."""
+        from torchao.quantization import Float8DynamicActivationFloat8WeightConfig, quantize_
+
+        layers = self.policy.paligemma_with_expert.layers
+        for i in range(len(layers)):
+            quantize_(layers[i].mlps[0], Float8DynamicActivationFloat8WeightConfig())
+            quantize_(layers[i].self_attn.q_proj[0], Float8DynamicActivationFloat8WeightConfig())
+            quantize_(layers[i].self_attn.k_proj[0], Float8DynamicActivationFloat8WeightConfig())
+            quantize_(layers[i].self_attn.v_proj[0], Float8DynamicActivationFloat8WeightConfig())
+            quantize_(layers[i].self_attn.o_proj[0], Float8DynamicActivationFloat8WeightConfig())
+
+    @property
+    def vision_in_channels(self) -> int:
+        return self.policy.vision_in_channels
+
+    @property
+    def max_action_dim(self) -> int:
+        return self.policy.max_action_dim
+
+    @property
+    def n_action_steps(self) -> int:
+        return self.policy.n_action_steps
+
     @torch.no_grad()
     def predict(
         self,
@@ -45,3 +72,15 @@ class GigaBrain0Synthesis(BaseSynthesis):
             emb_ids=emb_ids,
             enable_2d_traj_output=enable_2d_traj_output,
         )
+
+    @torch.no_grad()
+    def init_lang_generation(self, images, img_masks, lang_tokens, lang_masks):
+        return self.policy.init_lang_generation(images, img_masks, lang_tokens, lang_masks)
+
+    @torch.no_grad()
+    def next_lang_logits(self, state: dict, input_token: torch.Tensor):
+        return self.policy.next_lang_logits(state, input_token)
+
+    @property
+    def inner_policy(self) -> GigaBrain0Policy:
+        return self.policy
