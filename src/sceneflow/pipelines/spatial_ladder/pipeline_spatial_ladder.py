@@ -1,7 +1,5 @@
 from typing import List, Optional, Sequence, Union
 
-from qwen_vl_utils import process_vision_info
-
 from ...reasoning.spatial_reasoning.spatial_ladder.spatial_ladder_reasoning import (
     SpatialLadderReasoning,
 )
@@ -88,23 +86,7 @@ class SpatialLadderPipeline:
             for m in batched_messages
         ]
 
-        vision_info = [process_vision_info(m) for m in batched_messages]
-        image_inputs, video_inputs = [], []
-        for imgs, vids in vision_info:
-            image_inputs.append(imgs if imgs else None)
-            video_inputs.append(vids if vids else None)
-        if all(v is None for v in image_inputs):
-            image_inputs = None
-        if all(v is None for v in video_inputs):
-            video_inputs = None
-
-        inputs = self.processor(
-            text=texts,
-            images=image_inputs,
-            videos=video_inputs,
-            padding=True,
-            return_tensors="pt",
-        )
+        inputs = self.operator.process_perception(batched_messages, texts, processor=self.processor)
 
         outputs = self.reasoning.inference(
             inputs=inputs,
