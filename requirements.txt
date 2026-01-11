@@ -42,8 +42,3 @@ flask-socketio
 gradio==4.14.0
 gradio_imageslider
 Pillow
-kaldiio
-whisper
-beartype
-s2wrapper
-s2wrapper@git+https://github.com/bfshi/scaling_on_scales

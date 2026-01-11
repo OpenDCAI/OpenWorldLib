@@ -232,7 +232,6 @@ class OmniVinciPipeline:
                 messages=messages,
                 **kwargs
             )
-            breakpoint()
             # Extract messages and configuration from processed data
             messages = processed_data.get("messages")
             load_audio_in_video = processed_data.get("load_audio_in_video", self.load_audio_in_video)
