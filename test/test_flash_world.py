@@ -1,7 +1,7 @@
 import sys
 sys.path.append("..")
 
-from src.sceneflow.pipelines.flash_world.pipeline_flash_world import FlashWorldPipeline
+from sceneflow.pipelines.flash_world.pipeline_flash_world import FlashWorldPipeline
 
 MODEL_PATH = "imlixinyang/FlashWorld"
 OFFLOAD_T5 = True
@@ -17,6 +17,11 @@ IMAGE_INDEX = 0
 RETURN_VIDEO = True
 VIDEO_FPS = 15
 OUTPUT_DIR = "./output/flash_world"
+
+# Custom output paths - directory or file path, optional
+CUSTOM_PLY_DIR = "./output/flash_world/custom_ply"
+CUSTOM_SPZ_DIR = "./output/flash_world/custom_spz"
+CUSTOM_VIDEO_DIR = "./output/flash_world/custom_video"
 
 INTERACTIONS = ["camera_rotate_left", "camera_forward"]
 
@@ -39,5 +44,11 @@ results = pipeline(
     video_fps=VIDEO_FPS,
 )
 
-pipeline.save_results(results=results, output_dir=OUTPUT_DIR)
+pipeline.save_results(
+    results=results, 
+    output_dir=OUTPUT_DIR,
+    ply_path=CUSTOM_PLY_DIR,
+    spz_path=CUSTOM_SPZ_DIR,
+    video_path=CUSTOM_VIDEO_DIR,
+)
 

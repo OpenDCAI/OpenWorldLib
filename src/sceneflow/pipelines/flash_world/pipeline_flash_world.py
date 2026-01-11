@@ -4,6 +4,7 @@ import shutil
 import json
 import base64
 import tempfile
+import warnings
 import torch
 import numpy as np
 from PIL import Image
@@ -101,6 +102,18 @@ class FlashWorldPipeline:
         
         with open(json_path, 'r') as f:
             config = json.load(f)
+        
+        # Check for missing keys and issue warnings
+        expected_keys = ['text_prompt', 'image_prompt', 'resolution', 'image_index', 
+                        'cameras', 'return_video', 'video_fps']
+        missing_keys = [key for key in expected_keys if key not in config]
+        if missing_keys:
+            warnings.warn(
+                f"Config file '{json_path}' is missing the following keys: {', '.join(missing_keys)}. "
+                f"Using default values for missing keys.",
+                UserWarning,
+                stacklevel=2
+            )
         
         # Extract values from config
         text_prompt = config.get('text_prompt', default_config['text_prompt'])
@@ -395,6 +408,9 @@ class FlashWorldPipeline:
         save_spz: bool = True,
         save_video: bool = True,
         opacity_threshold: float = 0.000,
+        ply_path: Optional[str] = None,
+        spz_path: Optional[str] = None,
+        video_path: Optional[str] = None,
     ) -> Dict[str, str]:
         """
         Save pipeline results to files (gaussians.ply, gaussians.spz, video.mp4).
@@ -406,11 +422,17 @@ class FlashWorldPipeline:
                 - 'T_norm': torch.Tensor, normalization transform
                 - 'video_frames': List[PIL.Image], rendered video frames (optional)
                 - 'video_path': str, path to temporary video file (optional)
-            output_dir: Directory to save output files
+            output_dir: Directory to save output files (used as default if custom paths not provided)
             save_ply: If True, save gaussians.ply
             save_spz: If True, save gaussians.spz
             save_video: If True, save video.mp4
             opacity_threshold: Opacity threshold for Gaussian pruning
+            ply_path: Custom path for PLY file (can be a directory or full file path). 
+                      If directory, uses gaussians.ply in that directory. If None, uses output_dir/gaussians.ply
+            spz_path: Custom path for SPZ file (can be a directory or full file path).
+                      If directory, uses gaussians.spz in that directory. If None, uses output_dir/gaussians.spz
+            video_path: Custom path for video file (can be a directory or full file path).
+                       If directory, uses video.mp4 in that directory. If None, uses output_dir/video.mp4
             
         Returns:
             Dictionary with paths to saved files:
@@ -427,8 +449,32 @@ class FlashWorldPipeline:
         saved_paths = {}
         
         # Export gaussians.ply and gaussians.spz
-        ply_path = os.path.join(output_dir, 'gaussians.ply') if save_ply else None
-        spz_path = os.path.join(output_dir, 'gaussians.spz') if save_spz else None
+        # Use custom paths if provided, otherwise use default paths in output_dir
+        if save_ply:
+            if ply_path is None:
+                ply_path = os.path.join(output_dir, 'gaussians.ply')
+            else:
+                # Check if ply_path is a directory (doesn't end with .ply) or a file path
+                if not ply_path.endswith('.ply'):
+                    # It's a directory, use default filename
+                    ply_path = os.path.join(ply_path, 'gaussians.ply')
+                # Ensure directory exists for custom path
+                os.makedirs(os.path.dirname(ply_path) if os.path.dirname(ply_path) else '.', exist_ok=True)
+        else:
+            ply_path = None
+            
+        if save_spz:
+            if spz_path is None:
+                spz_path = os.path.join(output_dir, 'gaussians.spz')
+            else:
+                # Check if spz_path is a directory (doesn't end with .spz) or a file path
+                if not spz_path.endswith('.spz'):
+                    # It's a directory, use default filename
+                    spz_path = os.path.join(spz_path, 'gaussians.spz')
+                # Ensure directory exists for custom path
+                os.makedirs(os.path.dirname(spz_path) if os.path.dirname(spz_path) else '.', exist_ok=True)
+        else:
+            spz_path = None
         
         if save_ply or save_spz:
             export_gaussians(
@@ -445,7 +491,17 @@ class FlashWorldPipeline:
         
         # Save video if generated
         if save_video:
-            video_path = os.path.join(output_dir, 'video.mp4')
+            # Use custom path if provided, otherwise use default path in output_dir
+            if video_path is None:
+                video_path = os.path.join(output_dir, 'video.mp4')
+            else:
+                # Check if video_path is a directory (doesn't end with video extension) or a file path
+                video_extensions = ('.mp4', '.avi', '.mov', '.mkv', '.webm')
+                if not video_path.endswith(video_extensions):
+                    # It's a directory, use default filename
+                    video_path = os.path.join(video_path, 'video.mp4')
+                # Ensure directory exists for custom path
+                os.makedirs(os.path.dirname(video_path) if os.path.dirname(video_path) else '.', exist_ok=True)
             
             if 'video_path' in results and os.path.exists(results['video_path']):
                 # If video was already saved, copy it to output directory
