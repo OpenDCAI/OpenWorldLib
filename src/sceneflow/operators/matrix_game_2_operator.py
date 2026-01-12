@@ -353,7 +353,7 @@ class MatrixGame2Operator(BaseOperator):
         
         return {"keyboard_condition": keyboard_tensor}
 
-    # 3 个 process_action_* 变成调用统一逻辑
+    # multi_turn 不用额外修改，外部调整num_frames以及输入interaction即可
     def process_action_universal(self, num_frames):
         return self._build_sequence(num_frames)
 
