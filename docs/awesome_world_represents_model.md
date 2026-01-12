@@ -48,6 +48,7 @@
 - **DA2** · [[Paper]](https://arxiv.org/pdf/2509.26618) [[Code]](https://github.com/EnVision-Research/DA-2) · citation: 1 · github star: 201
 - **EvoWorld** · [[Paper]](https://arxiv.org/pdf/2510.01183) [[Code]](https://github.com/JiahaoPlus/EvoWorld) · citation: 0 · github star: 49
 - **omniVGGT** · [[Paper]](https://arxiv.org/pdf/2511.10560) [[Code]](https://github.com/livioni/omnivggt-offcial) · citation: 0 · github star: 173
+- **MakeAnything** · [[Paper]](https://arxiv.org/pdf/2502.01572) [[Code]](https://github.com/showlab/MakeAnything) · citation: 0 · github star: 201
 
 </details>
 
@@ -68,9 +69,13 @@
 - **WorldMirror** · [[Paper]](https://arxiv.org/pdf/2510.10726) [[Code]](#) · citation: 0 · github star: 0
 - **Skyfall-GS** · [[Paper]](https://arxiv.org/pdf/2510.15869) [[Code]](https://github.com/jayin92/skyfall-gs) · citation: 0 · github star: 402
 - **Worldgrow** · [[Paper]](https://arxiv.org/pdf/2510.21682) [[Code]](https://github.com/world-grow/WorldGrow) · citation: 0 · github star: 356
+
 * **Continuous 3D Perception Model with Persistent State (CUT3R)** · [[Paper]](https://arxiv.org/pdf/2501.12387) [[Code]](https://github.com/CUT3R/CUT3R) · citation: – · github star: 1.2k
+* **WonderZomom** · [[Paper]](https://arxiv.org/pdf/2512.09164) [[Code]](#) · citation: - · github star: -
+* **EchoWorld** · [[Paper]](https://arxiv.org/abs/2504.13065) [[Code]](https://github.com/LeapLabTHU/EchoWorld) · citation: - · github star: -
 
 #### 4D+physical knowledge
+
 - **PhysDreamer** · [[Paper]](https://arxiv.org/pdf/2404.13026) [[Code]](https://github.com/a1600012888/PhysDreamer) · citation: 114 · github star: 594
 - **Physics3D** · [[Paper]](https://arxiv.org/pdf/2406.04338) [[Code]](https://github.com/liuff19/Physics3D) · citation: 39 · github star: 223
 - **DriveDreamer4D** · [[Paper]](https://arxiv.org/pdf/2410.13571) [[Code]](https://github.com/GigaAI-research/DriveDreamer4D) · citation: 62 · github star: 258
@@ -114,24 +119,35 @@
 - **CogVideoX** · [[Paper]](#) [[Code]](https://github.com/zai-org/CogVideo) · citation: 0 · github star: 12163
 - **longcat-video** · [[Paper]](#) [[Code]](https://github.com/meituan-longcat/LongCat-Video) · citation: 0 · github star: 1177
 - **Pretrained Video Generative Models as World Simulators** · [[Paper]](https://arxiv.org/pdf/2502.07825) [[Code]](#) · citation: 16 · github star: 0
+- **SFP** · [[Paper]](https://arxiv.org/abs/2510.04020) [[Code]](#) · citation: - · github star: -
 
 #### 视频camera调整
 
 - **ReCamMaster:** · [[Paper]](https://arxiv.org/pdf/2509.19296) [[Code]](https://github.com/nv-tlabs/lyra) · citation: 2 · github star: 591
 - **CamCloneMaster** · [[Paper]](https://arxiv.org/pdf/2506.03140) [[Code]](https://github.com/KlingTeam/CamCloneMaster) · citation: 1 · github star: 129
+- **EgoX** · [[Paper]](https://arxiv.org/pdf/2512.08269) [[Code]](#) · citation: - · github star: -
+- **WorldReel** · [[Paper]](https://arxiv.org/pdf/2512.07821) [[Code]](https://github.com/bshfang/WorldReel) · citation: - · github star: -
+- **DimensionX** · [[Paper]](https://arxiv.org/pdf/2411.04928) [[Code]](https://github.com/wenqsun/DimensionX) · citation: - · github star: 1.3k
+
+#### 视频编辑
+
+- **WorldCanvas** · [[Paper]](https://arxiv.org/pdf/2512.16924) [[Code]](https://github.com/pPetrichor/WorldCanvas) · citation: - · github star: 98
 
 </details>
 
 <details>
 <summary><h3 style="display:inline;">Memory</h3></summary><br>
 
-#### 模型记忆/知识表征
+#### 大模型记忆/知识表征
 
-- **LANGUAGE MODELS REPRESENT SPACE AND TIME**:  · [[Paper]](https://arxiv.org/pdf/2310.02207) [[Code]](#) · citation: 0 · github star: 0
+- **LANGUAGE MODELS REPRESENT SPACE AND TIME** · [[Paper]](https://arxiv.org/pdf/2310.02207) [[Code]](#) · citation: 0 · github star: 0
+- **On memory** · [[Paper]](https://arxiv.org/pdf/2512.06983) [[Code]](#) · citation: - · github star: -
 
 #### 视频生成memory
 
 - **Inferix: A Block-Diffusion based Next-Generation Inference Engine for World Simulation**: · [[Paper]](https://arxiv.org/pdf/2511.20714) [[Code]](https://github.com/alibaba-damo-academy/Inferix) · citation: 0 · github star: 84
+- **MemFlow** · [[Paper]](https://arxiv.org/pdf/2512.14699) [[Code]](https://github.com/KlingTeam/MemFlow) · citation: - · github star: 112
+- **StoryMem** · [[Paper]](https://arxiv.org/pdf/2512.19539) [[Code]](https://github.com/Kevin-thu/StoryMem) · citation: - · github star: 36
 
 </details>
 
@@ -186,7 +202,7 @@
 * **Diffusion Feedback Helps CLIP See Better (DIVA)** · [[Paper]](https://openreview.net/forum?id=tLFWU6izoA) [[Code]](https://github.com/baaivision/DIVA) · citation: – · github star: 295
 * **Learning from Videos for 3D World: Enhancing MLLMs with 3D Vision Geometry Priors** · [[Paper]](https://arxiv.org/pdf/2505.24625) [[Code]](https://github.com/LaVi-Lab/VG-LLM) · citation: – · github star: 172
 * **Thinking by Doing** · [[Paper]](https://arxiv.org/pdf/2511.23476) [[Code]](#) · citation: - · github star: -
-* 
+
 #### 世界建模，可控生成
 
 * **Cambrian-S** · [[Paper]](https://arxiv.org/pdf/2511.04670) [[Code]](https://github.com/cambrian-mllm/cambrian-s) · citation: – · github star: 404
@@ -234,9 +250,10 @@
 
 </details>
 <details>
-<summary><h3 style="display:inline;">3D +multi-view images</h3></summary><br>
+<summary><h3 style="display:inline;">3D +multi-view images reasoning</h3></summary><br>
 
 * **GS-reasoner** · [[Paper]](https://arxiv.org/pdf/2510.13800) [[Code]](https://github.com/WU-CVGL/GS-Reasoner) · citation: – · github star: 35
+* **UniUGG** · [[Paper]](https://arxiv.org/abs/2508.11952) [[Code]](https://github.com/fudan-zvg/UniUGG) · citation: – · github star: -
 
 </details>
 
@@ -251,7 +268,14 @@
 - **Yan** · [[Paper]](https://www.arxiv.org/pdf/2508.08601) [[Code]](#) · citation: 1 · github star: 0
 - **Context-as-Memory** · [[Paper]](https://arxiv.org/pdf/2506.03141) [[Code]](#) · citation: 15 · github star: 0
 - **Hunyuan-GameCraft** · [[Paper]](https://arxiv.org/pdf/2506.17201) [[Code]](https://github.com/Tencent-Hunyuan/Hunyuan-GameCraft-1.0) · citation: 13 · github star: 617
+- **Hunyuan-GameCraft-2** · [[Paper]](https://arxiv.org/pdf/2511.23429) [[Code]](https://github.com/Tencent-Hunyuan/Hunyuan-GameCraft-1.0) · citation: - · github star: -
+- **Hunyuan-Worldplay** · [[Paper]](https://3d-models.hunyuan.tencent.com/world/world1_5/HYWorld_1.5_Tech_Report.pdf) [[Code]](https://github.com/Tencent-Hunyuan/HY-WorldPlay) · citation: - · github star: 349
+- **Longvie-2** · [[Paper]](https://arxiv.org/pdf/2512.13604) [[Code]](https://github.com/Vchitect/LongVie) · citation: - · github star: 241
+- **Genesis** · [[Paper]](https://arxiv.org/pdf/2506.17201) [[Code]](https://genesis-embodied-ai.github.io/) · citation: - · github star: -
+- **Matrix-Game** · [[Paper]](https://arxiv.org/pdf/2506.18701) [[Code]](https://github.com/Tencent-Hunyuan/Hunyuan-GameCraft-1.0) · citation: - · github star: -
+- **Matrix-Game 2.0** · [[Paper]](https://arxiv.org/pdf/2508.13009) [[Code]](https://github.com/Tencent-Hunyuan/Hunyuan-GameCraft-1.0) · citation: - · github star: -
 - **Hunyuan-Game** · [[Paper]](https://arxiv.org/pdf/2505.14135) [[Code]](#) · citation: 2 · github star: 0
+- **Yume1.5** · [[Paper]](https://arxiv.org/pdf/2512.22096) [[Code]](https://github.com/stdstu12/YUME) · citation: - · github star: 440 
 - **GameNGen** · [[Paper]](https://arxiv.org/pdf/2408.14837) [[Code]](#) · citation: 135 · github star: 0
 - **Oasis-2.0** · [[Paper]](https://arxiv.org/pdf/2503.08741) [[Code]](https://github.com/Letian2003/MM_INF) · citation: 5 · github star: 32
 - **WorldExplorer** · [[Paper]](https://arxiv.org/pdf/2506.01799v2) [[Code]](https://github.com/mschneider456/worldexplorer) · citation: 3 · github star: 132
@@ -314,6 +338,7 @@
 - **MomaGEN** · [[Paper]](https://arxiv.org/pdf/2510.18316) [[Code]](https://github.com/ChengshuLi/MoMaGen) · citation: 0 · github star: 42
 - **WorldVLA** · [[Paper]](https://arxiv.org/pdf/2506.21539) [[Code]](https://github.com/alibaba-damo-academy/RynnVLA-002) · citation: 37 · github star: 547
 - **PhysWorld** · [[Paper]](https://arxiv.org/pdf/2511.07416) [[Code]](#) · citation: 0 · github star: 0
+- **RoboTracer** · [[Paper]](https://arxiv.org/abs/2512.13660) [[Code]](https://github.com/Zhoues/RoboTracer) · citation: 0 · github star: 15
 
 #### Trajectory Generation
 
@@ -356,7 +381,10 @@
 - **Look and Tell** · [[Paper]](https://arxiv.org/pdf/2510.22672)
   citation: 0 · github star: 0
   access: https://huggingface.co/datasets/annadeichler/KTH-ARIA-referential（从huggingface进行下载）
-- **Unlocking Exocentric Video-Language Data for Egocentric Video Representation Learning** · [[Paper]](#)
+
+#### 数据构建 / 数据转化方法（data curation framework）
+
+- **Unlocking Exocentric Video-Language Data for Egocentric Video Representation Learning** · [[Paper]](https://arxiv.org/pdf/2408.03567)
 
 </details>
 
@@ -365,12 +393,9 @@
 
 #### Representation
 
-* **WorldBench** · [[Paper]](https://arxiv.org/pdf/2504.00983) [[Code]](https://github.com/haoyi-duan/WorldScore) · citation: 26 · github star: 163
-
+- **WorldBench** · [[Paper]](https://arxiv.org/pdf/2504.00983) [[Code]](https://github.com/haoyi-duan/WorldScore) · citation: 26 · github star: 163
 - **MMWorld** · [[Paper]](https://arxiv.org/pdf/2406.08407) [[Code]](https://github.com/eric-ai-lab/MMWorld) · citation: 31 · github star: 29
-
-* **MLVU** · [[Paper]](https://arxiv.org/pdf/2406.04264) [[Code]](https://github.com/JUNJIE99/MLVU) · citation: 66 · github star: 0
-
+- **MLVU** · [[Paper]](https://arxiv.org/pdf/2406.04264) [[Code]](https://github.com/JUNJIE99/MLVU) · citation: 66 · github star: 0
 - **FavorBench** · [[Paper]](https://arxiv.org/html/2503.14935) [[Code]](https://github.com/FAVOR-Bench/FAVOR-Bench) · citation: 0 · github star: 25
 - **Videoverse** · [[Paper]](https://arxiv.org/pdf/2510.08398) [[Code]](https://github.com/Zeqing-Wang/VideoVerse) · citation: 1 · github star: 14
 
@@ -397,20 +422,16 @@
 #### Dynamics
 
 - **ShortVIdBench** · [[Paper]](https://www.emergentmind.com/topics/shortvid-bench) [[Code]](https://github.com/TencentARC/ARC-Hunyuan-Video-7B) · citation: 0 · github star: 0
-
-* **FavorBench** · [[Paper]](https://arxiv.org/html/2503.14935) [[Code]](https://github.com/FAVOR-Bench/FAVOR-Bench) · citation: 0 · github star: 25
-* **Motion-Bench** · [[Paper]](https://arxiv.org/pdf/2501.02955) [[Code]](https://github.com/zai-org/MotionBench) · citation: 14 · github star: 59
-* **VinoGround** · [[Paper]](https://arxiv.org/pdf/2410.02763) [[Code]](https://github.com/Vinoground/Vinoground) · citation: 14 · github star: 0
-
+- **FavorBench** · [[Paper]](https://arxiv.org/html/2503.14935) [[Code]](https://github.com/FAVOR-Bench/FAVOR-Bench) · citation: 0 · github star: 25
+- **Motion-Bench** · [[Paper]](https://arxiv.org/pdf/2501.02955) [[Code]](https://github.com/zai-org/MotionBench) · citation: 14 · github star: 59
+- **VinoGround** · [[Paper]](https://arxiv.org/pdf/2410.02763) [[Code]](https://github.com/Vinoground/Vinoground) · citation: 14 · github star: 0
 - **MMWorld** · [[Paper]](https://arxiv.org/pdf/2406.08407) [[Code]](https://github.com/eric-ai-lab/MMWorld) · citation: 31 · github star: 29
-
-* **MLVU** · [[Paper]](https://arxiv.org/pdf/2406.04264) [[Code]](https://github.com/JUNJIE99/MLVU) · citation: 66 · github star: 0
-* **Videoverse** · [[Paper]](https://arxiv.org/pdf/2510.08398) [[Code]](https://github.com/Zeqing-Wang/VideoVerse) · citation: 1 · github star: 14
+- **MLVU** · [[Paper]](https://arxiv.org/pdf/2406.04264) [[Code]](https://github.com/JUNJIE99/MLVU) · citation: 66 · github star: 0
+- **Videoverse** · [[Paper]](https://arxiv.org/pdf/2510.08398) [[Code]](https://github.com/Zeqing-Wang/VideoVerse) · citation: 1 · github star: 14
 
 #### Actionability
 
-* **MLVU** · [[Paper]](https://arxiv.org/pdf/2406.04264) [[Code]](https://github.com/JUNJIE99/MLVU) · citation: 66 · github star: 0
-
+- **MLVU** · [[Paper]](https://arxiv.org/pdf/2406.04264) [[Code]](https://github.com/JUNJIE99/MLVU) · citation: 66 · github star: 0
 - **FavorBench** · [[Paper]](https://arxiv.org/html/2503.14935) [[Code]](https://github.com/FAVOR-Bench/FAVOR-Bench) · citation: 0 · github star: 25
 - **WoWbench** · [[Paper]](https://arxiv.org/pdf/2509.22642) [[Code]](https://github.com/wow-world-model/wow-world-model) · citation: 6 · github star: 103
 
@@ -431,6 +452,11 @@
 * **Mind the Gap: Benchmarking Spatial Reasoning in Vision-Language Models** · [[Paper]](https://arxiv.org/pdf/2503.19707) [[Code]](https://github.com/stogiannidis/srbench) · citation: 12 · github star: 16
 * **VisualTrans: A Benchmark for Real-World Visual Transformation Reasoning** · [[Paper]](https://arxiv.org/abs/2508.04043) [[Code]](#) · citation: 0 · github star: 0
 * **From Flatland to Space: Teaching Vision-Language Models to Perceive and Reason in 3D** · [[Paper]](https://arxiv.org/abs/2503.22976) [[Code]](https://github.com/LogosRoboticsGroup/SPAR) · citation: – · github star: 64
+* **MMGR** · [[Paper]](https://arxiv.org/pdf/2512.14691) [[Code]](https://github.com/Zefan-Cai/MMGR) · citation: - · github star: -
+
+#### reasoning
+
+* **Envision** · [[Paper]](https://arxiv.org/pdf/2512.01816) [[Code]](https://github.com/opendatalab-raiser/Envision) · citation: 0 · github star: 27
 
 #### physics
 
@@ -479,6 +505,10 @@
 
 - **Positional Encoding Field** · [[Paper]](https://arxiv.org/pdf/2510.20385) [[Code]](https://github.com/MTLab/PE-Field) · citation: 1 · github star: 242
 
+#### Web+Mobile
+- **Web World Models** · [[Paper]](https://arxiv.org/pdf/2512.23676) [[Code]](https://github.com/Princeton-AI2-Lab/Web-World-Models) · citation: - · github star: -
+ 
+
 </details>
 
 ---
@@ -486,20 +516,68 @@
 ## Corresponding Survey
 
 <details>
-<summary><h3 style="display:inline;">Surveys and Reviews</h3></summary><br>
+<summary><strong>1. 核心概念与通用世界模型 (Core Concepts & General World Models)</strong></summary>
 
-- **World-Simulator** · [[Paper]](https://arxiv.org/pdf/2503.04641) [[Code]](https://github.com/ALEEEHU/World-Simulator) · citation: 5 · github star: 312
-- **The Role of World Models in Shaping Autonomous Driving: A Comprehensive Survey** · [[Paper]](https://arxiv.org/pdf/2502.10498) [[Code]](#) · citation: 8 · github star: 0
-- **Is Sora a World Simulator? A Comprehensive Survey on General World Models and Beyond** · [[Paper]](https://arxiv.org/pdf/2405.03520) [[Code]](https://github.com/GigaAI-research/General-World-Models-Survey) · citation: 68 · github star: 463
-- **3D and 4D World Modeling: A Survey code:** · [[Paper]](https://www.researchgate.net/profile/Lingdong-Kong-3/publication/395334069_3D_and_4D_World_Modeling_A_Survey/links/68bd29446f87c42f3b904fa4/3D-and-4D-World-Modeling-A-Survey.pdf) [[Code]](https://github.com/worldbench/survey) · citation: 0 · github star: 641
-- **A Survey of Interactive Generative Video** · [[Paper]](https://arxiv.org/pdf/2504.21853) [[Code]](#) · citation: 10 · github star: 0
-- **Understanding World or Predicting Future? A Comprehensive Survey of World Models** · [[Paper]](https://dl.acm.org/doi/full/10.1145/3746449) [[Code]](https://github.com/tsinghua-fib-lab/World-Model) · citation: 0 · github star: 201
-- **nan** · [[Paper]](#) [[Code]](https://github.com/oahzxl/Awesome-Efficient-Video-Generation) · citation: 0 · github star: 40
-- **Advances in Feed-Forward 3D Reconstruction and View Synthesis: A Survey：** · [[Paper]](https://arxiv.org/pdf/2507.14501) [[Code]](#) · citation: 3 · github star: 0
-- **Awesome-World-Models** · [[Paper]](#) [[Code]](https://github.com/knightnemo/Awesome-World-Models) · citation: 0 · github star: 837
-- **3D representation** · [[Paper]](https://arxiv.org/pdf/2512.03422) [[Code]](#) · citation: 0 · github star: 0
+- **World-Simulator** · [[Paper]](https://arxiv.org/pdf/2503.04641) [[Code]](https://github.com/ALEEEHU/World-Simulator) · citation: - · github star: -
+- **Is Sora a World Simulator? A Comprehensive Survey on General World Models and Beyond** · [[Paper]](https://arxiv.org/pdf/2405.03520) [[Code]](https://github.com/GigaAI-research/General-World-Models-Survey) · citation: - · github star: -
+- **Understanding World or Predicting Future? A Comprehensive Survey of World Models** · [[Paper]](https://dl.acm.org/doi/full/10.1145/3746449) [[Code]](https://github.com/tsinghua-fib-lab/World-Model) · citation: - · github star: -
+- **Understanding World or Predicting Future?** · [[Paper]](https://arxiv.org/abs/2411.14499) [[Code]](#) · citation: - · github star: -
+- **World Models in AI: Like a Child** · [[Paper]](https://arxiv.org/abs/2503.15168) [[Code]](#) · citation: - · github star: -
 
 </details>
+
+<details>
+<summary><strong>2. 世界表征维度与生成 (World Representation & Generation)</strong></summary>
+
+- **3D and 4D World Modeling: A Survey** · [[Paper]](https://arxiv.org/abs/2509.07996) [[Code]](https://github.com/worldbench/survey) · citation: - · github star: -
+- **Exploring the Evolution of Physics Cognition in Video Generation** · [[Paper]](https://arxiv.org/pdf/2503.21765) [[Code]](#) · citation: - · github star: -
+- **Physics Cognition in Video Generation** · [[Paper]](https://arxiv.org/abs/2503.21765) [[Code]](https://github.com/minnie-lin/Awesome-Physics-Cognition-based-Video-Generation) · citation: - · github star: -
+- **A Survey of Interactive Generative Video** · [[Paper]](https://arxiv.org/pdf/2504.21853) [[Code]](#) · citation: - · github star: -
+- **From 2D to 3D Cognition** · [[Paper]](https://arxiv.org/abs/2506.20134) [[Code]](#) · citation: - · github star: -
+- **Advances in Feed-Forward 3D Reconstruction and View Synthesis: A Survey** · [[Paper]](https://arxiv.org/pdf/2507.14501) [[Code]](#) · citation: - · github star: -
+- **3D Representation** · [[Paper]](https://arxiv.org/pdf/2512.03422) [[Code]](#) · citation: - · github star: -
+
+</details>
+
+<details>
+<summary><strong>3. 世界模型在具身智能中的应用 (Application: Embodied AI)</strong></summary>
+
+- **World Models for Embodied AI** · [[Paper]](https://arxiv.org/abs/2510.16732) [[Code]](https://github.com/Li-Zn-H/AwesomeWorldModels) · citation: - · github star: -
+- **World Models and Physical Simulation** · [[Paper]](https://arxiv.org/abs/2507.00917) [[Code]](https://github.com/NJU3DV-LoongGroup/Embodied-World-Models-Survey) · citation: - · github star: -
+- **Embodied AI Agents: Modeling the World** · [[Paper]](https://arxiv.org/abs/2506.22355) [[Code]](#) · citation: - · github star: -
+- **Aligning Cyber Space with Physical World** · [[Paper]](https://arxiv.org/abs/2407.06886) [[Code]](https://github.com/HCPLab-SYSU/Embodied_AI_Paper_List) · citation: - · github star: -
+
+</details>
+
+<details>
+<summary><strong>4. 世界模型在自动驾驶中的应用 (Application: Autonomous Driving)</strong></summary>
+
+- **The Role of World Models in Shaping Autonomous Driving: A Comprehensive Survey** · [[Paper]](https://arxiv.org/pdf/2502.10498) [[Code]](#) · citation: - · github star: -
+- **A Survey of World Models for Autonomous Driving** · [[Paper]](https://arxiv.org/abs/2501.11260) [[Code]](#) · citation: - · github star: -
+- **World Models for Autonomous Driving: An Initial Survey** · [[Paper]](https://arxiv.org/abs/2403.02622) [[Code]](#) · citation: - · github star: -
+- **Interplay Between Video Generation and World Models in Autonomous Driving** · [[Paper]](https://arxiv.org/abs/2411.02914) [[Code]](#) · citation: - · github star: -
+
+</details>
+
+<details>
+<summary><strong>5. 安全性、高效性与学习方法 (Safety, Efficiency & Learning Methods)</strong></summary>
+
+- **The Safety Challenge of World Models** · [[Paper]](https://arxiv.org/abs/2510.05865) [[Code]](#) · citation: - · github star: -
+- **World Model Safety** · [[Paper]](https://arxiv.org/abs/2411.07690) [[Code]](#) · citation: - · github star: -
+- **From Masks to Worlds** · [[Paper]](https://arxiv.org/abs/2510.20668) [[Code]](https://github.com/M-E-AGI-Lab/Awesome-World-Models) · citation: - · github star: -
+- **Model-based Reinforcement Learning: A Survey** · [[Paper]](https://link.springer.com/article/10.1007/s11432-022-3696-5) [[Code]](#) · citation: - · github star: -
+
+</details>
+
+<details>
+<summary><strong>6. 资源列表 (Awesome Lists)</strong></summary>
+
+- **Awesome-Efficient-Video-Generation** · [[Paper]](#) [[Code]](https://github.com/oahzxl/Awesome-Efficient-Video-Generation) · citation: - · github star: -
+- **Awesome-World-Models** · [[Paper]](#) [[Code]](https://github.com/knightnemo/Awesome-World-Models) · citation: - · github star: -
+
+</details>
+
+---
 
 ## World Model Training
 

@@ -1,0 +1,6 @@
+[submodule "data/worldbench/third_party/WorldScore"]
+	path = data/worldbench/third_party/WorldScore
+	url = https://github.com/haoyi-duan/WorldScore.git
+[submodule "data/worldbench/third_party/VBench"]
+	path = data/worldbench/third_party/VBench
+	url = https://github.com/Vchitect/VBench
