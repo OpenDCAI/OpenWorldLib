@@ -1,6 +1,7 @@
 from .base_operator import BaseOperator
 
 import torch
+from torchvision.transforms import v2
 import random
 
 def combine_data(data, num_frames=57, keyboard_dim=6, mouse=True):
@@ -259,6 +260,21 @@ def encode_actions(action_list, mode):
     return keyboard, None
 
 
+def resizecrop(image, th, tw):
+    w, h = image.size
+    if h / w > th / tw:
+        new_w = int(w)
+        new_h = int(new_w * th / tw)
+    else:
+        new_h = int(h)
+        new_w = int(new_h * tw / th)
+    left = (w - new_w) / 2
+    top = (h - new_h) / 2
+    right = (w + new_w) / 2
+    bottom = (h + new_h) / 2
+    image = image.crop((left, top, right, bottom))
+    return image
+
 
 class MatrixGame2Operator(BaseOperator):
 
@@ -277,6 +293,12 @@ class MatrixGame2Operator(BaseOperator):
         self.interaction_template_init()
 
         self.current_interaction = []  # 保存用户按顺序输入的动作组
+
+        self.frame_process = v2.Compose([
+            v2.Resize(size=(352, 640), antialias=True),
+            v2.ToTensor(),
+            v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+        ])
 
     def check_interaction(self, interaction):
         if interaction not in self.interaction_template:
@@ -350,3 +372,23 @@ class MatrixGame2Operator(BaseOperator):
             return self.process_action_templerun(num_frames)
         else:
             raise ValueError(f"Unknown mode {self.mode}")
+
+    def process_perception(self,
+                           input_image,
+                           num_output_frames,
+                           resize_H=352,
+                           resize_W=640,
+                           device: str = "cuda",
+                           weight_dtype = torch.bfloat16,):
+        image = resizecrop(input_image, resize_H, resize_W)
+        image = self.frame_process(image)[None, :, None, :, :].to(dtype=weight_dtype, device=device)
+
+        padding_video = torch.zeros_like(image).repeat(1, 1, 4 * (num_output_frames - 1), 1, 1)
+        img_cond = torch.concat([image, padding_video], dim=2)
+        tiler_kwargs={"tiled": True, "tile_size": [resize_H//8, resize_W//8], "tile_stride": [resize_H//16+1, resize_W//16-2]}
+
+        return {
+            "image": image,
+            "img_cond": img_cond,
+            "tiler_kwargs": tiler_kwargs
+        }
