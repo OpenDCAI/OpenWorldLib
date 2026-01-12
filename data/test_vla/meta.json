@@ -1,0 +1,47 @@
+{
+  "dataset_name": "libero_10_no_noops",
+  "split": "train",
+  "step_index": 0,
+  "task": "put the white mug on the left plate and put the yellow and white mug on the right plate",
+  "observation": {
+    "state": [
+      -0.05338004603981972,
+      0.007029631175100803,
+      0.6783280968666077,
+      3.1407692432403564,
+      0.0017593271331861615,
+      -0.08994418382644653,
+      0.03878866136074066,
+      -0.03878721222281456
+    ],
+    "joint_state": [
+      0.003805282060056925,
+      -0.14113527536392212,
+      0.01111516822129488,
+      -2.4312031269073486,
+      0.003601354081183672,
+      2.2328262329101562,
+      0.7972416877746582
+    ]
+  },
+  "action": [
+    0.01607142947614193,
+    0.0,
+    -0.0,
+    0.0,
+    0.0,
+    -0.0,
+    -1.0
+  ],
+  "reward": 0.0,
+  "discount": 1.0,
+  "flags": {
+    "is_first": true,
+    "is_last": false,
+    "is_terminal": false
+  },
+  "paths": {
+    "main_view": "/ytech_m2v8_hdd/workspace/kling_mm/libozhou/SceneFlow/tmp_out/main_view.png",
+    "wrist_view": "/ytech_m2v8_hdd/workspace/kling_mm/libozhou/SceneFlow/tmp_out/wrist_view.png"
+  }
+}
