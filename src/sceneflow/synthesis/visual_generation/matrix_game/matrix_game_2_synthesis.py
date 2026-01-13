@@ -97,9 +97,14 @@ class MatrixGame2Synthesis(BaseSynthesis):
                 visual_context,
                 operator_condition,
                 num_output_frames,
-                operation_visualization=True):
+                operation_visualization=True,
+                input_kv_cache1 = None,
+                input_kv_cache_mouse = None,
+                input_kv_cache_keyboard = None,
+                input_crossattn_cache = None,
+                ):
         sampled_noise = torch.randn(
-            [1, 16,num_output_frames, cond_concat.size(-2), cond_concat.size(-1)], device=self.device, dtype=self.weight_dtype
+            [1, 16, num_output_frames, cond_concat.size(-2), cond_concat.size(-1)], device=self.device, dtype=self.weight_dtype
         )
 
         conditional_dict = {
@@ -120,7 +125,11 @@ class MatrixGame2Synthesis(BaseSynthesis):
                 conditional_dict=conditional_dict,
                 return_latents=False,
                 mode=self.mode,
-                profile=False
+                profile=False,
+                input_kv_cache1 = input_kv_cache1,
+                input_kv_cache_mouse = input_kv_cache_mouse,
+                input_kv_cache_keyboard = input_kv_cache_keyboard,
+                input_crossattn_cache = input_crossattn_cache
             )
         
         videos_tensor = torch.cat(videos, dim=1)

@@ -19,11 +19,13 @@ class MatrixGame2Pipeline:
     def __init__(self,
                  operators: Optional[MatrixGame2Operator] = None,
                  synthesis_model: Optional[MatrixGame2Synthesis] = None,
+                 memory_module: Optional[Any] = None,
                  device: str = "cuda",
                  weight_dtype = torch.bfloat16,
                  ):
         self.synthesis_model = synthesis_model 
         self.operators = operators
+        self.memory_module = memory_module
         self.device = device
         self.weight_dtype = weight_dtype
         self.current_image = None
@@ -47,10 +49,12 @@ class MatrixGame2Pipeline:
             **kwargs
         )
         operators = MatrixGame2Operator(mode=mode)
+        memory_module = []
 
         pipeline = cls(
             operators=operators,
             synthesis_model=synthesis_model,
+            memory_module=memory_module,
             device=device,
             weight_dtype=weight_dtype
         )
@@ -102,6 +106,10 @@ class MatrixGame2Pipeline:
                                      "forward_left", "forward_right",
                                      "camera_l", "camera_r"],
                  operation_visualization=True,
+                 input_kv_cache1 = None,
+                 input_kv_cache_mouse = None,
+                 input_kv_cache_keyboard = None,
+                 input_crossattn_cache = None,
                  **kwds):
         output_dict = self.process(
             input_image=input_image,
@@ -116,6 +124,10 @@ class MatrixGame2Pipeline:
             operator_condition=output_dict['operator_condition'],
             num_output_frames=num_output_frames,
             operation_visualization=operation_visualization,
+            input_kv_cache1 = input_kv_cache1,
+            input_kv_cache_mouse = input_kv_cache_mouse,
+            input_kv_cache_keyboard = input_kv_cache_keyboard,
+            input_crossattn_cache = input_crossattn_cache,
             **kwds
         )
         return output_video
@@ -152,7 +164,14 @@ class MatrixGame2Pipeline:
             raise ValueError("Current image is None. Please provide 'initial_image' for the first step.")
 
         # 2. 执行生成 (直接复用 __call__ 的逻辑)
-        # 这里的参数完全由你本次调用决定，不再受限于生成器的初始化
+        ### self.memory_module 相关的处理请放在memory文件下
+        if len(self.memory_module) == 0:
+            kv_cache1 = kv_cache_mouse = kv_cache_keyboard = crossattn_cache = None
+        else:
+            kv_cache1 = self.memory_module[-1]["kv_cache1"]
+            kv_cache_mouse = self.memory_module[-1]["kv_cache_mouse"]
+            kv_cache_keyboard = self.memory_module[-1]["kv_cache_keyboard"]
+            crossattn_cache = self.memory_module[-1]["crossattn_cache"]
         video_output = self.__call__(
             input_image=self.current_image,
             num_output_frames=num_output_frames,
@@ -160,8 +179,18 @@ class MatrixGame2Pipeline:
             resize_H=resize_H,
             resize_W=resize_W,
             operation_visualization=operation_visualization,
+            input_kv_cache1 = kv_cache1,
+            input_kv_cache_mouse = kv_cache_mouse,
+            input_kv_cache_keyboard = kv_cache_keyboard,
+            input_crossattn_cache = crossattn_cache,
             **kwds
         )
+        self.memory_module.append({
+            "kv_cache1": self.synthesis_model.pipeline.kv_cache1,
+            "kv_cache_mouse": self.synthesis_model.pipeline.kv_cache_mouse,
+            "kv_cache_keyboard": self.synthesis_model.pipeline.kv_cache_keyboard,
+            "crossattn_cache": self.synthesis_model.pipeline.crossattn_cache
+        })
 
         # 3. 更新状态：提取最后一帧，保存到 self.current_image 供下一轮使用
         # 假设 video_output 是 tensor，我们需要将其转回 PIL
