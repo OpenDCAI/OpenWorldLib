@@ -176,10 +176,6 @@ class CausalInferencePipeline(torch.nn.Module):
         return_latents = False,
         mode = 'universal',
         profile = False,
-        input_kv_cache1 = None,
-        input_kv_cache_mouse = None,
-        input_kv_cache_keyboard = None,
-        input_crossattn_cache = None,
     ) -> torch.Tensor:
         """
         Supports streaming inference with memory input.
@@ -224,49 +220,44 @@ class CausalInferencePipeline(torch.nn.Module):
         for j in range(len(vae_cache)):
             vae_cache[j] = None
 
-        if input_kv_cache1==None or input_kv_cache_mouse==None or input_kv_cache_keyboard==None or input_crossattn_cache==None:
-            self.kv_cache1 = self.kv_cache_keyboard = self.kv_cache_mouse = self.crossattn_cache=None
-            # Step 1: Initialize KV cache to all zeros
-            if self.kv_cache1 is None:
-                self._initialize_kv_cache(
-                    batch_size=batch_size,
-                    dtype=noise.dtype,
-                    device=noise.device
-                )
-                self._initialize_kv_cache_mouse_and_keyboard(
-                    batch_size=batch_size,
-                    dtype=noise.dtype,
-                    device=noise.device
-                )
-                
-                self._initialize_crossattn_cache(
-                    batch_size=batch_size,
-                    dtype=noise.dtype,
-                    device=noise.device
-                )
-            else:
-                # reset cross attn cache
-                for block_index in range(self.num_transformer_blocks):
-                    self.crossattn_cache[block_index]["is_init"] = False
-                # reset kv cache
-                for block_index in range(len(self.kv_cache1)):
-                    self.kv_cache1[block_index]["global_end_index"] = torch.tensor(
-                        [0], dtype=torch.long, device=noise.device)
-                    self.kv_cache1[block_index]["local_end_index"] = torch.tensor(
-                        [0], dtype=torch.long, device=noise.device)
-                    self.kv_cache_mouse[block_index]["global_end_index"] = torch.tensor(
-                        [0], dtype=torch.long, device=noise.device)
-                    self.kv_cache_mouse[block_index]["local_end_index"] = torch.tensor(
-                        [0], dtype=torch.long, device=noise.device)
-                    self.kv_cache_keyboard[block_index]["global_end_index"] = torch.tensor(
-                        [0], dtype=torch.long, device=noise.device)
-                    self.kv_cache_keyboard[block_index]["local_end_index"] = torch.tensor(
-                        [0], dtype=torch.long, device=noise.device)
+        self.kv_cache1 = self.kv_cache_keyboard = self.kv_cache_mouse = self.crossattn_cache=None
+        # Step 1: Initialize KV cache to all zeros
+        if self.kv_cache1 is None:
+            self._initialize_kv_cache(
+                batch_size=batch_size,
+                dtype=noise.dtype,
+                device=noise.device
+            )
+            self._initialize_kv_cache_mouse_and_keyboard(
+                batch_size=batch_size,
+                dtype=noise.dtype,
+                device=noise.device
+            )
+            
+            self._initialize_crossattn_cache(
+                batch_size=batch_size,
+                dtype=noise.dtype,
+                device=noise.device
+            )
         else:
-            self.kv_cache1 = input_kv_cache1
-            self.kv_cache_mouse = input_kv_cache_mouse
-            self.kv_cache_keyboard = input_kv_cache_keyboard
-            self.crossattn_cache = input_crossattn_cache
+            # reset cross attn cache
+            for block_index in range(self.num_transformer_blocks):
+                self.crossattn_cache[block_index]["is_init"] = False
+            # reset kv cache
+            for block_index in range(len(self.kv_cache1)):
+                self.kv_cache1[block_index]["global_end_index"] = torch.tensor(
+                    [0], dtype=torch.long, device=noise.device)
+                self.kv_cache1[block_index]["local_end_index"] = torch.tensor(
+                    [0], dtype=torch.long, device=noise.device)
+                self.kv_cache_mouse[block_index]["global_end_index"] = torch.tensor(
+                    [0], dtype=torch.long, device=noise.device)
+                self.kv_cache_mouse[block_index]["local_end_index"] = torch.tensor(
+                    [0], dtype=torch.long, device=noise.device)
+                self.kv_cache_keyboard[block_index]["global_end_index"] = torch.tensor(
+                    [0], dtype=torch.long, device=noise.device)
+                self.kv_cache_keyboard[block_index]["local_end_index"] = torch.tensor(
+                    [0], dtype=torch.long, device=noise.device)
+
         # Step 2: Cache context feature
         current_start_frame = 0
         if initial_latent is not None:

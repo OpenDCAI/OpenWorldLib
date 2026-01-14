@@ -7,6 +7,7 @@ from typing import Optional, Any, List, Union
 from torchvision.transforms import v2
 from ...operators.matrix_game_2_operator import MatrixGame2Operator
 from ...synthesis.visual_generation.matrix_game.matrix_game_2_synthesis import MatrixGame2Synthesis
+from ...memories.visual_synthesis.matrix_game.matrix_game_2_memory import MatrixGame2Memory
 
 
 def tensor_to_pil(tensor: torch.Tensor) -> Image.Image:
@@ -49,7 +50,7 @@ class MatrixGame2Pipeline:
             **kwargs
         )
         operators = MatrixGame2Operator(mode=mode)
-        memory_module = []
+        memory_module = MatrixGame2Memory()
 
         pipeline = cls(
             operators=operators,
@@ -106,10 +107,6 @@ class MatrixGame2Pipeline:
                                      "forward_left", "forward_right",
                                      "camera_l", "camera_r"],
                  operation_visualization=True,
-                 input_kv_cache1 = None,
-                 input_kv_cache_mouse = None,
-                 input_kv_cache_keyboard = None,
-                 input_crossattn_cache = None,
                  **kwds):
         output_dict = self.process(
             input_image=input_image,
@@ -124,10 +121,6 @@ class MatrixGame2Pipeline:
             operator_condition=output_dict['operator_condition'],
             num_output_frames=num_output_frames,
             operation_visualization=operation_visualization,
-            input_kv_cache1 = input_kv_cache1,
-            input_kv_cache_mouse = input_kv_cache_mouse,
-            input_kv_cache_keyboard = input_kv_cache_keyboard,
-            input_crossattn_cache = input_crossattn_cache,
             **kwds
         )
         return output_video
@@ -140,62 +133,24 @@ class MatrixGame2Pipeline:
                resize_W: int = 640,
                operation_visualization: bool = False,
                **kwds) -> torch.Tensor:
-        """
-        执行单步交互生成，并自动更新内部状态 (self.current_image)。
-        
-        Args:
-            interaction_signal (List[str]): 本次交互的控制信号。
-            initial_image (Optional[Image.Image]): 
-                - 如果提供，将重置当前状态，以此图片作为起点（通常用于第一轮）。
-                - 如果为 None，则使用上一轮生成的最后一帧作为起点。
-            num_output_frames (int): 本次生成的帧数 (可以每轮动态改变)。
-            resize_H, resize_W: 本次生成的分辨率 (可以每轮动态改变)。
-            
-        Returns:
-            torch.Tensor: 本次生成的视频片段。
-        """
-        
-        # 1. 状态管理：如果有新图片传入，则重置起点；否则检查是否有历史状态
         if initial_image is not None:
-            print("--- Stream Session Reset/Started with new image ---")
-            self.current_image = initial_image
+            print("--- Stream Started ---")
+            self.memory_module.record(initial_image)
         
-        if self.current_image is None:
-            raise ValueError("Current image is None. Please provide 'initial_image' for the first step.")
+        current_image = self.memory_module.select()
+        if current_image is None:
+            raise ValueError("No image in storage. Provide 'initial_image' first.")
 
-        # 2. 执行生成 (直接复用 __call__ 的逻辑)
-        ### self.memory_module 相关的处理请放在memory文件下
-        if len(self.memory_module) == 0:
-            kv_cache1 = kv_cache_mouse = kv_cache_keyboard = crossattn_cache = None
-        else:
-            kv_cache1 = self.memory_module[-1]["kv_cache1"]
-            kv_cache_mouse = self.memory_module[-1]["kv_cache_mouse"]
-            kv_cache_keyboard = self.memory_module[-1]["kv_cache_keyboard"]
-            crossattn_cache = self.memory_module[-1]["crossattn_cache"]
         video_output = self.__call__(
-            input_image=self.current_image,
+            input_image=current_image,
             num_output_frames=num_output_frames,
             interaction_signal=interaction_signal,
             resize_H=resize_H,
             resize_W=resize_W,
             operation_visualization=operation_visualization,
-            input_kv_cache1 = kv_cache1,
-            input_kv_cache_mouse = kv_cache_mouse,
-            input_kv_cache_keyboard = kv_cache_keyboard,
-            input_crossattn_cache = crossattn_cache,
             **kwds
         )
-        self.memory_module.append({
-            "kv_cache1": self.synthesis_model.pipeline.kv_cache1,
-            "kv_cache_mouse": self.synthesis_model.pipeline.kv_cache_mouse,
-            "kv_cache_keyboard": self.synthesis_model.pipeline.kv_cache_keyboard,
-            "crossattn_cache": self.synthesis_model.pipeline.crossattn_cache
-        })
 
-        # 3. 更新状态：提取最后一帧，保存到 self.current_image 供下一轮使用
-        # 假设 video_output 是 tensor，我们需要将其转回 PIL
-        # 注意：这里直接使用你外部定义的 tensor_to_pil 函数
-        last_frame_tensor = video_output[-1] 
-        self.current_image = tensor_to_pil(last_frame_tensor)
+        self.memory_module.record(video_output)
 
         return video_output

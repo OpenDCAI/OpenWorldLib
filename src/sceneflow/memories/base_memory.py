@@ -15,6 +15,9 @@ class BaseMemory(object):
         pass
 
     def check_template(self, **kwargs):
+        """
+        the template of self.storage is [{'content':..., 'type':<type>, 'timestamp': <timestamp>, 'metadata': <metadata>}, {}, ...]
+        """
         key_list = ['content', 'type', 'timestamp', 'metadata']           ## metadata contain corresponding extra information
         type_list = ['image', 'video', 'text', 'audio', 'action', 'other']
 
