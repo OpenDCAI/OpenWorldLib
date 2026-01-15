@@ -1,5 +1,15 @@
 # SceneFlow
 
+## Noting
+### Target
+- 设定一套统一且规范的world model framework
+- 添加开源的world model相关的研究成果，并collect相关paper供研究者们进行参考
+
+### 功能展示
+1. video generation (navigation generation && long video generation)
+2. 3D scene generation
+3. reasoning (VQA+VLA)
+
 ## Install
 ```bash
 pip install torch==2.5.1 torchvision torchaudio
