@@ -1,5 +1,4 @@
-from .causal_inference import CausalInferencePipeline, CausalInferenceStreamingPipeline
+from .causal_inference import CausalInferencePipeline
 __all__ = [
     "CausalInferencePipeline",
-    "CausalInferenceStreamingPipeline"
 ]
