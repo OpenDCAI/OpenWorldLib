@@ -5,7 +5,7 @@ from omegaconf import OmegaConf
 from einops import rearrange
 from huggingface_hub import snapshot_download, hf_hub_download
 from ...base_synthesis import BaseSynthesis
-from .matrix_game_2.pipeline import CausalInferencePipeline, CausalInferenceStreamingPipeline
+from .matrix_game_2.pipeline import CausalInferencePipeline
 from .matrix_game_2.extension_modules.wanx_vae import get_wanx_vae_wrapper
 from .matrix_game_2.demo_utils.vae_block3 import VAEDecoderWrapper
 from .matrix_game_2.utils.visualize import process_video
@@ -97,9 +97,10 @@ class MatrixGame2Synthesis(BaseSynthesis):
                 visual_context,
                 operator_condition,
                 num_output_frames,
-                operation_visualization=True):
+                operation_visualization=True,
+                ):
         sampled_noise = torch.randn(
-            [1, 16,num_output_frames, cond_concat.size(-2), cond_concat.size(-1)], device=self.device, dtype=self.weight_dtype
+            [1, 16, num_output_frames, cond_concat.size(-2), cond_concat.size(-1)], device=self.device, dtype=self.weight_dtype
         )
 
         conditional_dict = {
@@ -120,7 +121,7 @@ class MatrixGame2Synthesis(BaseSynthesis):
                 conditional_dict=conditional_dict,
                 return_latents=False,
                 mode=self.mode,
-                profile=False
+                profile=False,
             )
         
         videos_tensor = torch.cat(videos, dim=1)
