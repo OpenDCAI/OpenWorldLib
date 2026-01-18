@@ -3,7 +3,7 @@ from PIL import Image
 import os
 
 # Model configuration
-model_path = "./"  # Update with your model path
+model_path = "nvidia/omnivinci"  # Update with your model path
 pipeline = OmniVinciPipeline.from_pretrained(
     pretrained_model_path=model_path,
     load_audio_in_video=True,
@@ -45,7 +45,7 @@ while True:
         break
     elif command == 'reset':
         pipeline.memory_module.manage(action="reset")
-        print("✓ Conversation history cleared")
+        print("Conversation history cleared")
         turn_idx = 0
         continue
     
@@ -59,7 +59,7 @@ while True:
         image_input = image_input
     else:
         if image_input:
-            print(f"⚠ Image file not found: {image_input}")
+            print(f"Image file not found: {image_input}")
         image_input = None
     
     audio_input = input("Audio path (or press Enter to skip): ").strip()
@@ -67,7 +67,7 @@ while True:
         audio_input = audio_input
     else:
         if audio_input:
-            print(f"⚠ Audio file not found: {audio_input}")
+            print(f"Audio file not found: {audio_input}")
         audio_input = None
     
     video_input = input("Video path (or press Enter to skip): ").strip()
@@ -75,19 +75,19 @@ while True:
         video_input = video_input
     else:
         if video_input:
-            print(f"⚠ Video file not found: {video_input}")
+            print(f"Video file not found: {video_input}")
         video_input = None
     
     # Check if any input provided
     if not any([text_input, image_input, audio_input, video_input]):
-        print("⚠ No input provided. Please provide at least one input.")
+        print("No input provided. Please provide at least one input.")
         continue
     
     # Optional: max_new_tokens
     max_tokens_str = input("Max new tokens (default: 1024): ").strip()
     max_new_tokens = int(max_tokens_str) if max_tokens_str else 1024
     
-    print(f"\n🔄 Processing Turn {turn_idx}...")
+    print(f"\nProcessing Turn {turn_idx}...")
     
     try:
         # Call stream method
@@ -101,13 +101,13 @@ while True:
             reset_memory=False
         )
         
-        print(f"\n✓ Response: {result}")
+        print(f"\nResponse: {result}")
         
         turn_idx += 1
-        print(f"\n📊 Total conversation turns: {len(pipeline.memory_module.storage)}")
+        print(f"\nTotal conversation turns: {len(pipeline.memory_module.storage)}")
         
     except Exception as e:
-        print(f"❌ Error during processing: {str(e)}")
+        print(f"Error during processing: {str(e)}")
         import traceback
         traceback.print_exc()
         continue
