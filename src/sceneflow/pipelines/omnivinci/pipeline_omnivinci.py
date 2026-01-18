@@ -13,6 +13,7 @@ from PIL import Image
 import soundfile as sf
 from ...operators.omnivinci_operator import OmniVinciOperator
 from ...reasoning.general_reasoning.omnivinci.omnivinci_reasoning import OmniVinciReasoning
+from ...memories.reasoning.omnivinci.omnivinci_memory import OmniVinciMemory
 
 
 class OmniVinciPipeline:
@@ -26,6 +27,7 @@ class OmniVinciPipeline:
         self,
         operator: Optional[OmniVinciOperator] = None,
         reasoning_model: Optional[OmniVinciReasoning] = None,
+        memory_module: Optional[OmniVinciMemory] = None,
         device: str = 'cuda',
         load_audio_in_video: bool = True,
         num_video_frames: int = 128,
@@ -37,6 +39,7 @@ class OmniVinciPipeline:
         Args:
             operator: OmniVinci operator instance
             reasoning_model: OmniVinci reasoning model instance
+            memory_module: Memory module for conversation history
             device: Device for inference
             load_audio_in_video: Whether to load audio track in videos
             num_video_frames: Number of frames to extract from video
@@ -44,6 +47,7 @@ class OmniVinciPipeline:
         """
         self.operator = operator
         self.reasoning_model = reasoning_model
+        self.memory_module = memory_module if memory_module else OmniVinciMemory()
         self.device = device
         self.load_audio_in_video = load_audio_in_video
         self.num_video_frames = num_video_frames
@@ -112,10 +116,14 @@ class OmniVinciPipeline:
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         
+        # Initialize memory module
+        memory_module = OmniVinciMemory()
+        
         # Create pipeline instance
         pipeline = cls(
             operator=operator,
             reasoning_model=reasoning_model,
+            memory_module=memory_module,
             device=device,
             load_audio_in_video=load_audio_in_video,
             num_video_frames=num_video_frames,
@@ -303,3 +311,83 @@ class OmniVinciPipeline:
     def get_reasoning_model(self) -> Optional[OmniVinciReasoning]:
         """Get reasoning model instance"""
         return self.reasoning_model
+    
+    def stream(
+        self,
+        text: Optional[str] = None,
+        images: Optional[Union[str, Path, Image.Image, List]] = None,
+        audios: Optional[Union[str, Path, bytes, List]] = None,
+        videos: Optional[Union[str, Path, List]] = None,
+        use_history: bool = True,
+        max_new_tokens: int = 1024,
+        generation_kwargs: Optional[dict] = None,
+        reset_memory: bool = False,
+        **kwargs
+    ) -> str:
+        """
+        Stream-based generation with conversation memory
+        
+        Args:
+            text: Text prompt for current turn
+            images: Image inputs for current turn
+            audios: Audio inputs for current turn
+            videos: Video inputs for current turn
+            use_history: Whether to include conversation history
+            max_new_tokens: Maximum number of tokens to generate
+            generation_kwargs: Additional generation parameters
+            reset_memory: Whether to reset memory before processing
+            **kwargs: Additional parameters
+            
+        Returns:
+            Generated text string
+        """
+        if reset_memory:
+            self.memory_module.manage(action="reset")
+            print("--- Stream Started (Memory Reset) ---")
+        
+        # Build messages from history
+        messages = None
+        if use_history:
+            messages = self.memory_module.select()
+        
+        # Process inputs through operator
+        # Text will be merged into messages if messages exist
+        processed_data = self.process(
+            text=text,
+            images=images,
+            audios=audios,
+            videos=videos,
+            messages=messages,
+            **kwargs
+        )
+        
+        current_messages = processed_data.get("messages")
+        load_audio_in_video = processed_data.get("load_audio_in_video", self.load_audio_in_video)
+        num_video_frames = processed_data.get("num_video_frames", self.num_video_frames)
+        audio_length = processed_data.get("audio_length", self.audio_length)
+        
+        # Run inference
+        result = self.reasoning_model.inference(
+            messages=current_messages,
+            max_new_tokens=max_new_tokens,
+            generation_kwargs=generation_kwargs,
+            load_audio_in_video=load_audio_in_video,
+            num_video_frames=num_video_frames,
+            audio_length=audio_length,
+        )
+        
+        response_text = result
+        
+        # Record to memory
+        self.memory_module.record({
+            'messages': current_messages,
+            'response': response_text,
+            'metadata': {
+                'max_new_tokens': max_new_tokens,
+                'load_audio_in_video': load_audio_in_video,
+                'num_video_frames': num_video_frames,
+                'audio_length': audio_length,
+            }
+        })
+        
+        return result

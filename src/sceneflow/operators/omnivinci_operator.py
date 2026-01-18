@@ -136,7 +136,7 @@ class OmniVinciOperator(BaseOperator):
         
         Args:
             text: Text prompt
-            messages: Pre-built messages (if provided, text is ignored)
+            messages: Pre-built messages (text will be appended if provided)
             include_system_prompt: Whether to include system prompt
             **kwargs: Additional parameters
             
@@ -152,8 +152,38 @@ class OmniVinciOperator(BaseOperator):
         
         # Build or use provided messages
         if messages is not None:
-            result["messages"] = messages
-            result["text"] = None
+            # Use existing messages and append text if provided
+            result["messages"] = messages.copy() if isinstance(messages, list) else messages
+            
+            # If text is provided, append it to the last user message or create new one
+            if text:
+                # Find last user message
+                last_user_idx = None
+                for i in range(len(result["messages"]) - 1, -1, -1):
+                    if result["messages"][i].get("role") == "user":
+                        last_user_idx = i
+                        break
+                
+                if last_user_idx is not None:
+                    # Append to existing user message
+                    if isinstance(result["messages"][last_user_idx]["content"], list):
+                        result["messages"][last_user_idx]["content"].append(
+                            {"type": "text", "text": text}
+                        )
+                    else:
+                        # Convert to list format if needed
+                        result["messages"][last_user_idx]["content"] = [
+                            {"type": "text", "text": result["messages"][last_user_idx]["content"]},
+                            {"type": "text", "text": text}
+                        ]
+                else:
+                    # No user message found, create new one
+                    result["messages"].append({
+                        "role": "user",
+                        "content": [{"type": "text", "text": text}]
+                    })
+            
+            result["text"] = text
         else:
             built_messages = []
             

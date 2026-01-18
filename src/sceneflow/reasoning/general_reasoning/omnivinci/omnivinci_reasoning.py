@@ -560,7 +560,6 @@ def from_pretrained_new(cls, pretrained_model_name_or_path, *model_args, **kwarg
         Model.sound_tower = Qwen2AudioTower(sound_tower_path,config).to(Model.device)
         Model.vision_tower = SiglipVisionTowerDynamicS2(vision_tower_path,config).to(Model.device)
         config.mm_hidden_size = Model.vision_tower.hidden_size
-        breakpoint()
         return Model
     elif type(config) in cls._model_mapping.keys():
         model_class = _get_model_class(config, cls._model_mapping)
