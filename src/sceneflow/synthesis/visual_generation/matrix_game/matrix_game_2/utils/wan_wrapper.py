@@ -4,10 +4,10 @@ import torch
 from torch import nn
 from einops import rearrange
 from .scheduler import SchedulerInterface, FlowMatchScheduler
-from ....wan.wan_2p1.modules.tokenizers import HuggingfaceTokenizer
-from ....wan.wan_2p1.modules.model import WanModel #, RegisterTokens, GanAttentionBlock
-from ....wan.wan_2p1.modules.vae import _video_vae
-from ....wan.wan_2p1.modules.t5 import umt5_xxl
+from ......base_models.diffusion_model.video.wan_2p1.modules.tokenizers import HuggingfaceTokenizer
+from ......base_models.diffusion_model.video.wan_2p1.modules.model import WanModel #, RegisterTokens, GanAttentionBlock
+from ......base_models.diffusion_model.video.wan_2p1.modules.vae import _video_vae
+from ......base_models.diffusion_model.video.wan_2p1.modules.t5 import umt5_xxl
 from ..extension_modules.matrix_game_2_modules.causal_model import CausalWanModel
 
 
