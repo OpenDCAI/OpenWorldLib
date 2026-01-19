@@ -3,7 +3,8 @@ from einops import rearrange
 import torch
 import torch.nn as nn
 
-from ......base_models.diffusion_model.video.wan_2p1.modules.vae import AttentionBlock, CausalConv3d, RMS_norm, ResidualBlock, Upsample
+from ......base_models.diffusion_model.video.wan_2p1.modules.vae import (
+    AttentionBlock, CausalConv3d, RMS_norm, ResidualBlock, Upsample)
 
 
 class Resample(nn.Module):

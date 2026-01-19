@@ -5,7 +5,8 @@ import torch
 import torch.nn as nn
 
 from .constant import ALL_INPUTS_NAMES, ZERO_VAE_CACHE
-from ......base_models.diffusion_model.video.wan_2p1.modules.vae import AttentionBlock, CausalConv3d, RMS_norm, Upsample
+from ......base_models.diffusion_model.video.wan_2p1.modules.vae import (
+    AttentionBlock, CausalConv3d, RMS_norm, Upsample)
 
 CACHE_T = 2
 
