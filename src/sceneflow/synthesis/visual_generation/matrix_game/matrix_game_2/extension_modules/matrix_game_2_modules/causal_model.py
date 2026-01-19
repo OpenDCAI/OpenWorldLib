@@ -1,5 +1,5 @@
-from .....wan.wan_2p1.modules.attention import attention
-from .....wan.wan_2p1.modules.model import (
+from .......base_models.diffusion_model.video.wan_2p1.modules.attention import attention
+from .......base_models.diffusion_model.video.wan_2p1.modules.model import (
     WanRMSNorm,
     rope_apply,
     WanLayerNorm,

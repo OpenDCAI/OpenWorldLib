@@ -1,5 +1,5 @@
 import torch
-from .....visual_generation.wan.wan_2p1.modules.model import WanModel
+from ......base_models.diffusion_model.video.wan_2p1.modules.model import WanModel
 
 
 class GeneralLoRAFromPeft:
