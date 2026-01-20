@@ -1,15 +1,18 @@
 import torch
 import torch.nn as nn
-
+import os
 # =========================================================================
 # 来自 infer_demo.py 的模型动态修改工具函数 (原封不动)
 # =========================================================================
 
 def replace_dit_model_in_manager():
     """Replace DiT model class with MoE version"""
-    from .....base_models.diffusion_model.diffsynth.models.wan_video_dit_moe import WanModelMoe
-    from .....base_models.diffusion_model.diffsynth.configs.model_config import model_loader_configs
+    # from .....base_models.diffusion_model.diffsynth.models.wan_video_dit_moe import WanModelMoe
+    # from .....base_models.diffusion_model.diffsynth.configs.model_config import model_loader_configs
     
+    from .models.wan_video_dit_moe import WanModelMoe
+    from .configs.model_config import model_loader_configs
+
     for i, config in enumerate(model_loader_configs):
         keys_hash, keys_hash_with_shape, model_names, model_classes, model_resource = config
         
@@ -71,7 +74,7 @@ def add_moe_components(dit_model, moe_config):
     dim = dit_model.blocks[0].self_attn.q.weight.shape[0]
     unified_dim = moe_config.get("unified_dim", 25)
     num_experts = moe_config.get("num_experts", 4)
-    from diffsynth.models.wan_video_dit_moe import ModalityProcessor, MultiModalMoE
+    from .models.wan_video_dit_moe import ModalityProcessor, MultiModalMoE
     dit_model.sekai_processor = ModalityProcessor("sekai", 13, unified_dim)
     dit_model.nuscenes_processor = ModalityProcessor("nuscenes", 8, unified_dim)
     dit_model.openx_processor = ModalityProcessor("openx", 13, unified_dim)  # OpenX uses 13-dim input, similar to sekai but handled independently

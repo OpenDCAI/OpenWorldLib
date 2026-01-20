@@ -21,39 +21,13 @@ class AstraOperator(object):
             v2.ToTensor(),
             v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
         ])
-        
-        # 图标缓存
-        self.icons = {}
-        self._init_icons()
-
-    def _init_icons(self):
-        """Pre-load icons for visualization"""
-        ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../../../..')) # 根据实际层级调整
-        icons_dir = os.path.join(ROOT_DIR, 'icons')
-        if not os.path.exists(icons_dir):
-             icons_dir = "./icons"
-
-        icon_names = ['move_forward.png', 'not_move_forward.png', 
-                      'move_backward.png', 'not_move_backward.png',
-                      'move_left.png', 'not_move_left.png',
-                      'move_right.png', 'not_move_right.png',
-                      'turn_up.png', 'not_turn_up.png',
-                      'turn_down.png', 'not_turn_down.png',
-                      'turn_left.png', 'not_turn_left.png',
-                      'turn_right.png', 'not_turn_right.png']
-        
-        if os.path.exists(icons_dir):
-            for name in icon_names:
-                path = os.path.join(icons_dir, name)
-                if os.path.exists(path):
-                    try:
-                        icon = Image.open(path).convert("RGBA")
-                        icon = icon.resize((50, 50), Image.Resampling.LANCZOS)
-                        self.icons[name] = icon
-                    except Exception as e:
-                        print(f"Error loading icon {name}: {e}")
 
     def check_interaction(self, interaction):
+        """
+        检验输入是否符合astra输入格式
+        """
+        if interaction not in self.interaction_template:
+            raise ValueError(f"Invalid interaction: {interaction}. Allowed: {self.interaction_template}")
         return True
 
     def get_interaction(self, interaction):
@@ -380,37 +354,3 @@ class AstraOperator(object):
             mask[start_frame:min(start_frame + initial_condition_frames, max_needed_frames)] = 1.0
             camera_embedding = torch.cat([pose_sequence, mask], dim=1)
             return camera_embedding.to(torch.bfloat16)
-
-    def overlay_controls(self, frame_img, pose_vec):
-        """Overlay control icons"""
-        if pose_vec is None or np.all(pose_vec[:12] == 0): return frame_img
-            
-        tx = pose_vec[3]; tz = pose_vec[11]
-        r00 = pose_vec[0]; r02 = pose_vec[2]; yaw = np.arctan2(r02, r00)
-        r12 = pose_vec[6]; r22 = pose_vec[10]; pitch = np.arctan2(-r12, r22)
-        
-        TRANS_THRESH = 0.01; ROT_THRESH = 0.005
-        is_forward = tz < -TRANS_THRESH; is_backward = tz > TRANS_THRESH
-        is_left = tx < -TRANS_THRESH; is_right = tx > TRANS_THRESH
-        is_turn_left = yaw > ROT_THRESH; is_turn_right = yaw < -ROT_THRESH
-        is_turn_up = pitch < -ROT_THRESH; is_turn_down = pitch > ROT_THRESH
-        
-        W, H = frame_img.size; spacing = 60
-        def paste_icon(name_active, name_inactive, is_active, x, y):
-            name = name_active if is_active else name_inactive
-            if name in self.icons:
-                icon = self.icons[name]
-                frame_img.paste(icon, (int(x), int(y)), icon)
-        
-        base_x_right = 100; base_y = H - 100
-        paste_icon('move_forward.png', 'not_move_forward.png', is_forward, base_x_right, base_y - spacing)
-        paste_icon('move_left.png', 'not_move_left.png', is_left, base_x_right - spacing, base_y)
-        paste_icon('move_backward.png', 'not_move_backward.png', is_backward, base_x_right, base_y)
-        paste_icon('move_right.png', 'not_move_right.png', is_right, base_x_right + spacing, base_y)
-        
-        base_x_left = W - 150
-        paste_icon('turn_up.png', 'not_turn_up.png', is_turn_up, base_x_left, base_y - spacing)
-        paste_icon('turn_left.png', 'not_turn_left.png', is_turn_left, base_x_left - spacing, base_y)
-        paste_icon('turn_down.png', 'not_turn_down.png', is_turn_down, base_x_left, base_y)
-        paste_icon('turn_right.png', 'not_turn_right.png', is_turn_right, base_x_left + spacing, base_y)
-        return frame_img

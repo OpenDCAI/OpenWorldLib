@@ -5,6 +5,7 @@ import imageio
 from PIL import Image
 from dataclasses import dataclass
 from typing import Optional
+from huggingface_hub import snapshot_download, hf_hub_download
 
 from ...operators.astra_operator import AstraOperator
 from ...synthesis.visual_generation.kling.astra_synthesis import AstraSynthesis
@@ -30,7 +31,7 @@ class AstraConfig:
     text_guidance_scale: float = 1.0
     
     # MoE 模型结构参数 (通常固定)
-    moe_num_experts: int = 4
+    moe_num_experts: int = 3
     moe_top_k: int = 1
     moe_hidden_dim: Optional[int] = None
     
@@ -51,6 +52,46 @@ class AstraPipeline(object):
         self.memory = memory
         self.config = config
         self.device = synthesis.device
+    # 2. 新增：解析路径的辅助函数
+    @staticmethod
+    def _resolve_path(path_or_id, is_file=False):
+        """
+        如果路径存在，直接返回；
+        如果不存在，尝试作为 HuggingFace Repo ID 下载。
+        """
+        if os.path.exists(path_or_id):
+            return path_or_id
+        
+        print(f"Path '{path_or_id}' not found locally, attempting to download from HuggingFace...")
+        try:
+            # 如果是基础模型文件夹 (Wan)
+            if not is_file:
+                return snapshot_download(repo_id=path_or_id)
+            
+            # 如果是单个权重文件 (Astra DiT)
+            # 这里稍微复杂点：如果用户给了 Repo ID，我们需要找到里面的权重文件
+            # 简单起见，我们假设用户传入的是 Repo ID，我们下载整个 Repo 并自动寻找 .ckpt/.safetensors
+            folder_path = snapshot_download(repo_id=path_or_id)
+            
+            # 自动寻找常见的权重文件名
+            candidates = ["diffusion_pytorch_model.ckpt", "diffusion_pytorch_model.safetensors", "model.ckpt", "model.safetensors"]
+            for name in candidates:
+                p = os.path.join(folder_path, name)
+                if os.path.exists(p):
+                    return p
+            
+            # 如果没找到，尝试在子文件夹里找 (Astra 原始结构可能在 checkpoints 下)
+            for root, dirs, files in os.walk(folder_path):
+                for file in files:
+                    if file.endswith(".ckpt") or file.endswith(".safetensors"):
+                        return os.path.join(root, file)
+            
+            raise FileNotFoundError(f"Downloaded {path_or_id} but could not find model weights (.ckpt/.safetensors)")
+            
+        except Exception as e:
+            print(f"Error downloading from HF: {e}")
+            # 如果下载失败，返回原路径让后续报错更明确
+            return path_or_id
 
     @classmethod
     def from_pretrained(cls, 
@@ -58,30 +99,29 @@ class AstraPipeline(object):
                         wan_model_path: str, 
                         device: str = "cuda", 
                         **kwargs):
-        """
-        初始化 Pipeline。
-        kwargs 可以覆盖 AstraConfig 中的默认值，例如 mo_num_experts=3
-        """
-        # 1. 组装配置
+        
+        # 3. 修改：在配置前先解析路径
+        print("Resolving model paths...")
+        resolved_wan_path = cls._resolve_path(wan_model_path, is_file=False)
+        resolved_dit_path = cls._resolve_path(dit_path, is_file=True)
+        
         config = AstraConfig(
-            dit_path=dit_path,
-            wan_model_path=wan_model_path,
+            dit_path=resolved_dit_path,
+            wan_model_path=resolved_wan_path,
             device=device
         )
-        # 允许用户在 init 时覆盖默认配置
         for k, v in kwargs.items():
             if hasattr(config, k):
                 setattr(config, k, v)
         
-        # 2. 初始化各模块 (传入 config 对象替代 args)
         print(f"Loading Astra components on {device}...")
         synthesis = AstraSynthesis.from_pretrained(config, device=device)
         operator = AstraOperator(device=device)
         memory = AstraMemory(capacity=config.max_history_frames)
         
         return cls(operator, synthesis, memory, config)
-
-    def process(self, 
+        
+    def __call__(self, 
                 condition_image: str, 
                 prompt: str, 
                 direction: str = "forward", 
@@ -189,11 +229,5 @@ class AstraPipeline(object):
         with imageio.get_writer(output_path, fps=20) as writer:
             for i, frame in enumerate(video_np):
                 img = Image.fromarray(frame)
-                # 自动处理图标
-                if args.add_icons and video_camera_poses is not None:
-                    pose_idx = args.start_frame + i
-                    if pose_idx < len(video_camera_poses):
-                        pose_vec = video_camera_poses[pose_idx]
-                        img = self.operator.overlay_controls(img, pose_vec)
                 writer.append_data(np.array(img))
         print("Save complete.")
