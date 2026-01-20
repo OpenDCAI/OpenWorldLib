@@ -14,6 +14,13 @@ class BaseMemory(object):
         self.capacity = capacity
         pass
 
+    def check_template(self, **kwargs):
+        """
+        the template of self.storage is [{'content':..., 'type':<type>, 'timestamp': <timestamp>, 'metadata': <metadata>}, {}, ...]
+        """
+        key_list = ['content', 'type', 'timestamp', 'metadata']           ## metadata contain corresponding extra information
+        type_list = ['image', 'video', 'text', 'audio', 'action', 'other']
+
     def record(self, data, metadata=None, **kwargs):
         """
         1. Recording (Ingestion)

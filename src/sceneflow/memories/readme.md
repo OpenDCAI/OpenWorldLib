@@ -1,0 +1,4 @@
+## Noting
+synthesis变化可能比较大，无论是navigation还是long video generation，因此这里估计没有一个统一的memory文件可以管理，得分不同的方法进行处理
+reasoning按理说主要是token拼接，所以记录方式会简单些
+representation
