@@ -36,9 +36,17 @@ scikit-image
 huggingface_hub[cli]
 clip @ git+https://github.com/openai/CLIP.git
 dominate
-pycuda
+# pycuda
 flask
 flask-socketio
 gradio==4.14.0
 gradio_imageslider
-Pillow
+huggingface-hub[torch]>=0.22
+pillow==10.3.0
+scipy
+trimesh
+pyglet<2
+viser
+lpips
+h5py
+scikit-learn
