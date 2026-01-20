@@ -52,7 +52,7 @@ class AstraPipeline(object):
         self.memory = memory
         self.config = config
         self.device = synthesis.device
-    # 2. 新增：解析路径的辅助函数
+    # 解析路径的辅助函数
     @staticmethod
     def _resolve_path(path_or_id, is_file=False):
         """
@@ -68,9 +68,7 @@ class AstraPipeline(object):
             if not is_file:
                 return snapshot_download(repo_id=path_or_id)
             
-            # 如果是单个权重文件 (Astra DiT)
-            # 这里稍微复杂点：如果用户给了 Repo ID，我们需要找到里面的权重文件
-            # 简单起见，我们假设用户传入的是 Repo ID，我们下载整个 Repo 并自动寻找 .ckpt/.safetensors
+            #用户传入的是 Repo ID，下载整个 Repo 并自动寻找 .ckpt/.safetensors
             folder_path = snapshot_download(repo_id=path_or_id)
             
             # 自动寻找常见的权重文件名
@@ -80,7 +78,7 @@ class AstraPipeline(object):
                 if os.path.exists(p):
                     return p
             
-            # 如果没找到，尝试在子文件夹里找 (Astra 原始结构可能在 checkpoints 下)
+            # 如果没找到，尝试在子文件夹里找
             for root, dirs, files in os.walk(folder_path):
                 for file in files:
                     if file.endswith(".ckpt") or file.endswith(".safetensors"):
@@ -100,7 +98,7 @@ class AstraPipeline(object):
                         device: str = "cuda", 
                         **kwargs):
         
-        # 3. 修改：在配置前先解析路径
+        # 修改：在配置前先解析路径
         print("Resolving model paths...")
         resolved_wan_path = cls._resolve_path(wan_model_path, is_file=False)
         resolved_dit_path = cls._resolve_path(dit_path, is_file=True)
@@ -132,7 +130,7 @@ class AstraPipeline(object):
         """
         args = self.config
         
-        # 1. 加载并编码条件图像
+        # 加载并编码条件图像
         print(f"Processing image: {condition_image}")
         frames = self.operator.process_perception(condition_image=condition_image)
         latents = self.synthesis.encode_frames(frames)
@@ -151,14 +149,14 @@ class AstraPipeline(object):
         self.memory.record(history_latents) 
         initial_latents = history_latents # 备份用于最终拼接
 
-        # 2. 编码提示词
+        # 编码提示词
         print(f"Encoding prompt: {prompt}")
         prompt_emb_pos = self.synthesis.pipe.encode_prompt(prompt)
         prompt_emb_neg = None
         if args.text_guidance_scale > 1.0:
             prompt_emb_neg = self.synthesis.pipe.encode_prompt("")
         
-        # 3. 生成动作 (Interaction)
+        # 生成动作 (Interaction)
         print(f"Generating camera embeddings for direction: {direction}...")
         self.operator.current_interaction = [] # 清空之前的状态
         self.operator.get_interaction(direction)

@@ -1,1 +1,1 @@
-from .wan_video_astra import WanVideoAstraPipeline
+from .wan_video_recammaster import WanVideoAstraPipeline
