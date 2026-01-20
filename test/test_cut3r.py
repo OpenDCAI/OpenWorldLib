@@ -17,7 +17,7 @@ MODEL_NAME = "cut3r_224_linear_4"  # or "cut3r_512_dpt_4_64"
 # Inference parameters
 SIZE = 224  # Input image size (None = auto-detect from model, or specify 224/512)
 VIS_THRESHOLD = 1.5  # Confidence threshold for filtering point clouds (1.0 to INF, higher = more filtering)
-
+INTERACTION = None  # "move_left", "move_right", "move_up", "move_down","zoom_in", "zoom_out"
 OUTPUT_DIR = None
 
 
@@ -28,6 +28,7 @@ pipeline = CUT3RPipeline.from_pretrained(
 
 results = pipeline(
     DATA_PATH,
+    interaction=INTERACTION,
     size=SIZE,  
     vis_threshold=VIS_THRESHOLD,  # Filter point clouds by confidence
 )
