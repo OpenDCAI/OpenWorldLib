@@ -1,5 +1,3 @@
-torch==2.3.0
-torchvision==0.18.0
 sentencepiece==0.1.99
 shortuuid
 accelerate==0.34.2
