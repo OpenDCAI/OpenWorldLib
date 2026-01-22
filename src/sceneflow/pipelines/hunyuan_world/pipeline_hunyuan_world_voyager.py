@@ -9,8 +9,8 @@ from PIL import Image
 from typing import Optional, Any
 from ..pipeline_utils import PipelineABC
 from ...operators.hunyuan_world_voager_operator import HunyuanWorldVoyagerOperator
-from ...representations.depth_to_point_clond_representation import Depth2PointCloudRepresentation
-from ...synthesis.visual_generation.hunyuan_world.hunyuan_video_synthesis import HunyuanVideoSynthesis
+from ...representations.point_clouds_generation.hunyuan_world.hunyuan_world_voyager_representation import Depth2PointCloudRepresentation
+from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager_synthesis import HunyuanVideoSynthesis
 from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager.config import parse_args
 from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager.utils.file_utils import video_output
 
@@ -100,15 +100,7 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
     def process(self, input_image, interaction_signal="forward"):
         """处理输入图像和交互信号，输出渲染视频"""
         # 转换输入图像
-        if isinstance(input_image, np.ndarray):
-            image_tensor = torch.tensor(input_image / 255, dtype=torch.float32, device=self.device).permute(2, 0, 1)
-        elif isinstance(input_image, Image.Image):
-            if input_image.mode != 'RGB':
-                input_image = input_image.convert('RGB')
-            input_image = np.array(input_image)
-            image_tensor = torch.tensor(input_image / 255.0, dtype=torch.float32, device=self.device).permute(2, 0, 1)
-        else:
-            image_tensor = input_image.to(self.device)
+        image_tensor = self.operators.process_perception(input_image, self.device)
 
         Height, Width = input_image.shape[:2] if hasattr(input_image, 'shape') else (256, 256)
         

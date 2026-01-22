@@ -12,7 +12,7 @@ import torch.nn.functional as F
 import torch.utils
 import torch.utils.checkpoint
 import torch.version
-from ...utils3d.torch import depth_map_to_point_map, intrinsics_from_focal_center
+from ....general_3d.eastern_journalist.utils3d.torch import depth_map_to_point_map, intrinsics_from_focal_center
 from huggingface_hub import hf_hub_download
 
 
@@ -179,7 +179,7 @@ class MoGeModel(nn.Module):
         
         # NOTE: We have copied the DINOv2 code in torchhub to this repository.
         # Minimal modifications have been made: removing irrelevant code, unnecessary warnings and fixing importing issues.
-        hub_loader = getattr(importlib.import_module("...dinov2.hub.backbones", __package__), encoder)
+        hub_loader = getattr(importlib.import_module(".....perception_core.general_perception.dinov2.hub.backbones", __package__), encoder)
         self.backbone = hub_loader(pretrained=False)
         dim_feature = self.backbone.blocks[0].attn.qkv.in_features
         

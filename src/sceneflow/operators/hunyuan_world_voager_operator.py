@@ -113,3 +113,15 @@ class HunyuanWorldVoyagerOperator(BaseOperator):
                     Height=Height,
                     fx=fx,
                     fy=fy)
+
+    def process_perception(self, input_image, device):
+        if isinstance(input_image, np.ndarray):
+            image_tensor = torch.tensor(input_image / 255, dtype=torch.float32, device=device).permute(2, 0, 1)
+        elif isinstance(input_image, Image.Image):
+            if input_image.mode != 'RGB':
+                input_image = input_image.convert('RGB')
+            input_image = np.array(input_image)
+            image_tensor = torch.tensor(input_image / 255.0, dtype=torch.float32, device=device).permute(2, 0, 1)
+        else:
+            image_tensor = input_image.to(device)
+        return image_tensor

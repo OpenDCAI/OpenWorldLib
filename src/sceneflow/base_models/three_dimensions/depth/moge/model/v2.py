@@ -15,7 +15,7 @@ from huggingface_hub import hf_hub_download
 
 from ..utils.geometry_torch import normalized_view_plane_uv, recover_focal_shift, angle_diff_vec3
 from .utils import wrap_dinov2_attention_with_sdpa, wrap_module_with_gradient_checkpointing, unwrap_module_with_gradient_checkpointing
-from ...utils3d.torch import depth_map_to_point_map, intrinsics_from_focal_center
+from ....general_3d.eastern_journalist.utils3d.torch import depth_map_to_point_map, intrinsics_from_focal_center
 from .modules import DINOv2Encoder, MLP, ConvStack
 
     

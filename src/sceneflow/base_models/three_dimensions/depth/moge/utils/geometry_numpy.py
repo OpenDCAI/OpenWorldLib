@@ -6,7 +6,7 @@ import cv2
 import numpy as np
 from scipy.signal import fftconvolve
 import numpy as np
-from ...utils3d.numpy import masked_nearest_resize, sliding_window
+from ....general_3d.eastern_journalist.utils3d.numpy import masked_nearest_resize, sliding_window
 
 from .tools import timeit
 

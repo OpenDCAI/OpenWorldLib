@@ -7,7 +7,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.types
-from ...utils3d.torch import sliding_window, uv_map
+from ....general_3d.eastern_journalist.utils3d.torch import sliding_window, uv_map
 
 from .tools import timeit
 from .geometry_numpy import solve_optimal_focal_shift, solve_optimal_shift

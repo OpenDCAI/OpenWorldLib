@@ -12,8 +12,9 @@ import cv2
 from PIL import Image
 import torch
 import torchvision.transforms.v2.functional as TF
-from ...utils3d.numpy import intrinsics_to_fov, unproject_cv, masked_nearest_resize, rotation_matrix_from_vectors, intrinsics_from_focal_center, ray_intersection
-from ...utils3d import focal_to_fov, fov_to_focal
+from ....general_3d.eastern_journalist.utils3d.numpy import (
+    intrinsics_to_fov, unproject_cv, masked_nearest_resize, rotation_matrix_from_vectors, intrinsics_from_focal_center, ray_intersection)
+from ....general_3d.eastern_journalist.utils3d import focal_to_fov, fov_to_focal
 from scipy.signal import fftconvolve
 
 from ..utils.geometry_numpy import harmonic_mean_numpy, norm3d, depth_occlusion_edge_numpy

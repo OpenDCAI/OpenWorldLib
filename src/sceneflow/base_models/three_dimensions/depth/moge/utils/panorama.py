@@ -14,7 +14,8 @@ from scipy.sparse import csr_array, hstack, vstack
 from scipy.ndimage import convolve
 from scipy.sparse.linalg import lsmr
 
-from ...utils3d.numpy import create_icosahedron_mesh, intrinsics_from_fov, extrinsics_look_at, uv_map, unproject_cv, project_cv, uv_to_pixel
+from ....general_3d.eastern_journalist.utils3d.numpy import (
+    create_icosahedron_mesh, intrinsics_from_fov, extrinsics_look_at, uv_map, unproject_cv, project_cv, uv_to_pixel)
 
 
 def get_panorama_cameras():
