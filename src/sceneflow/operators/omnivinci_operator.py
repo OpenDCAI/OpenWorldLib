@@ -1,22 +1,22 @@
 """
-Qwen2.5-Omni Operator for multimodal data preprocessing.
+OmniVinci Operator for multimodal data preprocessing.
 
 This operator handles preprocessing for text, image, audio, and video inputs
-for the Qwen2.5-Omni model.
+for the OmniVinci model.
 """
 
 import numpy as np
 from PIL import Image
 import torch
-from typing import Union, Optional, Dict, Any, List, Sequence
+from typing import Union, Optional, Dict, Any, List
 from pathlib import Path
 
 from .base_operator import BaseOperator
 
 
-class Qwen2p5OmniOperator(BaseOperator):
+class OmniVinciOperator(BaseOperator):
     """
-    Operator for Qwen2.5-Omni multimodal preprocessing.
+    Operator for OmniVinci multimodal preprocessing.
     
     Supports:
     - Text prompts
@@ -28,16 +28,20 @@ class Qwen2p5OmniOperator(BaseOperator):
     def __init__(
         self,
         processor=None,
-        use_audio_in_video: bool = True,
+        load_audio_in_video: bool = True,
+        num_video_frames: int = 128,
+        audio_length: str = "max_3600",
         system_prompt: Optional[str] = None,
         operation_types: List[str] = None,
     ):
         """
-        Initialize Qwen2.5-Omni Operator
+        Initialize OmniVinci Operator
         
         Args:
-            processor: Qwen2_5OmniProcessor instance
-            use_audio_in_video: Whether to use audio track in video inputs
+            processor: AutoProcessor instance
+            load_audio_in_video: Whether to load audio track in video inputs
+            num_video_frames: Number of frames to extract from video
+            audio_length: Maximum audio length to process
             system_prompt: System prompt for the model
             operation_types: List of operation types
         """
@@ -53,14 +57,15 @@ class Qwen2p5OmniOperator(BaseOperator):
         super().__init__(operation_types)
         
         self.processor = processor
-        self.use_audio_in_video = use_audio_in_video
+        self.load_audio_in_video = load_audio_in_video
+        self.num_video_frames = num_video_frames
+        self.audio_length = audio_length
         
-        # Default system prompt for Qwen2.5-Omni
+        # Default system prompt for OmniVinci
         if system_prompt is None:
             self.system_prompt = (
-                "You are Qwen, a virtual human developed by the Qwen Team, "
-                "Alibaba Group, capable of perceiving auditory and visual inputs, "
-                "as well as generating text and speech."
+                "You are OmniVinci, an advanced multimodal AI assistant "
+                "capable of understanding and processing text, images, audio, and video content."
             )
         else:
             self.system_prompt = system_prompt
@@ -89,22 +94,9 @@ class Qwen2p5OmniOperator(BaseOperator):
     def load_image(self, image_input: Union[str, Path, Image.Image]) -> Image.Image:
         """
         Load and preprocess image
-        
-        Args:
-            image_input: Image path or PIL Image
-            
-        Returns:
-            PIL Image in RGB mode
         """
-        if isinstance(image_input, (str, Path)):
-            pil_img = Image.open(image_input)
-        else:
-            pil_img = image_input
         
-        if pil_img.mode != 'RGB':
-            pil_img = pil_img.convert('RGB')
-        
-        return pil_img
+        return str(image_input)
     
     def load_audio(self, audio_input: Union[str, Path, bytes]) -> Union[str, bytes]:
         """
@@ -242,7 +234,9 @@ class Qwen2p5OmniOperator(BaseOperator):
         Returns:
             Dict containing:
                 - messages: Processed messages with perception data
-                - use_audio_in_video: Whether to use audio in video
+                - load_audio_in_video: Whether to load audio in video
+                - num_video_frames: Number of frames to extract from video
+                - audio_length: Maximum audio length
         """
         messages = []
         
@@ -257,6 +251,14 @@ class Qwen2p5OmniOperator(BaseOperator):
         
         # Build user message content
         content = []
+        
+        # Add videos first (as per OmniVinci's expected order)
+        if videos is not None:
+            if not isinstance(videos, list):
+                videos = [videos]
+            for video in videos:
+                processed_video = self.load_video(video)
+                content.append({"type": "video", "video": processed_video})
         
         # Add images
         if images is not None:
@@ -274,14 +276,6 @@ class Qwen2p5OmniOperator(BaseOperator):
                 processed_audio = self.load_audio(audio)
                 content.append({"type": "audio", "audio": processed_audio})
         
-        # Add videos
-        if videos is not None:
-            if not isinstance(videos, list):
-                videos = [videos]
-            for video in videos:
-                processed_video = self.load_video(video)
-                content.append({"type": "video", "video": processed_video})
-        
         # Add user message
         if content:
             messages.append({
@@ -291,7 +285,9 @@ class Qwen2p5OmniOperator(BaseOperator):
         
         result = {
             "messages": messages,
-            "use_audio_in_video": self.use_audio_in_video,
+            "load_audio_in_video": self.load_audio_in_video,
+            "num_video_frames": self.num_video_frames,
+            "audio_length": self.audio_length,
         }
         
         return result
@@ -303,8 +299,14 @@ class Qwen2p5OmniOperator(BaseOperator):
         Args:
             **kwargs: Configuration parameters to update
         """
-        if "use_audio_in_video" in kwargs:
-            self.use_audio_in_video = kwargs["use_audio_in_video"]
+        if "load_audio_in_video" in kwargs:
+            self.load_audio_in_video = kwargs["load_audio_in_video"]
+        
+        if "num_video_frames" in kwargs:
+            self.num_video_frames = kwargs["num_video_frames"]
+        
+        if "audio_length" in kwargs:
+            self.audio_length = kwargs["audio_length"]
         
         if "system_prompt" in kwargs:
             self.system_prompt = kwargs["system_prompt"]

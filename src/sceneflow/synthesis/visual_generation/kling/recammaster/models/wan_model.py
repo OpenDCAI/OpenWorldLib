@@ -6,7 +6,7 @@ from typing import Tuple, Optional
 from einops import rearrange
 
 from ..recammaster_utils import hash_state_dict_keys
-from ....wan.wan_2p1.modules.model import WanRMSNorm, sinusoidal_embedding_1d, MLPProj
+from ......base_models.diffusion_model.video.wan_2p1.modules.model import WanRMSNorm, sinusoidal_embedding_1d, MLPProj
 try:
     import flash_attn_interface
     FLASH_ATTN_3_AVAILABLE = True

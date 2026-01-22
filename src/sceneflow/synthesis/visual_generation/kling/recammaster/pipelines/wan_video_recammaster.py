@@ -1,5 +1,5 @@
 from ..model_manager import ModelManager
-from ....wan.wan_2p1.modules.model import WanModel
+from ......base_models.diffusion_model.video.wan_2p1.modules.model import WanModel
 from ..models.wan_video_text_encoder import WanTextEncoder
 from ....matrix_game.matrix_game_2.extension_modules.wanx_vae.wanx_vae import WanVAE as WanVideoVAE
 from ..models.wan_video_image_encoder import WanImageEncoder
@@ -14,9 +14,9 @@ from tqdm import tqdm
 from typing import Optional
 
 from ..vram_management import enable_vram_management, AutoWrappedModule, AutoWrappedLinear
-from ....wan.wan_2p1.modules.t5 import T5RelativeEmbedding, T5LayerNorm
-from ....wan.wan_2p1.modules.model import WanRMSNorm, sinusoidal_embedding_1d
-from ....wan.wan_2p1.modules.vae import RMS_norm, CausalConv3d, Upsample
+from ......base_models.diffusion_model.video.wan_2p1.modules.t5 import T5RelativeEmbedding, T5LayerNorm
+from ......base_models.diffusion_model.video.wan_2p1.modules.model import WanRMSNorm, sinusoidal_embedding_1d
+from ......base_models.diffusion_model.video.wan_2p1.modules.vae import RMS_norm, CausalConv3d, Upsample
 
 
 class WanVideoReCamMasterPipeline(BasePipeline):

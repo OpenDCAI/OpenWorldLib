@@ -3,7 +3,8 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from ....wan.wan_2p1.modules.t5 import T5RelativeEmbedding, T5LayerNorm, T5SelfAttention, init_weights
+from ......base_models.diffusion_model.video.wan_2p1.modules.t5 import (
+    T5RelativeEmbedding, T5LayerNorm, T5SelfAttention, init_weights)
 
 
 class WanTextEncoder(torch.nn.Module):
