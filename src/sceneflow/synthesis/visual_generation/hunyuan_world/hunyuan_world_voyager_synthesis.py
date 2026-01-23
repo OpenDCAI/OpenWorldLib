@@ -206,7 +206,7 @@ def load_models(args, device, logger, pretrained_model_path):
 
 
 # need to set register strategy
-class HunyuanVideoSynthesis(object):
+class HunyuanWorldVoyagerSynthesis(object):
     def __init__(
         self,
         args,

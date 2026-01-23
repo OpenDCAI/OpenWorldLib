@@ -9,8 +9,8 @@ from PIL import Image
 from typing import Optional, Any
 from ..pipeline_utils import PipelineABC
 from ...operators.hunyuan_world_voager_operator import HunyuanWorldVoyagerOperator
-from ...representations.point_clouds_generation.hunyuan_world.hunyuan_world_voyager_representation import Depth2PointCloudRepresentation
-from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager_synthesis import HunyuanVideoSynthesis
+from ...representations.point_clouds_generation.hunyuan_world.hunyuan_world_voyager_representation import HunyuanWorldVoyagerRepresentation
+from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager_synthesis import HunyuanWorldVoyagerSynthesis
 from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager.config import parse_args
 from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager.utils.file_utils import video_output
 
@@ -18,8 +18,8 @@ from ...synthesis.visual_generation.hunyuan_world.hunyuan_world_voyager.utils.fi
 class HunyuanWorldVoyagerPipeline(PipelineABC):
     def __init__(self,
                  operators: Optional[HunyuanWorldVoyagerOperator] = None,
-                 represent_model: Optional[Depth2PointCloudRepresentation] = None,
-                 rendering_model: Optional[HunyuanVideoSynthesis] = None,
+                 represent_model: Optional[HunyuanWorldVoyagerRepresentation] = None,
+                 rendering_model: Optional[HunyuanWorldVoyagerSynthesis] = None,
                  rendering_args = None,
                  save_representation_video = False,
                  device: str = 'cuda'):
@@ -63,7 +63,7 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
         
         # 加载表示模型
         print(f"Loading representation model from {represent_model_path}")
-        represent_model = Depth2PointCloudRepresentation.from_pretrained(
+        represent_model = HunyuanWorldVoyagerRepresentation.from_pretrained(
             represent_model_path,
             device=device,
             depth_model_name='moge_v1', 
@@ -76,7 +76,7 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
         rendering_args.model_base = rendering_model_path
         rendering_args.input_path = represent_render_dir
 
-        rendering_model = HunyuanVideoSynthesis.from_pretrained(
+        rendering_model = HunyuanWorldVoyagerSynthesis.from_pretrained(
             rendering_model_path, 
             rendering_args,
             # **{k: v for k, v in kwargs.items() if k in ['cache_dir', 'force_download', 'resume_download']}
@@ -100,7 +100,7 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
     def process(self, input_image, interaction_signal="forward"):
         """处理输入图像和交互信号，输出渲染视频"""
         # 转换输入图像
-        image_tensor = self.operators.process_perception(input_image, self.device)
+        input_image, image_tensor = self.operators.process_perception(input_image, self.device)
 
         Height, Width = input_image.shape[:2] if hasattr(input_image, 'shape') else (256, 256)
         

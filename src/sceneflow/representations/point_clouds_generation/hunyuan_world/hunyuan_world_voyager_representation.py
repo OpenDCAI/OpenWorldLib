@@ -235,7 +235,7 @@ def render_from_cameras_videos(points, colors, extrinsics, intrinsics, height, w
     return render_list, mask_list, depth_list
 
 
-class Depth2PointCloudRepresentation(BaseRepresentation):
+class HunyuanWorldVoyagerRepresentation(BaseRepresentation):
     def __init__(self, depth_model=None):
         super().__init__()
         self.depth_model = depth_model

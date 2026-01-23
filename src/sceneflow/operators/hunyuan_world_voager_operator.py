@@ -124,4 +124,4 @@ class HunyuanWorldVoyagerOperator(BaseOperator):
             image_tensor = torch.tensor(input_image / 255.0, dtype=torch.float32, device=device).permute(2, 0, 1)
         else:
             image_tensor = input_image.to(device)
-        return image_tensor
+        return input_image, image_tensor
