@@ -568,41 +568,35 @@
 
 <summary><h3style="display:inline;">Datasets</h3></summary><br>
 
--**OmniWorld-Game** · [[Paper]](https://arxiv.org/pdf/2509.12201) [[Code]](https://github.com/yangzhou24/OmniWorld)citation: 0
+-**OmniWorld-Game** · [[Paper]](https://arxiv.org/pdf/2509.12201) [[Code]](https://github.com/yangzhou24/OmniWorld)
 
--**AgiBot** · [[Paper]](https://arxiv.org/pdf/2503.06669) [[Code]](https://github.com/OpenDriveLab/AgiBot-World)citation: 140
+-**AgiBot** · [[Paper]](https://arxiv.org/pdf/2503.06669) [[Code]](https://github.com/OpenDriveLab/AgiBot-World)
 
--**DROID** · [[Paper]](https://arxiv.org/pdf/2403.12945) [[Code]](https://github.com/droid-dataset/droid_policy_learning)citation: 402
+-**DROID** · [[Paper]](https://arxiv.org/pdf/2403.12945) [[Code]](https://github.com/droid-dataset/droid_policy_learning)
 
--**RH20T** · [[Paper]](https://arxiv.org/pdf/2307.00595)citation: 123
+-**RH20T** · [[Paper]](https://arxiv.org/pdf/2307.00595)
 
--**HOI4D** · [[Paper]](https://arxiv.org/pdf/2203.01577)citation: 234
+-**HOI4D** · [[Paper]](https://arxiv.org/pdf/2203.01577)
 
--**Epic-Kitchens** · [[Paper]](https://arxiv.org/pdf/1804.02748)citation: 1162
+-**Epic-Kitchens** · [[Paper]](https://arxiv.org/pdf/1804.02748)
 
--**Ego-Exo4D** · [[Paper]](https://arxiv.org/pdf/2311.18259)citation: 280
+-**Ego-Exo4D** · [[Paper]](https://arxiv.org/pdf/2311.18259)
 
--**HoloAssist** · [[Paper]](https://arxiv.org/pdf/2309.17024)citation: 101
+-**HoloAssist** · [[Paper]](https://arxiv.org/pdf/2309.17024)
 
--**Assembly101** · [[Code]](https://assembly-101.github.io/)citation: 0
+-**Assembly101** · [[Code]](https://assembly-101.github.io/)
 
--**EgoDex** · [[Paper]](https://arxiv.org/pdf/2505.11709)citation: 23
+-**EgoDex** · [[Paper]](https://arxiv.org/pdf/2505.11709)
 
 -**CityWalk** · [[Paper]](https://arxiv.org/pdf/2411.17820)
-
-  citation: 14
 
   access: https://huggingface.co/datasets/ai4ce/CityWalker
 
 -**GameFactory-Dataset** · [[Paper]](#)
 
-  citation: 0
-
   access: https://huggingface.co/datasets/KlingTeam/GameFactory-Dataset（从huggingface进行下载）
 
 -**Look and Tell** · [[Paper]](https://arxiv.org/pdf/2510.22672)
-
-  citation: 0
 
   access: https://huggingface.co/datasets/annadeichler/KTH-ARIA-referential（从huggingface进行下载）
 
