@@ -2,11 +2,25 @@
 
 ## Recent Updates
 
+<<<<<<< HEAD
 *`2025.11.24` - Begin linking to papers and github
 
 *`2025.11.28` - update a new model
 
 *`2025.12.02` - update some new models
+==========================
+
+* `2025.11.24` - Begin linking to papers and github
+* `2025.11.28` - update a new model
+* `2025.12.02` - update some new models
+
+>>>>>>> 2c1c0de (增加了ai2thor的交互功能)
+>>>>>>>
+>>>>>>
+>>>>>
+>>>>
+>>>
+>>
 
 ---
 

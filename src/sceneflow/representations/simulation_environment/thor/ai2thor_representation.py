@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, Optional, Union, List
 
 from .ai2thor.controller import Controller
 from .ai2thor.platform import CloudRendering
@@ -16,34 +16,34 @@ class Ai2ThorRepresentation:
     def __init__(
         self,
         executable_path: Optional[str] = None,
-        scene: str = "FloorPlan212",                  # 默认场景，共120个场景，详细可见：https://ai2thor.allenai.org/ithor/documentation/scenes
-        visibilityDistance: float = 1.5,              # 可见距离，单位米
-        gridSize: float = 0.25,                       # 移动距离，单位米
-        rotateStepDegrees: int = 90,                  # 旋转角度，单位度
-        width: int = 300,                             # 画面宽度，单位像素
-        height: int = 300,                            # 画面高度，单位像素
-        fieldOfView: int = 90,                        # 视野，单位度
-        renderDepthImage: bool = False,               # 是否渲染深度图
-        renderInstanceSegmentation: bool = False,     # 是否渲染实例分割图
-        headless: bool = False,                       # 是否无头模式（不弹 Unity 窗口）
-        snapToGrid: bool = True,                      # 决定智能体在执行任何移动动作（如“前进”和“完全传送”）后是否将其位置对齐到网格点。网格点之间的间距由gridSize决定。设置为False可允许对角线移动。
-        agentMode: str = "default",                   # 代理模式，默认"default"
+        scene: str = "FloorPlan212",
+        visibilityDistance: float = 1.5,
+        gridSize: float = 0.25,
+        rotateStepDegrees: int = 90,
+        width: int = 300,
+        height: int = 300,
+        fieldOfView: int = 90,
+        renderDepthImage: bool = False,
+        renderInstanceSegmentation: bool = False,
+        headless: bool = False,
+        snapToGrid: bool = True,
+        agentMode: str = "default",
     ):
-        self.executable_path = executable_path
-        self.scene = scene
-        self.visibilityDistance = visibilityDistance
-        self.gridSize = gridSize
-        self.rotateStepDegrees = rotateStepDegrees
-        self.width = width
-        self.height = height
-        self.fieldOfView = fieldOfView
-        self.renderDepthImage = renderDepthImage
-        self.renderInstanceSegmentation = renderInstanceSegmentation
-        self.headless = headless
-        self.snapToGrid = snapToGrid
-        self.agentMode = agentMode
+        self.executable_path = executable_path                              # 可选，ai2thor可执行文件路径
+        self.scene = scene                                                  # 默认场景，具体可以在https://ai2thor.allenai.org/ithor/documentation/scenes查看详情
+        self.visibilityDistance = visibilityDistance                        # 可见距离
+        self.gridSize = gridSize                                            # 移动距离
+        self.rotateStepDegrees = rotateStepDegrees                          # 旋转角度
+        self.width = width                                                  # 可视图像宽度
+        self.height = height                                                # 图像高度
+        self.fieldOfView = fieldOfView                                      # 视野角度
+        self.renderDepthImage = renderDepthImage                            # 是否渲染深度图
+        self.renderInstanceSegmentation = renderInstanceSegmentation        # 是否渲染实例分割图
+        self.headless = headless                                            # 是否无头模式
+        self.snapToGrid = snapToGrid                                        # 是否贴合网格移动
+        self.agentMode = agentMode                                          # agent模式
 
-        self.controller: Optional[Controller] = None
+        self.controller: Optional[Controller] = None                        # Controller实例，初始为None
 
     def controller_init(self) -> None:
         kwargs: Dict[str, Any] = dict(
@@ -62,8 +62,7 @@ class Ai2ThorRepresentation:
 
         if self.executable_path is not None:
             kwargs["local_executable_path"] = self.executable_path
-
-        # Headless/off-screen（不弹 Unity 窗口），那些云服务器平台需要此参数
+            
         if self.headless:
             kwargs["platform"] = CloudRendering
 
@@ -112,7 +111,7 @@ class Ai2ThorRepresentation:
             obs["instance_detections2D"] = getattr(event, "instance_detections2D", None)
 
         return obs
-    
+
     def get_object_in_frame(self, x: float, y: float, checkVisible: bool = False) -> Optional[str]:
         if self.controller is None:
             raise RuntimeError("Controller not initialized. Call controller_init() first.")
@@ -124,6 +123,51 @@ class Ai2ThorRepresentation:
             raise RuntimeError("Controller not initialized. Call controller_init() first.")
         q = self.controller.step(action="GetCoordinateFromRaycast", x=float(x), y=float(y))
         return q.metadata.get("actionReturn", None)
+
+    # ===== NEW: inventory helper =====
+    @staticmethod
+    def _get_inventory_objects(md: Dict[str, Any]) -> List[Dict[str, Any]]:
+        inv_top = md.get("inventoryObjects", None)
+        if isinstance(inv_top, list):
+            return inv_top
+        agent = md.get("agent", {}) or {}
+        inv_agent = agent.get("inventoryObjects", None)
+        if isinstance(inv_agent, list):
+            return inv_agent
+        return []
+
+    def agent_has_in_hand(self, event: Any) -> bool:
+        md = getattr(event, "metadata", {}) or {}
+        inv = self._get_inventory_objects(md)
+        return len(inv) > 0
+
+    def held_object_id(self, event: Any) -> Optional[str]:
+        md = getattr(event, "metadata", {}) or {}
+        inv = self._get_inventory_objects(md)
+        if len(inv) == 0:
+            return None
+        return inv[0].get("objectId", None)
+
+    # ===== NEW: object meta helper =====
+    def get_object_meta(self, event: Any, object_id: str) -> Optional[Dict[str, Any]]:
+        md = getattr(event, "metadata", {}) or {}
+        for o in md.get("objects", []):
+            if o.get("objectId") == object_id:
+                return o
+        return None
+
+    # ===== NEW: focus helper (center) =====
+    def get_focus_object(self, event: Any, checkVisible: bool = False) -> Optional[str]:
+        return self.get_object_in_frame(0.5, 0.5, checkVisible=checkVisible)
+    
+    def get_focus_coordinate(self) -> Optional[Dict[str, float]]:
+        """Raycast at center crosshair (0.5, 0.5)."""
+        coord = self.get_coordinate_from_raycast(0.5, 0.5)
+        if not isinstance(coord, dict):
+            return None
+        if not all(k in coord for k in ("x", "y", "z")):
+            return None
+        return {"x": float(coord["x"]), "y": float(coord["y"]), "z": float(coord["z"])}
 
     def close(self) -> None:
         if self.controller is not None:

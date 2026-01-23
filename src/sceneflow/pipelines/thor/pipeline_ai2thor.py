@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import json
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import cv2
 import numpy as np
@@ -22,21 +22,21 @@ class _InputState:
 
 class Ai2ThorPipeline:
     """
-    OpenCV-interactive pipeline.
+    Unified pipeline.
 
-    Controls:
-    - W/A/S/D: move (operator decides mapping -> AI2-THOR actions)
-    - Hold mouse button + drag:
-        dx -> RotateLeft/RotateRight (via operator)
-        dy -> LookUp/LookDown (via operator)
-    - ESC: quit
-    - P: snapshot
-    - Q: quit (in OpenCV window)
+    Modes:
+    - Human (policy=None):
+        W/A/S/D move; mouse move -> look; LMB up -> click_to_action()
+        ESC quits, P snapshot, Q (in cv2 window) quits.
+    - MLLM/Agent (policy!=None):
+        policy(obs)->tokens; tokens action space:
+          forward/backward/left/right/camera_l/camera_r/camera_up/camera_down/interact
+        Q quits in cv2 window.
 
     Outputs:
-    - video.avi
-    - actions.jsonl
-    - frames/*.jpg (optional)
+      - video.avi
+      - actions.jsonl
+      - frames/*.jpg (optional)
     """
 
     def __init__(self, operators: Ai2ThorOperator, representation: Ai2ThorRepresentation):
@@ -85,21 +85,37 @@ class Ai2ThorPipeline:
             frame_bgr = frame_bgr.astype(np.uint8)
         return frame_bgr
 
-    def run_interactive(
+    @staticmethod
+    def _draw_crosshair(img: np.ndarray, cx: int, cy: int, size: int = 10, thickness: int = 1) -> None:
+        cv2.line(img, (cx - size, cy), (cx + size, cy), (255, 255, 255), thickness, cv2.LINE_AA)
+        cv2.line(img, (cx, cy - size), (cx, cy + size), (255, 255, 255), thickness, cv2.LINE_AA)
+
+    def run(
         self,
         output_dir: str,
-        fps: int = 20,
-        save_frames: bool = False,
-        max_steps: Optional[int] = None,
-        include_depth: bool = False,
-        include_instance: bool = False,
-        save_frame_every: int = 3,
-        flush_every: int = 30,
-        window_name: str = "thor",
-        rot_step_pixels: float = 6.0,
-        look_step_pixels: float = 8.0,
-        mouse_button: str = "lmb",  # "lmb" or "rmb"
+        *,
+        policy: Optional[Callable[[Dict[str, Any]], List[str]]] = None,  # None=human；否则=agent(token)模式
+
+        fps: int = 20,                               # 渲染/执行节奏（影响控制灵敏度 & 视频帧率）
+        max_steps: Optional[int] = None,             # 最大 step 数；None=不限（一般按 q/esc 退出）
+
+        save_frames: bool = False,                   # 是否额外保存逐帧 jpg（调试用，体积大）
+        save_frame_every: int = 3,                   # 每 N step 存一张（越小越密）
+
+        include_depth: bool = False,                 # obs 里是否带 depth（开了会更慢/更占存储）
+        include_instance: bool = False,              # obs 里是否带 instance seg（开了会更慢）
+
+        flush_every: int = 30,                       # actions.jsonl 每 N step flush（防崩溃丢日志）
+        window_name: str = "thor",                   # OpenCV 窗口名（多实例时区分）
+
+        rot_step_pixels: float = 6.0,                # 人类模式：鼠标 dx 达到多少像素触发一次 yaw
+        look_step_pixels: float = 8.0,               # 人类模式：鼠标 dy 达到多少像素触发一次 pitch
+
+        overlay_focus: bool = True,                  # 画面叠加 focus 信息（闭环 debug 很有用）
+        overlay_error: bool = True,                  # 画面叠加 lastActionSuccess/errorMessage
+        overlay_crosshair: bool = True,              # 画面中心准星（方便对准 focus）
     ) -> None:
+
         self._ensure_dir(output_dir)
         frames_dir = os.path.join(output_dir, "frames")
         if save_frames:
@@ -117,29 +133,21 @@ class Ai2ThorPipeline:
 
         h, w = first_frame.shape[:2]
 
-        # ---- OpenCV window + mouse callback ----
+        # ---- OpenCV window ----
         cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
+        # ---- Human-mode mouse state ----
         mouse: Dict[str, Any] = {
-            "down": False,
             "last": None,
             "dx": 0.0,
             "dy": 0.0,
+            "click": False,
+            "click_time": 0.0,
         }
 
-        if mouse_button.lower() not in ("lmb", "rmb"):
-            raise ValueError("mouse_button must be 'lmb' or 'rmb'")
-
-        def _is_pressed(flags: int) -> bool:
-            if mouse_button.lower() == "lmb":
-                return bool(flags & cv2.EVENT_FLAG_LBUTTON)
-            return bool(flags & cv2.EVENT_FLAG_RBUTTON)
-
         def on_mouse(evt, x, y, flags, param):
-            down = _is_pressed(flags)
-            mouse["down"] = down
-
-            if evt == cv2.EVENT_MOUSEMOVE and down:
+            # accumulate dx/dy on move
+            if evt == cv2.EVENT_MOUSEMOVE:
                 if mouse["last"] is None:
                     mouse["last"] = (x, y)
                     return
@@ -147,10 +155,17 @@ class Ai2ThorPipeline:
                 mouse["dx"] += (x - lx)
                 mouse["dy"] += (y - ly)
                 mouse["last"] = (x, y)
-            else:
-                mouse["last"] = None  # 松开/非拖动时，清掉 last 防跳变
+            elif evt in (cv2.EVENT_LBUTTONDOWN, cv2.EVENT_RBUTTONDOWN, cv2.EVENT_LBUTTONUP, cv2.EVENT_RBUTTONUP):
+                mouse["last"] = (x, y)
 
-        cv2.setMouseCallback(window_name, on_mouse)
+            # click interaction
+            if evt == cv2.EVENT_LBUTTONUP:
+                mouse["click"] = True
+                mouse["click_time"] = time.time()
+
+        # Only set mouse callback in human mode (optional, but keeps things clean)
+        if policy is None:
+            cv2.setMouseCallback(window_name, on_mouse)
 
         # ---- video writer ----
         video_path = os.path.join(output_dir, "video.avi")
@@ -162,9 +177,27 @@ class Ai2ThorPipeline:
         # ---- logs ----
         log_f = open(os.path.join(output_dir, "actions.jsonl"), "w", encoding="utf-8")
 
-        # ---- keyboard listener ----
+        def _log(step: int, mode: str, action: Dict[str, Any], ev_after: Any, extra: Dict[str, Any]):
+            md = getattr(ev_after, "metadata", {}) or {}
+            record = {
+                "step": step,
+                "time": time.time(),
+                "mode": mode,  # "human" or "agent"
+                "action": action,
+                "lastActionSuccess": md.get("lastActionSuccess", None),
+                "errorMessage": md.get("errorMessage", ""),
+                "sceneName": md.get("sceneName", ""),
+                "agent": md.get("agent", {}),
+                "actionReturn": md.get("actionReturn", None),
+                **extra,
+            }
+            log_f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+        # ---- keyboard listener (human mode only) ----
         state = _InputState()
-        kb_listener = self._start_keyboard_listener(state)
+        kb_listener = None
+        if policy is None:
+            kb_listener = self._start_keyboard_listener(state)
 
         step_idx = 0
         tick = 1.0 / float(fps)
@@ -172,14 +205,14 @@ class Ai2ThorPipeline:
 
         try:
             while True:
-                # 必须要 waitKey(1) 才会派发鼠标事件；也支持窗口内按 q 退出
+                # cv2 window key
                 k = cv2.waitKey(1) & 0xFF
                 if k == ord("q"):
                     state.quit = True
 
                 if state.quit:
                     break
-                if max_steps is not None and step_idx >= max_steps:
+                if max_steps is not None and step_idx >= int(max_steps):
                     break
 
                 now = time.time()
@@ -188,38 +221,115 @@ class Ai2ThorPipeline:
                     continue
                 next_time += tick
 
-                # ---- always render current frame to window/video ----
+                # ---- update focus each tick ----
+                self.operators.update_focus(self.representation, event)
+
+                # ---- get obs + frame ----
                 obs = self.representation.get_representation(
                     event, include_depth=include_depth, include_instance=include_instance
                 )
-                frame = obs["frame"]
+                
+                # 把 focus 信息也给 policy（闭环需要）
+                obs["focus"] = self.operators.get_focus_info_for_overlay()  # 可能是 None
+                obs["agent"] = (getattr(event, "metadata", {}) or {}).get("agent", {})
+                
+                frame = obs.get("frame", None)
                 if frame is None:
+                    step_idx += 1
                     continue
+
                 frame_bgr = self._rgb_to_bgr_uint8(frame, w, h)
 
+                # ---- overlays ----
+                if overlay_crosshair:
+                    self._draw_crosshair(frame_bgr, w // 2, h // 2, size=10, thickness=1)
+
+                if overlay_focus:
+                    info = self.operators.get_focus_info_for_overlay()
+                    if info is not None:
+                        t1 = f'FOCUS: {info.get("objectType","")} | {str(info.get("objectId",""))[:48]}'
+                        t2 = (
+                            f'pickup:{info.get("pickupable")} open:{info.get("openable")} '
+                            f'toggle:{info.get("toggleable")} recept:{info.get("receptacle")} dist:{info.get("distance")}'
+                        )
+                        cv2.putText(frame_bgr, t1, (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+                        cv2.putText(frame_bgr, t2, (10, 44), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+                    else:
+                        cv2.putText(frame_bgr, "FOCUS: None", (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+
+                if overlay_error:
+                    md_now = getattr(event, "metadata", {}) or {}
+                    if not md_now.get("lastActionSuccess", True):
+                        err = str(md_now.get("errorMessage", "") or "")
+                        if err:
+                            cv2.putText(frame_bgr, f"ERR: {err[:80]}", (10, 66), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+
+                # ---- show + record ----
                 cv2.imshow(window_name, frame_bgr)
                 writer.write(frame_bgr)
 
-                # snapshot（不依赖 action）
-                if state.save_snapshot:
+                # ---- snapshot (human mode) ----
+                if policy is None and state.save_snapshot:
                     snap_path = os.path.join(output_dir, f"snapshot_{int(time.time())}.jpg")
-                    cv2.imwrite(
-                        snap_path,
-                        frame_bgr,
-                        [int(cv2.IMWRITE_JPEG_QUALITY), 95],
-                    )
+                    cv2.imwrite(snap_path, frame_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
                     state.save_snapshot = False
 
-                # ---- inputs -> actions (DONE IN OPERATOR) ----
-                actions = self.operators.inputs_to_actions(
-                    pressed_keys=state.pressed,
-                    mouse=mouse,
-                    rot_step_pixels=rot_step_pixels,
-                    look_step_pixels=look_step_pixels,
-                )
+                # ---- decide actions ----
+                actions: List[Dict[str, Any]] = []
+                mode = "agent" if policy is not None else "human"
+                extra_for_log: Dict[str, Any] = {}
 
-                # no action this tick -> continue
-                if len(actions) == 0:
+                if policy is None:
+                    # 1) click action
+                    if mouse.get("click", False):
+                        mouse["click"] = False
+                        a_click = self.operators.click_to_action(self.representation, event)
+                        if a_click is not None:
+                            actions.append(a_click)
+                            extra_for_log = {
+                                "kind": "click",
+                                "pressed": sorted(list(state.pressed)),
+                                "mouse": {
+                                    "dx": float(mouse.get("dx", 0.0)),
+                                    "dy": float(mouse.get("dy", 0.0)),
+                                },
+                            }
+
+                    # 2) nav actions
+                    nav_actions = self.operators.inputs_to_actions(
+                        pressed_keys=state.pressed,
+                        mouse=mouse,
+                        rot_step_pixels=rot_step_pixels,
+                        look_step_pixels=look_step_pixels,
+                    )
+                    if nav_actions:
+                        # if we already had click, keep kind mixed; else kind nav
+                        if "kind" not in extra_for_log:
+                            extra_for_log = {
+                                "kind": "nav",
+                                "pressed": sorted(list(state.pressed)),
+                                "mouse": {
+                                    "dx": float(mouse.get("dx", 0.0)),
+                                    "dy": float(mouse.get("dy", 0.0)),
+                                },
+                            }
+                        actions.extend(nav_actions)
+
+                else:
+                    # Agent mode: policy(obs)->tokens -> operator.process_interaction(...)
+                    tokens = policy(obs)
+                    if not isinstance(tokens, list):
+                        tokens = []
+                    tokens = [str(t) for t in tokens]
+
+                    # put tokens into operator buffer then translate to actions
+                    self.operators.get_interaction(tokens)
+                    actions = self.operators.process_interaction(self.representation, event)
+
+                    extra_for_log = {"tokens": tokens}
+
+                # ---- execute actions ----
+                if not actions:
                     step_idx += 1
                     continue
 
@@ -229,33 +339,15 @@ class Ai2ThorPipeline:
                         event, include_depth=include_depth, include_instance=include_instance
                     )
 
-                    # 可选：LookUp/Down 失败就清 dy，避免一直撞 pitch 上限抖动
-                    if a.get("action") in ("LookUp", "LookDown") and not obs2.get("lastActionSuccess", True):
+                    # if look failed, clear dy (human mode safety)
+                    if policy is None and a.get("action") in ("LookUp", "LookDown") and not obs2.get("lastActionSuccess", True):
                         mouse["dy"] = 0.0
 
-                    md = getattr(event, "metadata", {}) or {}
-                    record = {
-                        "step": step_idx,
-                        "time": time.time(),
-                        # 记录原始输入 + 本次执行动作
-                        "pressed": sorted(list(state.pressed)),
-                        "mouse": {
-                            "down": bool(mouse.get("down", False)),
-                            "dx": float(mouse.get("dx", 0.0)),
-                            "dy": float(mouse.get("dy", 0.0)),
-                        },
-                        "action": a,
-                        "lastActionSuccess": obs2.get("lastActionSuccess"),
-                        "errorMessage": obs2.get("errorMessage", ""),
-                        "sceneName": obs2.get("sceneName", ""),
-                        "agent": obs2.get("agent", {}),
-                        "actionReturn": md.get("actionReturn", None),
-                    }
-                    log_f.write(json.dumps(record, ensure_ascii=False) + "\n")
+                    _log(step_idx, mode, a, event, extra_for_log)
+
                     if step_idx % max(1, flush_every) == 0:
                         log_f.flush()
 
-                    # optional save frame（用当前 obs2 的 frame）
                     if save_frames and (step_idx % max(1, save_frame_every) == 0):
                         f2 = obs2.get("frame", None)
                         if f2 is not None:
@@ -270,10 +362,10 @@ class Ai2ThorPipeline:
 
         except KeyboardInterrupt:
             print("Interrupted by user.")
-
         finally:
             try:
-                kb_listener.stop()
+                if kb_listener is not None:
+                    kb_listener.stop()
             except Exception:
                 pass
             try:
@@ -290,32 +382,5 @@ class Ai2ThorPipeline:
                 pass
             cv2.destroyAllWindows()
 
-    def __call__(
-        self,
-        output_dir: str,
-        fps: int = 20,
-        save_frames: bool = False,
-        max_steps: Optional[int] = None,
-        include_depth: bool = False,
-        include_instance: bool = False,
-        save_frame_every: int = 3,
-        flush_every: int = 30,
-        window_name: str = "thor",
-        rot_step_pixels: float = 6.0,
-        look_step_pixels: float = 8.0,
-        mouse_button: str = "lmb",
-    ) -> None:
-        return self.run_interactive(
-            output_dir=output_dir,
-            fps=fps,
-            save_frames=save_frames,
-            max_steps=max_steps,
-            include_depth=include_depth,
-            include_instance=include_instance,
-            save_frame_every=save_frame_every,
-            flush_every=flush_every,
-            window_name=window_name,
-            rot_step_pixels=rot_step_pixels,
-            look_step_pixels=look_step_pixels,
-            mouse_button=mouse_button,
-        )
+    def __call__(self, output_dir: str, **kwargs) -> None:
+        return self.run(output_dir=output_dir, **kwargs)
