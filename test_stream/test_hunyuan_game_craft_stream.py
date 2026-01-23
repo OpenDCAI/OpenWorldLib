@@ -2,12 +2,9 @@ from PIL import Image
 import torch
 import imageio
 import os
-from src.sceneflow.pipelines.hunyuan_world.pipeline_hunyuan_game_craft import HunyuanGameCraftPipeline
+from sceneflow.pipelines.hunyuan_world.pipeline_hunyuan_game_craft import HunyuanGameCraftPipeline
 
 
-# -------------------------
-# Distributed helpers
-# -------------------------
 def get_rank() -> int:
     if torch.distributed.is_available() and torch.distributed.is_initialized():
         return torch.distributed.get_rank()
@@ -30,9 +27,6 @@ def barrier():
 
 
 def bcast_object(obj, src: int = 0):
-    """
-    Torchrun-safe: only rank0 creates object, then broadcast to all ranks.
-    """
     if get_world_size() == 1:
         return obj
     obj_list = [obj] if get_rank() == src else [None]
@@ -41,27 +35,17 @@ def bcast_object(obj, src: int = 0):
 
 
 def setup_stdin_guard():
-    """
-    Safety fuse: make it physically impossible for non-rank0 to read stdin.
-    Prevents accidental blocking in other code paths.
-    """
     if get_rank() != 0:
         sys.stdin = open(os.devnull, "r")
 
 
 def safe_input(prompt: str) -> str:
-    """
-    Handle EOF (e.g., no tty) by returning 'q' to stop.
-    """
     try:
         return input(prompt)
     except EOFError:
         return "q"
 
 
-# -------------------------
-# Parsing helpers
-# -------------------------
 def parse_signals(s: str, allowed):
     sigs = [x.strip() for x in s.split(",") if x.strip()]
     invalid = [x for x in sigs if x not in allowed]
@@ -69,12 +53,6 @@ def parse_signals(s: str, allowed):
 
 
 def parse_speeds(s: str, n: int):
-    """
-    Supports:
-    1) "0.2" -> broadcast to every signal
-    2) "0.2,0.3,0.1" -> must match n
-    Range: [0, 3]
-    """
     parts = [x.strip() for x in s.split(",") if x.strip()]
     if len(parts) == 0:
         raise ValueError("Empty speed input")
@@ -93,14 +71,7 @@ def parse_speeds(s: str, n: int):
     return speeds
 
 
-# -------------------------
-# Per-turn command protocol
-# -------------------------
 def make_next_cmd(turn_idx: int, allowed_interactions):
-    """
-    Rank0 reads input, packs everything needed for this turn into one dict,
-    then broadcasts to all ranks to keep control flow identical.
-    """
     rank = get_rank()
 
     if rank == 0:
@@ -134,9 +105,6 @@ def make_next_cmd(turn_idx: int, allowed_interactions):
     return cmd
 
 
-# -------------------------
-# Main
-# -------------------------
 def main():
     setup_stdin_guard()
 
@@ -146,8 +114,6 @@ def main():
     input_image = Image.open(image_path).convert("RGB")
 
     pretrained_model_path = "tencent/Hunyuan-GameCraft-1.0"
-
-
     pipeline = HunyuanGameCraftPipeline.from_pretrained(
         synthesis_model_path=pretrained_model_path,
         device="cuda",
@@ -155,13 +121,11 @@ def main():
         seed=250160,
     )
 
-    # ---- Allowed interactions
     AVAILABLE_INTERACTIONS = [
         "forward", "left", "right", "backward",
         "camera_l", "camera_r", "camera_up", "camera_down",
     ]
 
-    # ---- Default prompts (edit as needed)
     interaction_text_prompt = "A charming medieval village with cobblestone streets, thatched-roof houses."
     interaction_positive_prompt = "Realistic, High-quality."
     interaction_negative_prompt = (
@@ -169,13 +133,11 @@ def main():
         "bad limbs, distortion, blurring, text, subtitles, static, picture, black border."
     )
 
-    # ---- Output settings
     output_H = 704
     output_W = 1216
     fps = 24
     quality = 8
 
-    # ---- Inference settings (fixed; you can expose them to CLI if desired)
     cfg_scale = 2.0
     infer_steps = 50
     flow_shift_eval_video = 5.0
@@ -190,7 +152,6 @@ def main():
         print("  - input 'n' or 'q' to stop and export video")
         print("--- Interactive Stream Started ---")
 
-    # ---- Interactive loop
     turn_idx = 0
     while True:
         cmd = make_next_cmd(turn_idx, AVAILABLE_INTERACTIONS)
@@ -208,7 +169,6 @@ def main():
             barrier()
             continue
 
-        # cmd["type"] == "run"
         signals = cmd["signals"]
         speeds = cmd["speeds"]
 
@@ -217,11 +177,10 @@ def main():
 
         start_img = input_image if turn_idx == 0 else None
 
-        # IMPORTANT: requires your pipeline to implement stream(...)
         video_seg = pipeline.stream(
             interaction_signal=signals,
             interaction_speed=speeds,
-            initial_image=start_img,  # only non-None on first turn
+            initial_image=start_img,
             interaction_text_prompt=interaction_text_prompt,
             interaction_positive_prompt=interaction_positive_prompt,
             interaction_negative_prompt=interaction_negative_prompt,
@@ -240,15 +199,14 @@ def main():
         turn_idx += 1
         barrier()
 
-    # ---- Save on rank0 only
     if rank == 0:
         all_frames = getattr(pipeline.memory_module, "all_frames", [])
         print(f"Total frames generated: {len(all_frames)}")
         if len(all_frames) == 0:
             print("No frames to save. Exiting.")
             return
-        imageio.mimsave("hunyuan_game_craft_demo.mp4", all_frames, fps=fps, quality=quality)
-        print("Saved to: hunyuan_game_craft_demo.mp4")
+        imageio.mimsave("hunyuan_game_craft_stream_demo.mp4", all_frames, fps=fps, quality=quality)
+        print("Saved to: hunyuan_game_craft_stream_demo.mp4")
 
 
 if __name__ == "__main__":
