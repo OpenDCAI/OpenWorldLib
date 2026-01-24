@@ -1,39 +1,46 @@
+import inspect
 import torch
-from typing import Optional
-from torchvision.transforms import v2
+from typing import Optional, Any, List
+
 from ...operators.hunyuan_game_craft_operator import HunyuanGameCraftOperator
 from ...synthesis.visual_generation.hunyuan_world.hunyuan_game_craft_synthesis import HunyuanGameCraftSynthesis
 from ...synthesis.visual_generation.hunyuan_world.hunyuan_game_craft.config import parse_args
 from ...synthesis.visual_generation.hunyuan_world.hunyuan_game_craft.modules.parallel_states import initialize_distributed
+from ...memories.visual_synthesis.hunyuan_world.hunyuan_game_craft_memory import HunyuanGameCraftMemory
+
 
 class HunyuanGameCraftPipeline:
-    def __init__(self,
-                operators: Optional[HunyuanGameCraftOperator] = None,
-                synthesis_model: Optional[HunyuanGameCraftSynthesis] = None,
-                device: str = "cuda",
-                weight_dtype = torch.bfloat16
-                ):
-        self.synthesis_model = synthesis_model 
+    def __init__(
+        self,
+        operators: Optional[HunyuanGameCraftOperator] = None,
+        synthesis_model: Optional[HunyuanGameCraftSynthesis] = None,
+        memory_module: Optional[Any] = None,
+        device: str = "cuda",
+        weight_dtype=torch.bfloat16,
+    ):
+        self.synthesis_model = synthesis_model
         self.operators = operators
+        self.memory_module = memory_module
         self.device = device
         self.weight_dtype = weight_dtype
 
-        self.frame_process = v2.Compose([
-            v2.Resize(size=(352, 640), antialias=True),
-            v2.ToTensor(),
-            v2.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
-        ])
+        self._predict_sig = None
+        if self.synthesis_model is not None and hasattr(self.synthesis_model, "predict"):
+            try:
+                self._predict_sig = inspect.signature(self.synthesis_model.predict)
+            except Exception:
+                self._predict_sig = None
 
     @classmethod
-    def from_pretrained(cls,
-                        synthesis_model_path: Optional[str] = None,
-                        weight_dtype = torch.bfloat16,
-                        device: str = "cuda",
-                        cpu_offload: bool = False,
-                        seed: int = 250160,
-                        **kwargs) -> "HunyuanGameCraftPipeline":
-        
-
+    def from_pretrained(
+        cls,
+        synthesis_model_path: Optional[str] = None,
+        weight_dtype=torch.bfloat16,
+        device: str = "cuda",
+        cpu_offload: bool = False,
+        seed: int = 250160,
+        **kwargs,
+    ) -> "HunyuanGameCraftPipeline":
         args = parse_args()
         args.cpu_offload = cpu_offload
         args.seed = seed
@@ -43,40 +50,48 @@ class HunyuanGameCraftPipeline:
         if synthesis_model_path is None:
             synthesis_model_path = "tencent/Hunyuan-GameCraft-1.0"
 
-        print(f"Loading HunyuanGameCraft synthesis model from {synthesis_model_path}...")
-        
         synthesis_model = HunyuanGameCraftSynthesis.from_pretrained(
             pretrained_model_path=synthesis_model_path,
             device=device if not args.cpu_offload else torch.device("cpu"),
             weight_dtype=weight_dtype,
             args=args,
-            **kwargs
+            **kwargs,
         )
         operators = HunyuanGameCraftOperator()
+        memory_module = HunyuanGameCraftMemory()
 
-        pipeline = cls(
+        return cls(
             operators=operators,
             synthesis_model=synthesis_model,
+            memory_module=memory_module,
             device=device,
-            weight_dtype=weight_dtype
+            weight_dtype=weight_dtype,
         )
-        return pipeline
 
-    def _resizecrop(self, image, th, tw):
-        w, h = image.size
-        if h / w > th / tw:
-            new_w = int(w)
-            new_h = int(new_w * th / tw)
-        else:
-            new_h = int(h)
-            new_w = int(new_h * tw / th)
-        left = (w - new_w) / 2
-        top = (h - new_h) / 2
-        right = (w + new_w) / 2
-        bottom = (h + new_h) / 2
-        image = image.crop((left, top, right, bottom))
-        return image
-    
+    def _dist_rank(self) -> int:
+        if torch.distributed.is_available() and torch.distributed.is_initialized():
+            return torch.distributed.get_rank()
+        return 0
+
+    def _has_predict_arg(self, name: str) -> bool:
+        return self._predict_sig is not None and name in self._predict_sig.parameters
+
+    def _predict_call(self, **kwargs):
+        if self.synthesis_model is None:
+            raise ValueError("synthesis_model is None")
+
+        if self._predict_sig is None:
+            clean = {k: v for k, v in kwargs.items() if v is not None}
+            return self.synthesis_model.predict(**clean)
+
+        filtered = {}
+        for k, v in kwargs.items():
+            if v is None:
+                continue
+            if k in self._predict_sig.parameters:
+                filtered[k] = v
+        return self.synthesis_model.predict(**filtered)
+
     def process(self,
                 input_image,
                 output_H,
@@ -141,3 +156,94 @@ class HunyuanGameCraftPipeline:
             **kwds
         )
         return output_video
+
+    def stream(
+        self,
+        interaction_signal: List[str],
+        interaction_speed: List[float],
+        initial_image=None,
+        interaction_text_prompt: str = "",
+        interaction_positive_prompt: str = "Realistic, High-quality.",
+        interaction_negative_prompt: str = (
+            "overexposed, low quality, deformation, a poor composition, bad hands, bad teeth, bad eyes, "
+            "bad limbs, distortion, blurring, text, subtitles, static, picture, black border."
+        ),
+        output_H: int = 704,
+        output_W: int = 1216,
+        num_output_frames: int = 129,
+        cfg_scale: float = 2.0,
+        infer_steps: int = 50,
+        flow_shift_eval_video: float = 5.0,
+        **kwds,
+    ):
+        if self.memory_module is None:
+            raise ValueError("memory_module is None")
+
+        rank = self._dist_rank()
+
+        if initial_image is not None:
+            visual_context = self.operators.process_perception(
+                image=initial_image,
+                output_H=output_H,
+                output_W=output_W,
+                process_model=self.synthesis_model,
+            )
+            self.memory_module.record(initial_image, visual_context=visual_context, record_frames=False)
+
+        ctx = self.memory_module.select_context()
+        if ctx is None:
+            raise ValueError("No context in memory. Provide 'initial_image' in the first stream() call.")
+
+        self.operators.get_interaction(interaction_signal)
+        operator_condition = self.operators.process_interaction()
+        self.operators.delete_last_interaction()
+
+        if len(operator_condition) != len(interaction_speed):
+            raise ValueError(
+                f"interaction_speed length mismatch: {len(interaction_speed)} vs actions {len(operator_condition)}"
+            )
+
+        first_is_image = (getattr(self.memory_module, "n_generated_segments", 0) == 0)
+
+        prompt = interaction_text_prompt or ""
+        positive_prompt = interaction_positive_prompt or ""
+        if not self._has_predict_arg("positive_prompt"):
+            if positive_prompt.strip():
+                prompt = (prompt + " " + positive_prompt).strip()
+
+        out = self._predict_call(
+            ref_images=ctx.get("ref_images"),
+            last_latents=ctx.get("last_latents"),
+            ref_latents=ctx.get("ref_latents"),
+            action_list=operator_condition,
+            action_speed_list=interaction_speed,
+            prompt=prompt,
+            negative_prompt=interaction_negative_prompt,
+            positive_prompt=positive_prompt if self._has_predict_arg("positive_prompt") else None,
+            size=(output_H, output_W),
+            video_length=num_output_frames,
+            guidance_scale=cfg_scale,
+            infer_steps=infer_steps,
+            flow_shift=flow_shift_eval_video,
+            first_is_image=first_is_image if self._has_predict_arg("first_is_image") else None,
+            return_latents=True if self._has_predict_arg("return_latents") else None,
+            **kwds,
+        )
+
+        if isinstance(out, dict):
+            video_frames = out.get("video", None)
+            last_latents = out.get("last_latents", None)
+            ref_latents = out.get("ref_latents", None)
+        else:
+            video_frames = out
+            last_latents = None
+            ref_latents = None
+
+        self.memory_module.record(
+            video_frames if video_frames is not None else [],
+            last_latents=last_latents,
+            ref_latents=ref_latents,
+            record_frames=(rank == 0),
+        )
+
+        return video_frames 
