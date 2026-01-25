@@ -13,7 +13,7 @@ Preset_model_website: TypeAlias = str
 
 from ..configs.model_config import model_loader_configs, huggingface_model_loader_configs, patch_model_loader_configs
 
-from .utils import (
+from ......base_models.diffusion_model.diffsynth.models.utils import (
     load_state_dict, 
     init_weights_on_device, 
     hash_state_dict_keys, 

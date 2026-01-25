@@ -1,9 +1,8 @@
 from typing_extensions import Literal, TypeAlias
 from ..models.wan_video_dit import WanModel
-from ..models.wan_video_dit_recam_future import WanModelFuture
-from ..models.wan_video_text_encoder import WanTextEncoder
-from ..models.wan_video_image_encoder import WanImageEncoder
-from ..models.wan_video_vae import WanVideoVAE
+from ......base_models.diffusion_model.diffsynth.models.wan_video_text_encoder import WanTextEncoder
+from ......base_models.diffusion_model.diffsynth.models.wan_video_image_encoder import WanImageEncoder
+from ......base_models.diffusion_model.diffsynth.models.wan_video_vae import WanVideoVAE
 
 
 model_loader_configs = [

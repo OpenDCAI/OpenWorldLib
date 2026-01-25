@@ -1,1 +1,0 @@
-from .wan_video_recammaster import WanVideoAstraPipeline
