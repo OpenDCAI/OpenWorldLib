@@ -4,8 +4,6 @@ from ...base_synthesis import BaseSynthesis
 
 from .astra.pipelines.wan_video_astra import WanVideoAstraPipeline
 from .astra.models.model_manager import ModelManager
-# from ....base_models.diffusion_model.diffsynth.models.model_manager import ModelManager
-# from ....base_models.diffusion_model.diffsynth.pipelines.wan_video import WanVideoAstraPipeline # 注意这里的文件有改动，需要把astra的文件也加入
 
 import os
 import numpy as np
