@@ -45,8 +45,7 @@ def get_cu_seqlens(text_mask, img_len):
     text_len = text_mask.sum(dim=1)
     max_len = text_mask.shape[1] + img_len
 
-    cu_seqlens = torch.zeros([2 * batch_size + 1],
-                             dtype=torch.int32, device="cuda")
+    cu_seqlens = torch.zeros([2 * batch_size + 1], dtype=torch.int32, device="cuda")
 
     for i in range(batch_size):
         s = text_len[i] + img_len
@@ -102,9 +101,28 @@ def attention(
     if mode == "torch":
         if attn_mask is not None and attn_mask.dtype != torch.bool:
             attn_mask = attn_mask.to(q.dtype)
-        x = F.scaled_dot_product_attention(
-            q, k, v, attn_mask=attn_mask, dropout_p=drop_rate, is_causal=causal
-        )
+        if cu_seqlens_q is None:
+            x = F.scaled_dot_product_attention(
+                q, k, v, attn_mask=attn_mask, dropout_p=drop_rate, is_causal=causal
+            )
+        else:
+            attn1 = F.scaled_dot_product_attention(
+                q[:, :, :cu_seqlens_q[1]],
+                k[:, :, :cu_seqlens_kv[1]],
+                v[:, :, :cu_seqlens_kv[1]],
+                attn_mask=attn_mask,
+                dropout_p=drop_rate,
+                is_causal=causal
+            )
+            attn2 = F.scaled_dot_product_attention(
+                q[:, :, cu_seqlens_q[1]:],
+                k[:, :, cu_seqlens_kv[1]:],
+                v[:, :, cu_seqlens_kv[1]:],
+                attn_mask=None,
+                dropout_p=drop_rate,
+                is_causal=False
+            )
+            x = torch.cat([attn1, attn2], dim=2)
     elif mode == "flash":
         x = flash_attn_varlen_func(
             q,
@@ -174,16 +192,16 @@ def parallel_attention(
         v[:, :img_kv_len, :, :],
         dropout_p=0.0,
         causal=False,
-        joint_tensor_query=q[:, img_q_len:cu_seqlens_q[1]],
-        joint_tensor_key=k[:, img_kv_len:cu_seqlens_kv[1]],
-        joint_tensor_value=v[:, img_kv_len:cu_seqlens_kv[1]],
+        joint_tensor_query=q[:,img_q_len:cu_seqlens_q[1]],
+        joint_tensor_key=k[:,img_kv_len:cu_seqlens_kv[1]],
+        joint_tensor_value=v[:,img_kv_len:cu_seqlens_kv[1]],
         joint_strategy="rear",
     )
     if flash_attn.__version__ >= '2.7.0':
         attn2, *_ = _flash_attn_forward(
-            q[:, cu_seqlens_q[1]:],
-            k[:, cu_seqlens_kv[1]:],
-            v[:, cu_seqlens_kv[1]:],
+            q[:,cu_seqlens_q[1]:],
+            k[:,cu_seqlens_kv[1]:],
+            v[:,cu_seqlens_kv[1]:],
             dropout_p=0.0,
             softmax_scale=q.shape[-1] ** (-0.5),
             causal=False,
@@ -195,9 +213,9 @@ def parallel_attention(
         )
     else:
         attn2, *_ = _flash_attn_forward(
-            q[:, cu_seqlens_q[1]:],
-            k[:, cu_seqlens_kv[1]:],
-            v[:, cu_seqlens_kv[1]:],
+            q[:,cu_seqlens_q[1]:],
+            k[:,cu_seqlens_kv[1]:],
+            v[:,cu_seqlens_kv[1]:],
             dropout_p=0.0,
             softmax_scale=q.shape[-1] ** (-0.5),
             causal=False,

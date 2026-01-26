@@ -83,8 +83,7 @@ class FlowMatchDiscreteScheduler(SchedulerMixin, ConfigMixin):
 
         self.sigmas = sigmas
         # the value fed to model
-        self.timesteps = (
-            sigmas[:-1] * num_train_timesteps).to(dtype=torch.float32)
+        self.timesteps = (sigmas[:-1] * num_train_timesteps).to(dtype=torch.float32)
 
         self._step_index = None
         self._begin_index = None
@@ -141,7 +140,7 @@ class FlowMatchDiscreteScheduler(SchedulerMixin, ConfigMixin):
                 Number of tokens in the input sequence.
         """
         self.num_inference_steps = num_inference_steps
-
+        
         sigmas = torch.linspace(1, 0, num_inference_steps + 1)
         sigmas = self.sd3_time_shift(sigmas)
 

@@ -44,12 +44,9 @@ from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.utils import BaseOutput
 
 from ...constants import PRECISION_TO_TYPE
-from .......base_models.diffusion_model.video.hunyuan_video.vae.autoencoder_kl_causal_3d import (
-    AutoencoderKLCausal3D
-)
+from ...vae.autoencoder_kl_causal_3d import AutoencoderKLCausal3D
 from ...text_encoder import TextEncoder
-from ...modules.models import HYVideoDiffusionTransformer
-from ...utils.data_utils import black_image
+from ...modules import HYVideoDiffusionTransformer
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -69,8 +66,7 @@ def rescale_noise_cfg(noise_cfg, noise_pred_text, guidance_rescale=0.0):
     noise_pred_rescaled = noise_cfg * (std_text / std_cfg)
     # mix with the original results from guidance by factor guidance_rescale to avoid "plain looking" images
     noise_cfg = (
-        guidance_rescale * noise_pred_rescaled +
-        (1 - guidance_rescale) * noise_cfg
+        guidance_rescale * noise_pred_rescaled + (1 - guidance_rescale) * noise_cfg
     )
     return noise_cfg
 
@@ -168,8 +164,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
     model_cpu_offload_seq = "text_encoder->text_encoder_2->transformer->vae"
     _optional_components = ["text_encoder_2"]
     _exclude_from_cpu_offload = ["transformer"]
-    _callback_tensor_inputs = ["latents",
-                               "prompt_embeds", "negative_prompt_embeds"]
+    _callback_tensor_inputs = ["latents", "prompt_embeds", "negative_prompt_embeds"]
 
     def __init__(
         self,
@@ -237,10 +232,8 @@ class HunyuanVideoPipeline(DiffusionPipeline):
             scheduler=scheduler,
             text_encoder_2=text_encoder_2,
         )
-        self.vae_scale_factor = 2 ** (
-            len(self.vae.config.block_out_channels) - 1)
-        self.image_processor = VaeImageProcessor(
-            vae_scale_factor=self.vae_scale_factor)
+        self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
+        self.image_processor = VaeImageProcessor(vae_scale_factor=self.vae_scale_factor)
 
     def encode_prompt(
         self,
@@ -257,7 +250,6 @@ class HunyuanVideoPipeline(DiffusionPipeline):
         clip_skip: Optional[int] = None,
         text_encoder: Optional[TextEncoder] = None,
         data_type: Optional[str] = "image",
-        semantic_images=None
     ):
         r"""
         Encodes the prompt into text encoder hidden states.
@@ -316,14 +308,13 @@ class HunyuanVideoPipeline(DiffusionPipeline):
         if prompt_embeds is None:
             # textual inversion: process multi-vector tokens if necessary
             if isinstance(self, TextualInversionLoaderMixin):
-                prompt = self.maybe_convert_prompt(
-                    prompt, text_encoder.tokenizer)
+                prompt = self.maybe_convert_prompt(prompt, text_encoder.tokenizer)
 
             text_inputs = text_encoder.text2tokens(prompt, data_type=data_type)
 
             if clip_skip is None:
                 prompt_outputs = text_encoder.encode(
-                    text_inputs, data_type=data_type, semantic_images=semantic_images, device=device
+                    text_inputs, data_type=data_type, device=device
                 )
                 prompt_embeds = prompt_outputs.hidden_state
             else:
@@ -331,14 +322,12 @@ class HunyuanVideoPipeline(DiffusionPipeline):
                     text_inputs,
                     output_hidden_states=True,
                     data_type=data_type,
-                    semantic_images=semantic_images,
                     device=device,
                 )
                 # Access the `hidden_states` first, that contains a tuple of
                 # all the hidden states from the encoder layers. Then index into
                 # the tuple to access the hidden states from the desired layer.
-                prompt_embeds = prompt_outputs.hidden_states_list[-(
-                    clip_skip + 1)]
+                prompt_embeds = prompt_outputs.hidden_states_list[-(clip_skip + 1)]
                 # We also need to apply the final LayerNorm here to not mess with the
                 # representations. The `last_hidden_states` that we typically use for
                 # obtaining the final prompt representations passes through the LayerNorm
@@ -351,8 +340,7 @@ class HunyuanVideoPipeline(DiffusionPipeline):
             if attention_mask is not None:
                 attention_mask = attention_mask.to(device)
                 bs_embed, seq_len = attention_mask.shape
-                attention_mask = attention_mask.repeat(
-                    1, num_videos_per_prompt)
+                attention_mask = attention_mask.repeat(1, num_videos_per_prompt)
                 attention_mask = attention_mask.view(
                     bs_embed * num_videos_per_prompt, seq_len
                 )
@@ -364,15 +352,13 @@ class HunyuanVideoPipeline(DiffusionPipeline):
         else:
             prompt_embeds_dtype = prompt_embeds.dtype
 
-        prompt_embeds = prompt_embeds.to(
-            dtype=prompt_embeds_dtype, device=device)
+        prompt_embeds = prompt_embeds.to(dtype=prompt_embeds_dtype, device=device)
 
         if prompt_embeds.ndim == 2:
             bs_embed, _ = prompt_embeds.shape
             # duplicate text embeddings for each generation per prompt, using mps friendly method
             prompt_embeds = prompt_embeds.repeat(1, num_videos_per_prompt)
-            prompt_embeds = prompt_embeds.view(
-                bs_embed * num_videos_per_prompt, -1)
+            prompt_embeds = prompt_embeds.view(bs_embed * num_videos_per_prompt, -1)
         else:
             bs_embed, seq_len, _ = prompt_embeds.shape
             # duplicate text embeddings for each generation per prompt, using mps friendly method
@@ -388,16 +374,16 @@ class HunyuanVideoPipeline(DiffusionPipeline):
                 uncond_tokens = [""] * batch_size
             elif prompt is not None and type(prompt) is not type(negative_prompt):
                 raise TypeError(
-                    f"`negative_prompt` should be the same type to `prompt`, \
-                        but got {type(negative_prompt)} != {type(prompt)}."
+                    f"`negative_prompt` should be the same type to `prompt`, but got {type(negative_prompt)} !="
+                    f" {type(prompt)}."
                 )
             elif isinstance(negative_prompt, str):
                 uncond_tokens = [negative_prompt]
             elif batch_size != len(negative_prompt):
                 raise ValueError(
-                    f"`negative_prompt`: {negative_prompt} has batch size {len(negative_prompt)}, \
-                    but `prompt`: {prompt} has batch size {batch_size}. \
-                    Please make sure that passed `negative_prompt` matches the batch size of `prompt`."
+                    f"`negative_prompt`: {negative_prompt} has batch size {len(negative_prompt)}, but `prompt`:"
+                    f" {prompt} has batch size {batch_size}. Please make sure that passed `negative_prompt` matches"
+                    " the batch size of `prompt`."
                 )
             else:
                 uncond_tokens = negative_prompt
@@ -409,17 +395,10 @@ class HunyuanVideoPipeline(DiffusionPipeline):
                 )
 
             # max_length = prompt_embeds.shape[1]
-            uncond_input = text_encoder.text2tokens(
-                uncond_tokens, data_type=data_type)
-
-            if semantic_images is not None:
-                uncond_image = [black_image(img.size[0], img.size[1])
-                                for img in semantic_images]
-            else:
-                uncond_image = None
+            uncond_input = text_encoder.text2tokens(uncond_tokens, data_type=data_type)
 
             negative_prompt_outputs = text_encoder.encode(
-                uncond_input, data_type=data_type, semantic_images=uncond_image, device=device
+                uncond_input, data_type=data_type, device=device
             )
             negative_prompt_embeds = negative_prompt_outputs.hidden_state
 
@@ -470,10 +449,8 @@ class HunyuanVideoPipeline(DiffusionPipeline):
         )
 
     def decode_latents(self, latents, enable_tiling=True):
-        deprecation_message = "The decode_latents method is deprecated and will be removed in 1.0.0.\
-Please use VaeImageProcessor.postprocess(...) instead"
-        deprecate("decode_latents", "1.0.0",
-                  deprecation_message, standard_warn=False)
+        deprecation_message = "The decode_latents method is deprecated and will be removed in 1.0.0. Please use VaeImageProcessor.postprocess(...) instead"
+        deprecate("decode_latents", "1.0.0", deprecation_message, standard_warn=False)
 
         latents = 1 / self.vae.config.scaling_factor * latents
         if enable_tiling:
@@ -536,16 +513,15 @@ Please use VaeImageProcessor.postprocess(...) instead"
             not isinstance(callback_steps, int) or callback_steps <= 0
         ):
             raise ValueError(
-                f"`callback_steps` has to be a positive integer but is {callback_steps} of type {type(callback_steps)}."
+                f"`callback_steps` has to be a positive integer but is {callback_steps} of type"
+                f" {type(callback_steps)}."
             )
         if callback_on_step_end_tensor_inputs is not None and not all(
             k in self._callback_tensor_inputs
             for k in callback_on_step_end_tensor_inputs
         ):
             raise ValueError(
-                f"`callback_on_step_end_tensor_inputs` has to be in \
-                    {self._callback_tensor_inputs}, but found \
-                    {[k for k in callback_on_step_end_tensor_inputs if k not in self._callback_tensor_inputs]}"
+                f"`callback_on_step_end_tensor_inputs` has to be in {self._callback_tensor_inputs}, but found {[k for k in callback_on_step_end_tensor_inputs if k not in self._callback_tensor_inputs]}"
             )
 
         if prompt is not None and prompt_embeds is not None:
@@ -578,6 +554,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
                     f" {negative_prompt_embeds.shape}."
                 )
 
+
     def prepare_latents(
         self,
         batch_size,
@@ -589,14 +566,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
         device,
         generator,
         latents=None,
-        img_latents=None,
-        i2v_mode=False,
-        i2v_condition_type=None,
-        i2v_stability=True,
     ):
-        # if i2v_mode and i2v_condition_type == "latent_concat":
-        #     num_channels_latents = (num_channels_latents - 1) // 2
-        num_channels_latents = img_latents.shape[1]
         shape = (
             batch_size,
             num_channels_latents,
@@ -606,21 +576,9 @@ Please use VaeImageProcessor.postprocess(...) instead"
         )
         if isinstance(generator, list) and len(generator) != batch_size:
             raise ValueError(
-                f"You have passed a list of generators of length {len(generator)}, \
-                    but requested an effective batch size of {batch_size}.\
-                    Make sure the batch size matches the length of the generators."
+                f"You have passed a list of generators of length {len(generator)}, but requested an effective batch"
+                f" size of {batch_size}. Make sure the batch size matches the length of the generators."
             )
-
-        if i2v_mode and i2v_stability:
-            if img_latents.shape[2] == 1:
-                img_latents = img_latents.repeat(1, 1, video_length, 1, 1)
-            x0 = randn_tensor(shape, generator=generator,
-                              device=device, dtype=dtype)
-            x1 = img_latents
-
-            t = torch.tensor([0.999]).to(device=device)
-            latents = x0 * t + x1 * (1 - t)
-            latents = latents.to(dtype=dtype)
 
         if latents is None:
             latents = randn_tensor(
@@ -635,8 +593,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
             latents = latents * self.scheduler.init_noise_sigma
         return latents
 
-    # Copied from diffusers.pipelines.latent_consistency_models.
-    # pipeline_latent_consistency_text2img.LatentConsistencyModelPipeline.get_guidance_scale_embedding
+    # Copied from diffusers.pipelines.latent_consistency_models.pipeline_latent_consistency_text2img.LatentConsistencyModelPipeline.get_guidance_scale_embedding
     def get_guidance_scale_embedding(
         self,
         w: torch.Tensor,
@@ -718,8 +675,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
         negative_prompt: Optional[Union[str, List[str]]] = None,
         num_videos_per_prompt: Optional[int] = 1,
         eta: float = 0.0,
-        generator: Optional[Union[torch.Generator,
-                                  List[torch.Generator]]] = None,
+        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
         latents: Optional[torch.Tensor] = None,
         prompt_embeds: Optional[torch.Tensor] = None,
         attention_mask: Optional[torch.Tensor] = None,
@@ -739,18 +695,10 @@ Please use VaeImageProcessor.postprocess(...) instead"
         ] = None,
         callback_on_step_end_tensor_inputs: List[str] = ["latents"],
         freqs_cis: Tuple[torch.Tensor, torch.Tensor] = None,
-        freqs_cis_cond: Tuple[torch.Tensor, torch.Tensor] = None,
         vae_ver: str = "88-4c-sd",
         enable_tiling: bool = False,
         n_tokens: Optional[int] = None,
         embedded_guidance_scale: Optional[float] = None,
-        i2v_mode: bool = False,
-        i2v_condition_type: str = None,
-        i2v_stability: bool = True,
-        img_latents: Optional[torch.Tensor] = None,
-        semantic_images=None,
-        partial_cond=None,
-        partial_mask=None,
         **kwargs,
     ):
         r"""
@@ -800,7 +748,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
             negative_prompt_embeds (`torch.Tensor`, *optional*):
                 Pre-generated negative text embeddings. Can be used to easily tweak text inputs (prompt weighting). If
                 not provided, `negative_prompt_embeds` are generated from the `negative_prompt` input argument.
-
+                
             output_type (`str`, *optional*, defaults to `"pil"`):
                 The output format of the generated image. Choose between `PIL.Image` or `np.array`.
             return_dict (`bool`, *optional*, defaults to `True`):
@@ -808,8 +756,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
                 plain tuple.
             cross_attention_kwargs (`dict`, *optional*):
                 A kwargs dictionary that if specified is passed along to the [`AttentionProcessor`] as defined in
-                [`self.processor`]
-                (https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/attention_processor.py).
+                [`self.processor`](https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/attention_processor.py).
             guidance_rescale (`float`, *optional*, defaults to 0.0):
                 Guidance rescale factor from [Common Diffusion Noise Schedules and Sample Steps are
                 Flawed](https://arxiv.org/pdf/2305.08891.pdf). Guidance rescale factor should fix overexposure when
@@ -843,15 +790,13 @@ Please use VaeImageProcessor.postprocess(...) instead"
             deprecate(
                 "callback",
                 "1.0.0",
-                "Passing `callback` as an input argument to `__call__` is deprecated,\
-                consider using `callback_on_step_end`",
+                "Passing `callback` as an input argument to `__call__` is deprecated, consider using `callback_on_step_end`",
             )
         if callback_steps is not None:
             deprecate(
                 "callback_steps",
                 "1.0.0",
-                "Passing `callback_steps` as an input argument to `__call__` is deprecated,\
-                consider using `callback_on_step_end`",
+                "Passing `callback_steps` as an input argument to `__call__` is deprecated, consider using `callback_on_step_end`",
             )
 
         if isinstance(callback_on_step_end, (PipelineCallback, MultiPipelineCallbacks)):
@@ -890,8 +835,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
         else:
             batch_size = prompt_embeds.shape[0]
 
-        device = torch.device(
-            f"cuda:{dist.get_rank()}") if dist.is_initialized() else self._execution_device
+        device = torch.device(f"cuda:{dist.get_rank()}") if dist.is_initialized() else self._execution_device
 
         # 3. Encode input prompt
         lora_scale = (
@@ -918,7 +862,6 @@ Please use VaeImageProcessor.postprocess(...) instead"
             lora_scale=lora_scale,
             clip_skip=self.clip_skip,
             data_type=data_type,
-            semantic_images=semantic_images
         )
         if self.text_encoder_2 is not None:
             (
@@ -955,11 +898,10 @@ Please use VaeImageProcessor.postprocess(...) instead"
             if prompt_mask is not None:
                 prompt_mask = torch.cat([negative_prompt_mask, prompt_mask])
             if prompt_embeds_2 is not None:
-                prompt_embeds_2 = torch.cat(
-                    [negative_prompt_embeds_2, prompt_embeds_2])
+                prompt_embeds_2 = torch.cat([negative_prompt_embeds_2, prompt_embeds_2])
             if prompt_mask_2 is not None:
-                prompt_mask_2 = torch.cat(
-                    [negative_prompt_mask_2, prompt_mask_2])
+                prompt_mask_2 = torch.cat([negative_prompt_mask_2, prompt_mask_2])
+
 
         # 4. Prepare timesteps
         extra_set_timesteps_kwargs = self.prepare_extra_func_kwargs(
@@ -993,27 +935,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
             device,
             generator,
             latents,
-            img_latents=img_latents,
-            i2v_mode=i2v_mode,
-            i2v_condition_type=i2v_condition_type,
-            i2v_stability=i2v_stability
         )
-
-        if i2v_mode and i2v_condition_type == "latent_concat":
-            if img_latents.shape[2] == 1:
-                img_latents_concat = img_latents.repeat(
-                    1, 1, video_length, 1, 1)
-            else:
-                img_latents_concat = img_latents
-            img_latents_concat[:, :, 1:, ...] = 0
-
-            i2v_mask = torch.zeros(video_length)
-            i2v_mask[0] = 1
-
-            mask_concat = torch.ones(img_latents_concat.shape[0], 1,
-                                     img_latents_concat.shape[2], img_latents_concat.shape[3],
-                                     img_latents_concat.shape[4]).to(device=img_latents.device)
-            mask_concat[:, :, 1:, ...] = 0
 
         # 6. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
         extra_step_kwargs = self.prepare_extra_func_kwargs(
@@ -1031,8 +953,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
         ) and not self.args.disable_autocast
 
         # 7. Denoising loop
-        num_warmup_steps = len(timesteps) - \
-            num_inference_steps * self.scheduler.order
+        num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
         self._num_timesteps = len(timesteps)
 
         # if is_progress_bar:
@@ -1041,23 +962,12 @@ Please use VaeImageProcessor.postprocess(...) instead"
                 if self.interrupt:
                     continue
 
-                if i2v_mode and i2v_condition_type == "token_replace":
-                    latents = torch.concat(
-                        [img_latents, latents[:, :, 1:, :, :]], dim=2)
-
                 # expand the latents if we are doing classifier free guidance
-                if i2v_mode and i2v_condition_type == "latent_concat":
-                    latent_model_input = torch.concat(
-                        [latents, img_latents_concat, mask_concat, partial_cond, partial_mask], dim=1)
-                else:
-                    latent_model_input = latents
-
                 latent_model_input = (
-                    torch.cat([latent_model_input] * 2)
+                    torch.cat([latents] * 2)
                     if self.do_classifier_free_guidance
-                    else latent_model_input
+                    else latents
                 )
-
                 latent_model_input = self.scheduler.scale_model_input(
                     latent_model_input, t
                 )
@@ -1065,8 +975,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
                 t_expand = t.repeat(latent_model_input.shape[0])
                 guidance_expand = (
                     torch.tensor(
-                        [embedded_guidance_scale] *
-                        latent_model_input.shape[0],
+                        [embedded_guidance_scale] * latent_model_input.shape[0],
                         dtype=torch.float32,
                         device=device,
                     ).to(target_dtype)
@@ -1087,8 +996,6 @@ Please use VaeImageProcessor.postprocess(...) instead"
                         text_states_2=prompt_embeds_2,  # [2, 768]
                         freqs_cos=freqs_cis[0],  # [seqlen, head_dim]
                         freqs_sin=freqs_cis[1],  # [seqlen, head_dim]
-                        freqs_cos_cond=freqs_cis_cond[0],  # [seqlen, head_dim]
-                        freqs_sin_cond=freqs_cis_cond[1],  # [seqlen, head_dim]
                         guidance=guidance_expand,
                         return_dict=True,
                     )[
@@ -1111,36 +1018,25 @@ Please use VaeImageProcessor.postprocess(...) instead"
                     )
 
                 # compute the previous noisy sample x_t -> x_t-1
-                if i2v_mode and i2v_condition_type == "token_replace":
-                    latents = self.scheduler.step(
-                        noise_pred[:, :, 1:, :, :], t, latents[:, :, 1:, :, :], **extra_step_kwargs, return_dict=False
-                    )[0]
-                    latents = torch.concat(
-                        [img_latents, latents], dim=2
-                    )
-                else:
-                    latents = self.scheduler.step(
-                        noise_pred, t, latents, **extra_step_kwargs, return_dict=False
-                    )[0]
+                latents = self.scheduler.step(
+                    noise_pred, t, latents, **extra_step_kwargs, return_dict=False
+                )[0]
 
                 if callback_on_step_end is not None:
                     callback_kwargs = {}
                     for k in callback_on_step_end_tensor_inputs:
                         callback_kwargs[k] = locals()[k]
-                    callback_outputs = callback_on_step_end(
-                        self, i, t, callback_kwargs)
+                    callback_outputs = callback_on_step_end(self, i, t, callback_kwargs)
 
                     latents = callback_outputs.pop("latents", latents)
-                    prompt_embeds = callback_outputs.pop(
-                        "prompt_embeds", prompt_embeds)
+                    prompt_embeds = callback_outputs.pop("prompt_embeds", prompt_embeds)
                     negative_prompt_embeds = callback_outputs.pop(
                         "negative_prompt_embeds", negative_prompt_embeds
                     )
 
                 # call the callback, if provided
                 if i == len(timesteps) - 1 or (
-                    (i + 1) > num_warmup_steps and (i +
-                                                    1) % self.scheduler.order == 0
+                    (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
                 ):
                     if progress_bar is not None:
                         progress_bar.update()
@@ -1158,8 +1054,7 @@ Please use VaeImageProcessor.postprocess(...) instead"
                 pass
             else:
                 raise ValueError(
-                    f"Only support latents with shape (b, c, h, w) or (b, c, f, h, w), \
-                        but got {latents.shape}."
+                    f"Only support latents with shape (b, c, h, w) or (b, c, f, h, w), but got {latents.shape}."
                 )
 
             if (
@@ -1195,17 +1090,6 @@ Please use VaeImageProcessor.postprocess(...) instead"
         image = (image / 2 + 0.5).clamp(0, 1)
         # we always cast to float32 as this does not cause significant overhead and is compatible with bfloa16
         image = image.cpu().float()
-
-        if i2v_mode and i2v_condition_type == "latent_concat":
-            image = image[:, :, 4:, :, :]
-        
-        # split rgb and depth, process depth output separately
-        half_height = (height - 16) // 2
-        rgb = image[..., :half_height, :]
-        depth = image[..., -half_height:, :]
-        depth = depth[:, 0] * 0.299 + depth[:, 1] * 0.587 + depth[:, 2] * 0.114
-        depth = depth.unsqueeze(1).repeat(1, 3, 1, 1, 1)
-        image = torch.cat([rgb, depth], dim=-2)
 
         # Offload all models
         self.maybe_free_model_hooks()

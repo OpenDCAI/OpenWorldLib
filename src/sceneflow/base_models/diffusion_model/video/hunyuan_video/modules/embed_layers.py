@@ -45,8 +45,7 @@ class PatchEmbed(nn.Module):
             bias=bias,
             **factory_kwargs
         )
-        nn.init.xavier_uniform_(
-            self.proj.weight.view(self.proj.weight.size(0), -1))
+        nn.init.xavier_uniform_(self.proj.weight.view(self.proj.weight.size(0), -1))
         if bias:
             nn.init.zeros_(self.proj.bias)
 
@@ -114,8 +113,7 @@ def timestep_embedding(t, dim, max_period=10000):
     args = t[:, None].float() * freqs[None]
     embedding = torch.cat([torch.cos(args), torch.sin(args)], dim=-1)
     if dim % 2:
-        embedding = torch.cat(
-            [embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
+        embedding = torch.cat([embedding, torch.zeros_like(embedding[:, :1])], dim=-1)
     return embedding
 
 

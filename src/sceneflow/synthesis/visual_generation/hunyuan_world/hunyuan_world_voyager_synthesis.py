@@ -13,15 +13,15 @@ from loguru import logger
 import torch
 import torch.distributed as dist
 from .hunyuan_world_voyager.constants import PROMPT_TEMPLATE, NEGATIVE_PROMPT, PRECISION_TO_TYPE, NEGATIVE_PROMPT_I2V
-from .hunyuan_world_voyager.vae import load_vae
+from ....base_models.diffusion_model.video.hunyuan_video.vae import load_vae
 from .hunyuan_world_voyager.modules import load_model
 from .hunyuan_world_voyager.text_encoder import TextEncoder
 from .hunyuan_world_voyager.utils.lora_utils import load_lora_for_pipeline
 from .hunyuan_world_voyager.utils.geometry import get_plucker_coordinates
 from .hunyuan_world_voyager.utils.train_utils import load_state_dict
-from .hunyuan_world_voyager.modules.posemb_layers import get_nd_rotary_pos_embed
-from .hunyuan_world_voyager.modules.fp8_optimization import convert_fp8_linear
-from .hunyuan_world_voyager.diffusion.schedulers import FlowMatchDiscreteScheduler
+from ....base_models.diffusion_model.video.hunyuan_video.modules.posemb_layers import get_nd_rotary_pos_embed
+from ....base_models.diffusion_model.video.hunyuan_video.modules.fp8_optimization import convert_fp8_linear
+from ....base_models.diffusion_model.video.hunyuan_video.diffusion.schedulers import FlowMatchDiscreteScheduler
 from .hunyuan_world_voyager.diffusion.pipelines import HunyuanVideoPipeline
 import torchvision.transforms as transforms
 from PIL import Image
