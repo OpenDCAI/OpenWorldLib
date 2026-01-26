@@ -16,8 +16,6 @@ reasoning应该针对的是空间理解模型，例如：
 
 representation注意depthanything系列的工作
 
-src/sceneflow/representations/models/utils3d need to rename as src/sceneflow/representations/models/EasternJournalist_utils3d/..
-
 在安装过程中可以参考[ms-swift](https://github.com/modelscope/ms-swift)中requirements/install_all.sh的形式进行安装
 
 ## Student update

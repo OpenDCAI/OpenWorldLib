@@ -1,7 +1,9 @@
 import argparse
 from .constants import *
 import re
-from .modules.models import HUNYUAN_VIDEO_CONFIG
+from .....base_models.diffusion_model.video.hunyuan_video.modules.models import (
+    HUNYUAN_VIDEO_CONFIG
+)
 
 
 def parse_args(mode="eval", namespace=None):

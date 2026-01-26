@@ -5,19 +5,7 @@ import torch
 import copy
 import string
 import random
-
-
-def align_to(value, alignment):
-    """align hight, width according to alignment
-
-    Args:
-        value (int): height or width
-        alignment (int): target alignment factor
-
-    Returns:
-        int: the aligned value
-    """
-    return int(math.ceil(value / alignment) * alignment)
+from ......base_models.diffusion_model.video.hunyuan_video.utils.data_utils import align_to
 
 
 def black_image(width, height):
