@@ -4,7 +4,7 @@ import numpy as np
 import imageio
 from PIL import Image
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Dict, Any, List
 from huggingface_hub import snapshot_download, hf_hub_download
 
 from ...operators.astra_operator import AstraOperator
@@ -97,8 +97,9 @@ class AstraPipeline(object):
                         wan_model_path: str, 
                         device: str = "cuda", 
                         **kwargs):
-        
-        # 修改：在配置前先解析路径
+        """
+        加载权重并初始化各组件
+        """
         print("Resolving model paths...")
         resolved_wan_path = cls._resolve_path(wan_model_path, is_file=False)
         resolved_dit_path = cls._resolve_path(dit_path, is_file=True)
@@ -119,18 +120,23 @@ class AstraPipeline(object):
         
         return cls(operator, synthesis, memory, config)
         
-    def __call__(self, 
-                condition_image: str, 
-                prompt: str, 
-                direction: str = "forward", 
-                output_path: str = "output.mp4"):
+    def process(self, input_: str, interaction: Dict[str, Any]):
         """
-        执行推理并直接保存结果。
-        只需传入最关键的参数。
+        功能：预处理输入数据，将原始图片和文本转换为模型可用的 Tensor 信号
+        
+        Input:
+            input_ (str): 图片的路径
+            interaction (dict): 包含 'prompt' (str) 和 'direction' (str) 等交互信息
+        
+        Output:
+            processed_data (dict): 包含 encoded latents, embeddings 等
         """
         args = self.config
-        
-        # 加载并编码条件图像
+        condition_image = input_
+        prompt = interaction.get("prompt", "")
+        direction = interaction.get("direction", "forward")
+
+        # 1. 加载并编码条件图像 (Perception -> Representation)
         print(f"Processing image: {condition_image}")
         frames = self.operator.process_perception(condition_image=condition_image)
         latents = self.synthesis.encode_frames(frames)
@@ -143,22 +149,20 @@ class AstraPipeline(object):
             w_start = (W - target_width) // 2
             latents = latents[:, :, h_start:h_start+target_height, w_start:w_start+target_width]
         
-        # 准备历史记忆
         model_dtype = next(self.synthesis.pipe.dit.parameters()).dtype
         history_latents = latents[:, :args.initial_condition_frames, :, :].to(self.device, dtype=model_dtype)
-        self.memory.record(history_latents) 
         initial_latents = history_latents # 备份用于最终拼接
 
-        # 编码提示词
+        # 2. 编码提示词 (Interaction -> Representation)
         print(f"Encoding prompt: {prompt}")
         prompt_emb_pos = self.synthesis.pipe.encode_prompt(prompt)
         prompt_emb_neg = None
         if args.text_guidance_scale > 1.0:
             prompt_emb_neg = self.synthesis.pipe.encode_prompt("")
         
-        # 生成动作 (Interaction)
+        # 3. 生成相机控制信号 (Interaction -> Control Signal)
         print(f"Generating camera embeddings for direction: {direction}...")
-        self.operator.current_interaction = [] # 清空之前的状态
+        self.operator.current_interaction = [] 
         self.operator.get_interaction(direction)
         
         camera_embedding_full = self.operator.process_interaction(
@@ -174,7 +178,45 @@ class AstraPipeline(object):
         if args.use_camera_cfg:
             camera_embedding_uncond = torch.zeros_like(camera_embedding_full)
 
-        # 4. 循环生成
+        # 返回处理好的数据包
+        return {
+            "initial_latents": initial_latents,
+            "prompt_emb_pos": prompt_emb_pos,
+            "prompt_emb_neg": prompt_emb_neg,
+            "camera_embedding_full": camera_embedding_full,
+            "camera_embedding_uncond": camera_embedding_uncond
+        }
+
+    def __call__(self, 
+                input_: str, 
+                interaction: Dict[str, Any]) -> List[Image.Image]:
+        """
+        pipeline的调用入口
+        
+        Args:
+            input_ (str): 图片路径
+            interaction (dict): 交互参数 {'prompt': ..., 'direction': ...}
+            
+        Returns:
+            frames (List[PIL.Image]): 生成的视频帧列表
+        """
+        args = self.config
+        
+        # 1. 预处理 (调用 process)
+        processed_data = self.process(input_, interaction)
+        
+        initial_latents = processed_data["initial_latents"]
+        camera_embedding_full = processed_data["camera_embedding_full"]
+        prompt_emb_pos = processed_data["prompt_emb_pos"]
+        prompt_emb_neg = processed_data["prompt_emb_neg"]
+        camera_embedding_uncond = processed_data["camera_embedding_uncond"]
+
+        # 2. 初始化记忆
+        # 清空 Memory，并记录第一帧
+        self.memory.storage = [] 
+        self.memory.record(initial_latents)
+
+        # 3. 循环生成
         total_generated = 0
         all_generated_frames = []
 
@@ -204,28 +246,15 @@ class AstraPipeline(object):
             all_generated_frames.append(new_latents_squeezed)
             total_generated += current_generation
 
-        # 5. 解码与保存
+        # 5. 解码
         all_generated = torch.cat(all_generated_frames, dim=1)
         final_video_latents = torch.cat([initial_latents.to(all_generated.device), all_generated], dim=1).unsqueeze(0)
         
         print("Decoding video...")
+        # decode_video 返回的是 uint8 numpy array [T, H, W, C]
         video_np = self.synthesis.decode_video(final_video_latents)
         
-        # 保存逻辑封装在此处，保持 Test 简洁
-        self.save_video(video_np, camera_embedding_full, output_path, args)
+        # 5. 格式转换：转为 PIL Image List 方便用户保存
+        pil_frames = [Image.fromarray(frame) for frame in video_np]
         
-        return video_np
-
-    def save_video(self, video_np, camera_embedding_full, output_path, args):
-        print(f"Saving video to {output_path}")
-        os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        
-        time_compression_ratio = 4
-        camera_poses = camera_embedding_full.detach().float().cpu().numpy()
-        video_camera_poses = [x for x in camera_poses for _ in range(time_compression_ratio)]
-        
-        with imageio.get_writer(output_path, fps=20) as writer:
-            for i, frame in enumerate(video_np):
-                img = Image.fromarray(frame)
-                writer.append_data(np.array(img))
-        print("Save complete.")
+        return pil_frames
