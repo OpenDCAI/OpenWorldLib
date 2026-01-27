@@ -1,6 +1,0 @@
-1. hunyuan video 要放到base_models下面
-2. src/sceneflow/representations/models/moge 移动到 src/sceneflow/representations/depth_generation/moge 路径下
-3. src/sceneflow/representations/models/utils3d rename成 eastern_journalist_utils3d 转移到 src/sceneflow/base_models/three_dimensions/general_3d 路径下
-4. 为operator添加process_perception到operator中
-5. 尝试修改transformers的版本到4.49
-6. 因为要修改representation部分，因此depthanything也要有对应的修改

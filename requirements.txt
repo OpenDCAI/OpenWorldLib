@@ -1,8 +1,8 @@
 opencv-python>=4.9.0.80
 diffusers==0.31.0
-transformers>=4.49.0   # hunyuanworld need transformers==4.39.3
+transformers
 huggingface_hub[cli]
-tokenizers>=0.20.3    # hunyuanworld need tokenizers==0.15.2
+tokenizers
 accelerate>=1.1.1
 pandas==2.0.3
 numpy==1.24.4
@@ -12,7 +12,7 @@ loguru==0.7.2
 imageio==2.34.0
 imageio-ffmpeg==0.5.1
 safetensors==0.4.3
-peft>=0.17.0          # hunyuanworld need peft==0.13.2
+peft
 deepspeed==0.15.1
 pyarrow==14.0.1
 tensorboard==2.19.0

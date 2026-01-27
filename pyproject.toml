@@ -41,6 +41,18 @@ hunyuan_mirror = [
     "tyro==1.0.3",
 ]
 
+transformers_low = [
+    "transformers>=4.39.3,<=4.45.1",
+    "tokenizers>=0.15.2,<0.20.0",
+    "peft>=0.13.2,<0.14.0",
+]
+
+transformers_high = [
+    "transformers>=4.49.0",
+    "tokenizers>=0.20.3",
+    "peft>=0.17.0",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = { find = { where = ["src"] } }
