@@ -15,6 +15,9 @@ from transformers import (
 from transformers.utils import ModelOutput
 
 from ..constants import PRECISION_TO_TYPE
+from ......base_models.diffusion_model.video.hunyuan_video.text_encoder import (
+    TextEncoderModelOutput
+)
 
 
 def use_default(value, default):
@@ -91,31 +94,6 @@ def load_tokenizer(
         raise ValueError(f"Unsupported tokenizer type: {tokenizer_type}")
 
     return tokenizer, tokenizer_path, processor
-
-
-@dataclass
-class TextEncoderModelOutput(ModelOutput):
-    """
-    Base class for model's outputs that also contains a pooling of the last hidden states.
-
-    Args:
-        hidden_state (`torch.FloatTensor` of shape `(batch_size, sequence_length, hidden_size)`):
-            Sequence of hidden-states at the output of the last layer of the model.
-        attention_mask (`torch.LongTensor` of shape `(batch_size, sequence_length)`, *optional*):
-            Mask to avoid performing attention on padding token indices. Mask values selected in ``[0, 1]``:
-        hidden_states_list (`tuple(torch.FloatTensor)`, *optional*, returned when `output_hidden_states=True`
-        is passed):
-            Tuple of `torch.FloatTensor` (one for the output of the embeddings, if the model has an embedding layer, +
-            one for the output of each layer) of shape `(batch_size, sequence_length, hidden_size)`.
-            Hidden-states of the model at the output of each layer plus the optional initial embedding outputs.
-        text_outputs (`list`, *optional*, returned when `return_texts=True` is passed):
-            List of decoded texts.
-    """
-
-    hidden_state: torch.FloatTensor = None
-    attention_mask: Optional[torch.LongTensor] = None
-    hidden_states_list: Optional[Tuple[torch.FloatTensor, ...]] = None
-    text_outputs: Optional[list] = None
 
 
 class TextEncoder(nn.Module):
