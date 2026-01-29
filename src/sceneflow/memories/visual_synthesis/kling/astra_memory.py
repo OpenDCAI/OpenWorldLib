@@ -1,5 +1,5 @@
 import torch
-from .base_memory import BaseMemory
+from ...base_memory import BaseMemory
 
 class AstraMemory(BaseMemory):
     def __init__(self, capacity=49, **kwargs):
