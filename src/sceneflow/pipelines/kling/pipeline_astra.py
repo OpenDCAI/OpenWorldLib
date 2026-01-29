@@ -9,7 +9,7 @@ from huggingface_hub import snapshot_download, hf_hub_download
 
 from ...operators.astra_operator import AstraOperator
 from ...synthesis.visual_generation.kling.astra_synthesis import AstraSynthesis
-from ...memories.astra_memory import AstraMemory
+from ...memories.visual_synthesis.kling.astra_memory import AstraMemory
 
 # 定义默认配置，模拟 argparse 的行为
 @dataclass
