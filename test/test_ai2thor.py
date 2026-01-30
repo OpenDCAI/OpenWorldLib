@@ -207,10 +207,7 @@ def make_replay_then_closedloop_policy(
 
     return policy
 
-EXEC = "./thor-Linux64-f0825767cd50d69f666c7f282e54abfe58f1e917/thor-Linux64-f0825767cd50d69f666c7f282e54abfe58f1e917" # 请修改为你的 ai2thor 可执行文件路径
-
-rep = Ai2ThorRepresentation(
-    executable_path=EXEC,
+rep_cfg = dict(
     scene="FloorPlan1",
     visibilityDistance=1.5,
     gridSize=0.05,
@@ -221,7 +218,9 @@ rep = Ai2ThorRepresentation(
     height=300,
 )
 
-op = Ai2ThorOperator(
+
+
+op_cfg = dict(
     grid_size=0.05,
     rotate_deg=90,
     look_deg=5,
@@ -232,7 +231,7 @@ op = Ai2ThorOperator(
 
 policy = make_replay_then_closedloop_policy()
 
-pipeline = Ai2ThorPipeline(operators=op, representation=rep)
+pipeline = Ai2ThorPipeline.from_pretrained(op_cfg=op_cfg, rep_cfg=rep_cfg)
 pipeline(
     output_dir="./thor_record",
     fps=60,

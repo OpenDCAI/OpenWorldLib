@@ -1,10 +1,36 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Optional, Union, List
+from pathlib import Path
 
 from .ai2thor.controller import Controller
 from .ai2thor.platform import CloudRendering
+PROJECT_ROOT = Path(__file__).resolve().parents[5]  # 视你的目录层级而定
 
+AI2THOR_DIR = PROJECT_ROOT / "submodules" / "ai2thor"
+
+def find_thor_exec(ai2thor_dir: Path) -> str:
+    # 找到 thor-Linux64-<hash> 文件夹
+    builds = sorted(ai2thor_dir.glob("thor-Linux64-*"))
+    if not builds:
+        raise FileNotFoundError(f"No thor-Linux64-* found under {ai2thor_dir}")
+    build = builds[0]
+
+    exec_path = build / build.name
+
+    if not exec_path.exists() or exec_path.is_dir() or exec_path.name.endswith("_Data"):
+        cands = [
+            p for p in build.iterdir()
+            if p.is_file() and not p.name.endswith("_Data")
+        ]
+        if not cands:
+            raise FileNotFoundError(f"No executable file found under {build}")
+        exec_path = cands[0]
+
+    return str(exec_path)
+
+
+EXEC = find_thor_exec(AI2THOR_DIR)
 
 class Ai2ThorRepresentation:
     """
@@ -15,7 +41,7 @@ class Ai2ThorRepresentation:
 
     def __init__(
         self,
-        executable_path: Optional[str] = None,
+        executable_path: Optional[str] = EXEC,
         scene: str = "FloorPlan212",
         visibilityDistance: float = 1.5,
         gridSize: float = 0.25,
