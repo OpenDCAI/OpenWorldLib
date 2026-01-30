@@ -38,10 +38,32 @@ class Ai2ThorPipeline:
       - actions.jsonl
       - frames/*.jpg (optional)
     """
-
-    def __init__(self, operators: Ai2ThorOperator, representation: Ai2ThorRepresentation):
+    def __init__(
+        self,
+        operators: Optional[Ai2ThorOperator] = None,
+        representation: Optional[Ai2ThorRepresentation] = None,
+    ):
         self.operators = operators
         self.representation = representation
+
+    @classmethod
+    def from_pretrained(
+        cls,
+        *,
+        operators: Optional[Ai2ThorOperator] = None,
+        representation: Optional[Ai2ThorRepresentation] = None,
+        op_cfg: Optional[Dict[str, Any]] = None,
+        rep_cfg: Optional[Dict[str, Any]] = None,
+    ) -> "Ai2ThorPipeline":
+        if representation is None:
+            rep_cfg = {} if rep_cfg is None else dict(rep_cfg)
+            representation = Ai2ThorRepresentation(**rep_cfg)
+
+        if operators is None:
+            op_cfg = {} if op_cfg is None else dict(op_cfg)
+            operators = Ai2ThorOperator(**op_cfg)
+
+        return cls(operators=operators, representation=representation)
 
     @staticmethod
     def _ensure_dir(p: str) -> None:
