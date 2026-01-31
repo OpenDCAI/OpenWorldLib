@@ -112,7 +112,7 @@ class Ai2ThorPipeline:
         cv2.line(img, (cx - size, cy), (cx + size, cy), (255, 255, 255), thickness, cv2.LINE_AA)
         cv2.line(img, (cx, cy - size), (cx, cy + size), (255, 255, 255), thickness, cv2.LINE_AA)
 
-    def run(
+    def process(
         self,
         output_dir: str,
         *,
@@ -405,4 +405,4 @@ class Ai2ThorPipeline:
             cv2.destroyAllWindows()
 
     def __call__(self, output_dir: str, **kwargs) -> None:
-        return self.run(output_dir=output_dir, **kwargs)
+        return self.process(output_dir=output_dir, **kwargs)
