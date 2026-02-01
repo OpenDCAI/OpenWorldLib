@@ -13,6 +13,7 @@ from PIL import Image
 import soundfile as sf
 from ...operators.qwen2p5_omni_operator import Qwen2p5OmniOperator
 from ...reasoning.general_reasoning.qwen.qwen2p5_omni_reasoning import Qwen2p5OmniReasoning
+from ...memories.reasoning.qwen.qwen_memory import QwenMemory
 
 
 class Qwen2p5OmniPipeline:
@@ -26,6 +27,7 @@ class Qwen2p5OmniPipeline:
         self,
         operator: Optional[Qwen2p5OmniOperator] = None,
         reasoning_model: Optional[Qwen2p5OmniReasoning] = None,
+        memory_module: Optional[QwenMemory] = None,
         device: str = 'cuda',
         use_audio_in_video: bool = True,
     ):
@@ -35,11 +37,13 @@ class Qwen2p5OmniPipeline:
         Args:
             operator: Qwen2.5-Omni operator instance
             reasoning_model: Qwen2.5-Omni reasoning model instance
+            memory_module: Memory module for conversation history
             device: Device for inference
             use_audio_in_video: Whether to use audio track in videos
         """
         self.operator = operator
         self.reasoning_model = reasoning_model
+        self.memory_module = memory_module if memory_module else QwenMemory()
         self.device = device
         self.use_audio_in_video = use_audio_in_video
     
@@ -103,10 +107,14 @@ class Qwen2p5OmniPipeline:
         if device is None:
             device = "cuda" if torch.cuda.is_available() else "cpu"
         
+        # Initialize memory module
+        memory_module = QwenMemory()
+        
         # Create pipeline instance
         pipeline = cls(
             operator=operator,
             reasoning_model=reasoning_model,
+            memory_module=memory_module,
             device=device,
             use_audio_in_video=use_audio_in_video,
         )
@@ -295,3 +303,92 @@ class Qwen2p5OmniPipeline:
     def get_reasoning_model(self) -> Optional[Qwen2p5OmniReasoning]:
         """Get reasoning model instance"""
         return self.reasoning_model
+    
+    def stream(
+        self,
+        text: Optional[str] = None,
+        images: Optional[Union[str, Path, Image.Image, List]] = None,
+        audios: Optional[Union[str, Path, bytes, List]] = None,
+        videos: Optional[Union[str, Path, List]] = None,
+        use_history: bool = True,
+        max_new_tokens: int = 128,
+        generation_kwargs: Optional[dict] = None,
+        return_audio: bool = False,
+        reset_memory: bool = False,
+        **kwargs
+    ) -> Union[List[str], tuple]:
+        """
+        Stream-based generation with conversation memory
+        
+        Args:
+            text: Text prompt for current turn
+            images: Image inputs for current turn
+            audios: Audio inputs for current turn
+            videos: Video inputs for current turn
+            use_history: Whether to include conversation history
+            max_new_tokens: Maximum number of tokens to generate
+            generation_kwargs: Additional generation parameters
+            return_audio: Whether to return generated audio
+            reset_memory: Whether to reset memory before processing
+            **kwargs: Additional parameters
+            
+        Returns:
+            If return_audio is False: List of generated text strings
+            If return_audio is True: Tuple of (text strings, audio tensor)
+        """
+        if reset_memory:
+            self.memory_module.manage(action="reset")
+            print("--- Stream Started (Memory Reset) ---")
+        
+        # Build current turn messages
+        messages = None
+        if use_history:
+            messages = self.memory_module.select()
+        
+        # Process inputs through operator
+        processed_data = self.process(
+            text=text,
+            images=images,
+            audios=audios,
+            videos=videos,
+            messages=messages,
+            **kwargs
+        )
+        
+        current_messages = processed_data.get("messages")
+        use_audio_in_video = processed_data.get("use_audio_in_video", self.use_audio_in_video)
+        breakpoint()
+        # Run inference
+        if not return_audio:
+            result = self.reasoning_model.inference(
+                messages=current_messages,
+                max_new_tokens=max_new_tokens,
+                generation_kwargs=generation_kwargs,
+                use_audio_in_video=use_audio_in_video,
+                return_audio=return_audio,
+            )
+            response_text = result[0] if isinstance(result, list) else result
+        else:
+            result, audio = self.reasoning_model.inference(
+                messages=current_messages,
+                max_new_tokens=max_new_tokens,
+                generation_kwargs=generation_kwargs,
+                use_audio_in_video=use_audio_in_video,
+                return_audio=return_audio,
+            )
+            response_text = result[0] if isinstance(result, list) else result
+        
+        # Record to memory
+        self.memory_module.record({
+            'messages': current_messages,
+            'response': response_text,
+            'metadata': {
+                'max_new_tokens': max_new_tokens,
+                'return_audio': return_audio
+            }
+        })
+        
+        if return_audio:
+            return result, audio
+        return result
+

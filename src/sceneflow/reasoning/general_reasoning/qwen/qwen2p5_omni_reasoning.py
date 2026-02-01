@@ -43,6 +43,7 @@ class Qwen2p5OmniReasoning(BaseReasoning):
         torch_dtype: torch.dtype = torch.bfloat16,
         attn_implementation: Optional[str] = None,
         device_map: Union[str, dict] = "auto",
+        
         **kwargs,
     ) -> "Qwen2p5Omni":
         """
