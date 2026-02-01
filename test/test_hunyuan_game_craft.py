@@ -7,7 +7,6 @@ image_path = "./data/test_case1/ref_image.png"
 input_image = Image.open(image_path).convert('RGB')
 
 pretrained_model_path = "tencent/Hunyuan-GameCraft-1.0"
-
 pipeline = HunyuanGameCraftPipeline.from_pretrained(
     synthesis_model_path=pretrained_model_path,
     device="cuda",

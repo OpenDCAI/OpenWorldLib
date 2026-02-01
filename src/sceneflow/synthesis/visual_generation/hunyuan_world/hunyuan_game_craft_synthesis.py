@@ -11,7 +11,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from .hunyuan_game_craft.diffusion import load_diffusion_pipeline
 from .hunyuan_game_craft.helpers import get_nd_rotary_pos_embed_new
 from .hunyuan_game_craft.inference import Inference
-from .hunyuan_game_craft.diffusion.schedulers import FlowMatchDiscreteScheduler
+from sceneflow.base_models.diffusion_model.video.hunyuan_video.diffusion.schedulers import FlowMatchDiscreteScheduler
 from packaging import version as pver
 import torch.distributed
 
