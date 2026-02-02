@@ -30,7 +30,7 @@ from scipy.spatial.transform import Rotation as R
 from PIL import Image, ImageDraw, ImageFont
 from moviepy.editor import VideoFileClip, VideoClip
 
-from ..hunyuan_worldplay_synthesis import HunyuanVideo_1_5_Pipeline
+from ..hunyuan_worldplay_synthesis import _HunyuanWorldPlayInternalPipeline
 from .commons.parallel_states import initialize_parallel_state
 from .commons.infer_state import initialize_infer_state
 from .generate_custom_trajectory import generate_camera_trajectory_local
@@ -718,7 +718,7 @@ def generate_video(args):
     else:
         raise ValueError(f"Unsupported dtype: {args.dtype}. Must be 'bf16' or 'fp32'")
 
-    pipe = HunyuanVideo_1_5_Pipeline.create_pipeline(
+    pipe = _HunyuanWorldPlayInternalPipeline.create_pipeline(
         pretrained_model_name_or_path=args.model_path,
         transformer_version=transformer_version,
         enable_offloading=args.offloading,

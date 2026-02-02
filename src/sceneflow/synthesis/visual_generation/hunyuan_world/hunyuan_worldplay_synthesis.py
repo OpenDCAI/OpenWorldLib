@@ -100,15 +100,21 @@ class HunyuanWorldPlaySynthesis(object):
     """
     HunyuanWorldPlay Synthesis 类，提供统一的接口用于视频生成
     
-    参考 HunyuanVideoSynthesis 的结构，适配 WorldPlay 的特点
+    符合 Synthesis 模板要求：
+    - __init__: 初始化 synthesis 模型
+    - from_pretrained: 从预训练模型加载
+    - api_init: API 初始化（可选）
+    - predict: 推理方法，返回 PIL.Image 或 video frame list
     """
     
     def __init__(
         self,
-        vae: AutoencoderKL,
-        text_encoder: TextEncoder,
-        transformer: HunyuanVideo_1_5_DiffusionTransformer,
-        scheduler: KarrasDiffusionSchedulers,
+        *,
+        model,
+        vae: AutoencoderKL = None,
+        text_encoder: TextEncoder = None,
+        transformer: HunyuanVideo_1_5_DiffusionTransformer = None,
+        scheduler: KarrasDiffusionSchedulers = None,
         text_encoder_2: Optional[TextEncoder] = None,
         flow_shift: float = 7.0,
         guidance_scale: float = 6.0,
@@ -125,30 +131,8 @@ class HunyuanWorldPlaySynthesis(object):
         vision_encoder = None,
         enable_offloading: bool = False,
     ):
-        # 存储原始 pipeline 实例
-        self.pipeline = HunyuanVideo_1_5_Pipeline(
-            vae=vae,
-            text_encoder=text_encoder,
-            transformer=transformer,
-            scheduler=scheduler,
-            text_encoder_2=text_encoder_2,
-            flow_shift=flow_shift,
-            guidance_scale=guidance_scale,
-            embedded_guidance_scale=embedded_guidance_scale,
-            progress_bar_config=progress_bar_config,
-            vision_num_semantic_tokens=vision_num_semantic_tokens,
-            vision_states_dim=vision_states_dim,
-            glyph_byT5_v2=glyph_byT5_v2,
-            byt5_model=byt5_model,
-            byt5_tokenizer=byt5_tokenizer,
-            byt5_max_length=byt5_max_length,
-            prompt_format=prompt_format,
-            execution_device=execution_device,
-            vision_encoder=vision_encoder,
-            enable_offloading=enable_offloading,
-        )
+        self.model = model
         
-        # 暴露关键属性以便直接访问
         self.vae = vae
         self.text_encoder = text_encoder
         self.transformer = transformer
@@ -163,22 +147,39 @@ class HunyuanWorldPlaySynthesis(object):
         cls,
         pretrained_model_name_or_path,
         transformer_version,
+        *,
+        args=None,
+        device=None,
         create_sr_pipeline=False,
         force_sparse_attn=False,
         transformer_dtype=torch.bfloat16,
         enable_offloading=None,
         enable_group_offloading=None,
         overlap_group_offloading=True,
-        device=None,
         action_ckpt=None,
+        **kwargs,
     ):
         """
         从预训练模型加载并创建 HunyuanWorldPlaySynthesis 实例
         
-        这个方法直接调用 HunyuanVideo_1_5_Pipeline.create_pipeline 来创建 pipeline
-        然后包装成 HunyuanWorldPlaySynthesis 实例
+        Args:
+            pretrained_model_name_or_path: 预训练模型路径或 HuggingFace 模型名称
+            transformer_version: transformer 版本（如 "480p_i2v"）
+            args: 额外参数（可选）
+            device: 设备（如 "cuda"）
+            create_sr_pipeline: 是否创建超分辨率 pipeline
+            force_sparse_attn: 是否强制使用稀疏注意力
+            transformer_dtype: transformer 数据类型
+            enable_offloading: 是否启用 offloading
+            enable_group_offloading: 是否启用 group offloading
+            overlap_group_offloading: 是否重叠 group offloading
+            action_ckpt: action 模型检查点路径
+            **kwargs: 其他参数
+            
+        Returns:
+            HunyuanWorldPlaySynthesis: 合成类实例
         """
-        pipeline = HunyuanVideo_1_5_Pipeline.create_pipeline(
+        pipeline = _HunyuanWorldPlayInternalPipeline.create_pipeline(
             pretrained_model_name_or_path,
             transformer_version,
             create_sr_pipeline=create_sr_pipeline,
@@ -191,8 +192,8 @@ class HunyuanWorldPlaySynthesis(object):
             action_ckpt=action_ckpt,
         )
         
-        # 创建合成类实例
         synthesis = cls(
+            model=pipeline,
             vae=pipeline.vae,
             text_encoder=pipeline.text_encoder,
             transformer=pipeline.transformer,
@@ -214,33 +215,58 @@ class HunyuanWorldPlaySynthesis(object):
             enable_offloading=pipeline.enable_offloading,
         )
         
-        # 复制 sr_pipeline 属性
         if hasattr(pipeline, "sr_pipeline"):
             synthesis.sr_pipeline = pipeline.sr_pipeline
             
         return synthesis
+    
+    def api_init(self, *, api_key, endpoint):
+        """
+        API 初始化（可选）
+        """
+        pass
+    
+    @torch.no_grad()
+    def predict(self, *, data):
+        """
+        推理方法
+        
+        Args:
+            data: 包含推理所需参数的字典，包括：
+                - prompt: 文本提示
+                - aspect_ratio: 宽高比
+                - video_length: 视频长度
+                - reference_image: 参考图像（可选）
+                - viewmats: 视角矩阵
+                - Ks: 相机内参
+                - action: 动作信号
+                - 其他参数...
+                
+        Returns:
+            HunyuanVideoPipelineOutput: 包含生成的视频帧
+        """
+        return self.model(**data)
         
     def __call__(self, *args, **kwargs):
         """
-        直接调用 pipeline 的 __call__ 方法
+        直接调用 model 的 __call__ 方法
         """
-        return self.pipeline(*args, **kwargs)
+        return self.model(*args, **kwargs)
         
-    # 暴露 pipeline 的关键属性和方法
     @property
     def ideal_resolution(self):
-        return self.pipeline.ideal_resolution
+        return self.model.ideal_resolution
         
     @property
     def ideal_task(self):
-        return self.pipeline.ideal_task
+        return self.model.ideal_task
         
     @property
     def use_meanflow(self):
-        return self.pipeline.use_meanflow
+        return self.model.use_meanflow
 
 
-class HunyuanVideo_1_5_Pipeline(DiffusionPipeline):
+class _HunyuanWorldPlayInternalPipeline(DiffusionPipeline):
 
     model_cpu_offload_seq = "text_encoder->text_encoder_2->byt5_model->transformer->vae"
     _optional_components = ["text_encoder_2"]

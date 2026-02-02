@@ -36,7 +36,7 @@ from ..models.transformers.worldplay_1_5_transformer import (
 from ..models.transformers.modules.upsample import SRTo720pUpsampler
 from ..utils.data_utils import generate_crop_size_list
 
-from ...hunyuan_worldplay_synthesis import HunyuanVideo_1_5_Pipeline
+from ...hunyuan_worldplay_synthesis import _HunyuanWorldPlayInternalPipeline
 from .pipeline_utils import rescale_noise_cfg, retrieve_timesteps
 
 
@@ -94,7 +94,7 @@ class HunyuanVideo_1_5_SR_PipelineOutput(BaseOutput):
     videos: Union[torch.Tensor, np.ndarray]
 
 
-class HunyuanVideo_1_5_SR_Pipeline(HunyuanVideo_1_5_Pipeline):
+class HunyuanVideo_1_5_SR_Pipeline(_HunyuanWorldPlayInternalPipeline):
 
     def __init__(
         self,
