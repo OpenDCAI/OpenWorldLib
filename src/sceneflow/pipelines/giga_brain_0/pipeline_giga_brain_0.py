@@ -75,15 +75,16 @@ class GigaBrain0Pipeline:
         """Compile the `sample_actions` method using `torch.compile` for improved runtime speed."""
         self.synthesis.compile(**kwargs)
 
-    def _prepare_action_inputs(
+    def process(
         self,
         images: dict[str, torch.Tensor],
-        state: torch.Tensor,
         task: str,
+        state: torch.Tensor,
         pad_state: bool = True,
         add_batch_dim: bool = True,
     ):
-        ori_device = state.device
+        """Preprocess inputs (perception + interaction) to build model-ready tensors."""
+        ori_device = state.device if state is not None else self.device
         images = {k: v.to(self.device) for k, v in images.items()}
         state = state.to(self.device)
 
@@ -99,7 +100,16 @@ class GigaBrain0Pipeline:
         else:
             emb_ids = torch.tensor(self.embodiment_id, dtype=torch.long, device=self.device)
 
-        return images, img_masks, lang_tokens, lang_masks, state, image_transform_params, emb_ids, ori_device
+        return {
+            'images': images,
+            'img_masks': img_masks,
+            'lang_tokens': lang_tokens,
+            'lang_masks': lang_masks,
+            'state': state,
+            'image_transform_params': image_transform_params,
+            'emb_ids': emb_ids,
+            'ori_device': ori_device,
+        }
 
     @torch.no_grad()
     def __call__(
@@ -113,16 +123,14 @@ class GigaBrain0Pipeline:
         if autoregressive_mode_only:
             return self.predict_autoregressive_actions(images, task, state)
 
-        images, img_masks, lang_tokens, lang_masks, state, image_transform_params, emb_ids, ori_device = self._prepare_action_inputs(
-            images, state, task, pad_state=True, add_batch_dim=True
-        )
+        processed = self.process(images, task, state, pad_state=True, add_batch_dim=True)
 
         outputs = self.synthesis.predict(
-            images=images,
-            img_masks=img_masks,
-            lang_tokens=lang_tokens,
-            lang_masks=lang_masks,
-            emb_ids=emb_ids,
+            images=processed['images'],
+            img_masks=processed['img_masks'],
+            lang_tokens=processed['lang_tokens'],
+            lang_masks=processed['lang_masks'],
+            emb_ids=processed['emb_ids'],
             enable_2d_traj_output=enable_2d_traj_output,
         )
         if enable_2d_traj_output:
@@ -132,23 +140,23 @@ class GigaBrain0Pipeline:
 
         pred_action = self.operator.process_output(
             pred_action[0],
-            state,
+            processed['state'],
             self.original_action_dim,
-            image_transform_params=image_transform_params,
+            image_transform_params=processed['image_transform_params'],
             traj_pred=None,
         )
         if isinstance(pred_action, tuple):
             pred_action = pred_action[0]
-        pred_action = pred_action.to(ori_device)
+        pred_action = pred_action.to(processed['ori_device'])
 
         if enable_2d_traj_output:
             traj_pred = traj_pred[0]
-            if 'resize_with_pad' in image_transform_params:
-                ratio = image_transform_params['resize_with_pad']['ratio']
-                pad_x, pad_y = image_transform_params['resize_with_pad']['padding']
+            if 'resize_with_pad' in processed['image_transform_params']:
+                ratio = processed['image_transform_params']['resize_with_pad']['ratio']
+                pad_x, pad_y = processed['image_transform_params']['resize_with_pad']['padding']
                 traj_pred[:, ::2] = (traj_pred[:, ::2] * self.resize_imgs_with_padding[0] - pad_x) * ratio
                 traj_pred[:, 1::2] = (traj_pred[:, 1::2] * self.resize_imgs_with_padding[1] - pad_y) * ratio
-            traj_pred = traj_pred.to(ori_device)
+            traj_pred = traj_pred.to(processed['ori_device'])
             return pred_action, traj_pred
 
         return pred_action
@@ -175,9 +183,13 @@ class GigaBrain0Pipeline:
     def predict_autoregressive_actions(
         self, images: dict[str, torch.Tensor], task: str, state: torch.Tensor, max_new_tokens: int = 200
     ) -> torch.Tensor:
-        images, img_masks, lang_tokens, lang_masks, state, _, _, ori_device = self._prepare_action_inputs(
-            images, state, task, pad_state=False, add_batch_dim=False
-        )
+        processed = self.process(images, task, state, pad_state=False, add_batch_dim=False)
+        images = processed['images']
+        img_masks = processed['img_masks']
+        lang_tokens = processed['lang_tokens']
+        lang_masks = processed['lang_masks']
+        state = processed['state']
+        ori_device = processed['ori_device']
 
         generated = self.generate_autoregressive_tokens(images, img_masks, lang_tokens, lang_masks, max_new_tokens=max_new_tokens)
 

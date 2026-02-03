@@ -732,6 +732,9 @@ class GigaBrain0Operator(BaseOperator):
         super().__init__()
         self.device = 'cpu'
         self.embodiment_id = embodiment_id
+        # Interaction handling (free-text tasks by default).
+        self.interaction_template = ['free_text_task']
+        self.interaction_template_init()
 
         # Transforms
         self.state_normalize = Normalize({embodiment_id: state_norm_stats}, use_quantiles=True)
@@ -760,6 +763,40 @@ class GigaBrain0Operator(BaseOperator):
             encode_sub_task_input=True,
             autoregressive_inference_mode=autoregressive_inference_mode,
         )
+
+    # Interaction --------------------------------------------------------------
+    def check_interaction(self, interaction: str) -> bool:
+        """Validate interaction/task against template; allow free text when template contains 'free_text_task'."""
+        if not isinstance(interaction, str):
+            raise ValueError('interaction must be a string')
+        if self.interaction_template and 'free_text_task' not in self.interaction_template:
+            if interaction not in self.interaction_template:
+                raise ValueError(f'{interaction} not in interaction_template: {self.interaction_template}')
+        return True
+
+    def get_interaction(self, interaction: str | list[str]):
+        """Append interaction(s) to the current list after validation."""
+        if not isinstance(interaction, list):
+            interaction = [interaction]
+        for act in interaction:
+            self.check_interaction(act)
+            self.current_interaction.append(act)
+
+    def process_interaction(self, task: str | None = None, state: torch.Tensor | None = None, action: torch.Tensor | None = None):
+        """Tokenize task/state/action; falls back to last recorded interaction when task is None."""
+        if task is not None:
+            self.get_interaction(task)
+        if len(self.current_interaction) == 0:
+            raise ValueError('No interaction/task provided to process_interaction')
+        current_task = self.current_interaction[-1]
+        self.interaction_history.append(current_task)
+
+        if action is not None and not isinstance(action, torch.Tensor):
+            action = torch.tensor(action, dtype=torch.float32)
+        return self.prompt_tokenizer({'task': current_task, 'observation.state': state, 'action': action})
+
+    def delete_last_interaction(self):
+        super().delete_last_interaction()
 
     def set_action_dim(self, action_dim: int):
         """Delay setting action_dim until policy is known."""
