@@ -732,8 +732,8 @@ class GigaBrain0Operator(BaseOperator):
         super().__init__()
         self.device = 'cpu'
         self.embodiment_id = embodiment_id
-        # Interaction handling (free-text tasks by default).
-        self.interaction_template = ['free_text_task']
+        # Interaction handling (no fixed template; accept free-text tasks).
+        self.interaction_template = []
         self.interaction_template_init()
 
         # Transforms
@@ -766,12 +766,11 @@ class GigaBrain0Operator(BaseOperator):
 
     # Interaction --------------------------------------------------------------
     def check_interaction(self, interaction: str) -> bool:
-        """Validate interaction/task against template; allow free text when template contains 'free_text_task'."""
+        """Validate interaction/task; skip checks when no template is provided."""
         if not isinstance(interaction, str):
             raise ValueError('interaction must be a string')
-        if self.interaction_template and 'free_text_task' not in self.interaction_template:
-            if interaction not in self.interaction_template:
-                raise ValueError(f'{interaction} not in interaction_template: {self.interaction_template}')
+        if self.interaction_template and interaction not in self.interaction_template:
+            raise ValueError(f'{interaction} not in interaction_template: {self.interaction_template}')
         return True
 
     def get_interaction(self, interaction: str | list[str]):
@@ -789,7 +788,6 @@ class GigaBrain0Operator(BaseOperator):
         if len(self.current_interaction) == 0:
             raise ValueError('No interaction/task provided to process_interaction')
         current_task = self.current_interaction[-1]
-        self.interaction_history.append(current_task)
 
         if action is not None and not isinstance(action, torch.Tensor):
             action = torch.tensor(action, dtype=torch.float32)

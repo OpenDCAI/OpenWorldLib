@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from sceneflow.pipelines.giga_brain_0.pipeline_giga_brain_0 import GigaBrain0Pipeline
 
 
-MODEL_PATH = 'path/to/your/giga_brain_0_model'
+MODEL_PATH = 'open-gigaai/GigaBrain-0-3.5B-Base'
 NORM_STATS_PATH = 'data/test_vla/norm_stats.json'
 MAIN_VIEW_PATH = 'data/test_vla/main_view.png'
 WRIST_VIEW_PATH = 'data/test_vla/wrist_view.png'

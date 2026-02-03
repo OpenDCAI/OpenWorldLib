@@ -24,7 +24,6 @@ class SpatialLadderOperator(BaseOperator):
     def get_interaction(self, interaction):
         if self.check_interaction(interaction):
             self.current_interaction.append(interaction)
-            self.interaction_history.append(interaction)
 
     def process_interaction(self, *args, **kwargs):
         return self.current_interaction
@@ -49,3 +48,7 @@ class SpatialLadderOperator(BaseOperator):
             return_tensors="pt",
         )
         return inputs
+    
+    def delete_last_interaction(self):
+        super().delete_last_interaction()
+
