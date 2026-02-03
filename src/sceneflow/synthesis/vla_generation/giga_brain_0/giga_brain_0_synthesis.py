@@ -25,6 +25,22 @@ class GigaBrain0Synthesis(BaseSynthesis):
         self.policy.to(device)
         return self
 
+    def compile(self, **kwargs):
+        """Compile sample_actions for speed."""
+        self.policy.sample_actions = torch.compile(self.policy.sample_actions, **kwargs)
+        return self
+
+    def quantize(self) -> None:
+        """Apply dynamic float8 quantization to the Paligemma blocks only."""
+        from torchao.quantization import Float8DynamicActivationFloat8WeightConfig, quantize_
+
+        layers = self.policy.paligemma_with_expert.layers
+        for i in range(len(layers)):
+            quantize_(layers[i].mlps[0], Float8DynamicActivationFloat8WeightConfig())
+            quantize_(layers[i].self_attn.q_proj[0], Float8DynamicActivationFloat8WeightConfig())
+            quantize_(layers[i].self_attn.k_proj[0], Float8DynamicActivationFloat8WeightConfig())
+            quantize_(layers[i].self_attn.v_proj[0], Float8DynamicActivationFloat8WeightConfig())
+            quantize_(layers[i].self_attn.o_proj[0], Float8DynamicActivationFloat8WeightConfig())
 
     @property
     def vision_in_channels(self) -> int:
