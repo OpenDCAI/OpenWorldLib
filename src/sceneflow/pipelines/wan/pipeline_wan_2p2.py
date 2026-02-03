@@ -1,13 +1,16 @@
 from typing import Any, Dict, Optional
 import random
 import sys
+import torch
 
 from dataclasses import dataclass
 
 from ...base_models.diffusion_model.video.wan_2p2.configs import WAN_CONFIGS, SUPPORTED_SIZES
+from PIL import Image
 
 from ...operators.wan_2p2_operator import Wan2p2Operator
 from ...synthesis.visual_generation.wan.wan2p2_synthesis import Wan2p2Synthesis
+from ...memories.visual_synthesis.wan.wan_2p2_memeory import Wan2p2Memory
 
 EXAMPLE_PROMPT = {
     "ti2v-5B": {
@@ -18,7 +21,6 @@ EXAMPLE_PROMPT = {
 
 def _validate_args(args):
     # Basic check
-    assert args.ckpt_dir is not None, "Please specify the checkpoint directory."
     assert args.task in WAN_CONFIGS, f"Unsupport task: {args.task}"
     assert args.task in EXAMPLE_PROMPT, f"Unsupport task: {args.task}"
 
@@ -58,7 +60,6 @@ class Wan2p2Args:
     task: str = "ti2v-5B"
     size: str = "1280*720"
     frame_num: Optional[int] = None
-    ckpt_dir: Optional[str] = None
 
     # --- 分布式 / 并行 ---
     offload_model: Optional[bool] = None
@@ -98,16 +99,19 @@ class Wan2p2Pipeline:
         operator: Wan2p2Operator,
         synthesis_model: Wan2p2Synthesis,
         args: Wan2p2Args,
+        memory_module: Optional[Wan2p2Memory] = None,
     ) -> None:
         self.operator = operator
         self.synthesis_model = synthesis_model
         self.args = args
+        self.memory_module = memory_module if memory_module else Wan2p2Memory()
 
 
     @classmethod
     def from_pretrained(
         cls,
         *,
+        synthesis_model_path: str,
         args: Wan2p2Args,
         device_id: int = 0,
         rank: int = 0,
@@ -115,10 +119,12 @@ class Wan2p2Pipeline:
 
         _validate_args(args)
 
+
         operator = Wan2p2Operator()
+        memory_module = Wan2p2Memory()
         synthesis_model = Wan2p2Synthesis.from_pretrained(
             task=args.task,
-            ckpt_dir=args.ckpt_dir,
+            ckpt_dir=synthesis_model_path,
             device_id=device_id,
             rank=rank,
             t5_fsdp=args.t5_fsdp,
@@ -132,6 +138,7 @@ class Wan2p2Pipeline:
             operator=operator,
             synthesis_model=synthesis_model,
             args=args,
+            memory_module=memory_module,
         )
 
 
@@ -140,13 +147,12 @@ class Wan2p2Pipeline:
         *,
         prompt: str,
         image_path: Optional[str] = None,
+        image: Optional[Image.Image] = None,
     ) -> Dict[str, Any]:
-        """
-        对齐 WoWPipeline 风格：
-        - process_perception: 处理图片
-        - process_interaction: 处理文本（含可选扩写）
-        """
-        perception = self.operator.process_perception(input_path=image_path)
+
+        # 优先使用内存中的 image，其次才是 image_path
+        input_for_perception = image if image is not None else image_path
+        perception = self.operator.process_perception(input_path=input_for_perception)
         img = perception["input_image"]
 
         self.operator.get_interaction(prompt)
@@ -176,6 +182,7 @@ class Wan2p2Pipeline:
         *,
         prompt: Optional[str] = None,
         image_path: Optional[str] = None,
+        image: Optional[Image.Image] = None,
         save: bool = False,
     ) -> Any:
         if prompt is None:
@@ -183,17 +190,54 @@ class Wan2p2Pipeline:
                 raise ValueError("prompt must be provided either in args or call().")
             prompt = self.args.prompt
 
-        if image_path is None:
+        if image is None and image_path is None:
             image_path = self.args.image
 
         processed = self.process(
             prompt=prompt,
             image_path=image_path,
+            image=image,
         )
 
         video = self.synthesis_model.predict(
             processed_inputs=processed,
             args=self.args,
+        )
+
+        return video
+
+
+    def stream(
+        self,
+        *,
+        prompt: Optional[str] = None,
+        image_path: Optional[str] = None,
+        image: Optional[Image.Image] = None,
+    ) -> Any:
+        """
+        - 每次调用都会复用 __call__ 完整生成一段视频；
+        - 始终将该段视频记录到 memory_module（拆帧追加到 all_frames）；
+        - 返回本轮生成的视频张量。
+
+        注意：
+          - 会话级别的 memory 重置由外部调用
+        """
+        # 直接复用 __call__ 的逻辑（包括 prompt / image / image_path 默认处理）
+        video = self.__call__(
+            prompt=prompt,
+            image_path=image_path,
+            image=image,
+            save=False,
+        )
+
+        if not isinstance(video, torch.Tensor):
+            raise TypeError(
+                f"[Wan2p2Pipeline.stream] Expected torch.Tensor from predict, got {type(video)}"
+            )
+        self.memory_module.record(video)
+        print(
+            f"[Wan2p2Pipeline.stream] Recorded segment. "
+            f"Total frames in memory: {len(getattr(self.memory_module, 'all_frames', []))}"
         )
 
         return video

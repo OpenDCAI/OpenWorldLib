@@ -6,14 +6,12 @@ from sceneflow.base_models.diffusion_model.video.wan_2p2.utils.utils import save
 from sceneflow.base_models.diffusion_model.video.wan_2p2.configs import WAN_CONFIGS
 
 
-
-
-ckpt_dir = "Wan2.2/Wan2.2-TI2V-5B"
+pretrained_model_path = "Wan2.2/Wan2.2-TI2V-5B"
 
 args = Wan2p2Args(
     task="ti2v-5B",
     size="1280*704",
-    ckpt_dir=ckpt_dir,
+    # ckpt_dir=ckpt_dir,
     prompt=(
         "Summer beach vacation style, a white cat wearing sunglasses "
         "sits on a surfboard..."
@@ -24,14 +22,12 @@ args = Wan2p2Args(
 )
 
 pipeline = Wan2p2Pipeline.from_pretrained(
+    synthesis_model_path = pretrained_model_path,
     args=args,
     device_id=0,
     rank=0,
 )
 
-
-# 仅测试 pipeline 能构建成功
-print("WanPipeline 构建成功。")
 
 output_video = pipeline(
     prompt=pipeline.args.prompt,
@@ -48,5 +44,4 @@ save_video(
     value_range=(-1, 1),
 )
 
-print("生成完成，视频张量 shape:", getattr(output_video, "shape", None))
 

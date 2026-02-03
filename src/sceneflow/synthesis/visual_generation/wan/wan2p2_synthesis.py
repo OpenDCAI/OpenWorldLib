@@ -1,6 +1,9 @@
 from typing import Any, Dict, Optional
 
 import torch
+import os
+from pathlib import Path
+from huggingface_hub import snapshot_download
 
 from ....base_models.diffusion_model.video import wan_2p2
 from ....base_models.diffusion_model.video.wan_2p2.configs import (
@@ -61,9 +64,22 @@ class Wan2p2Synthesis:
             )
         cfg = WAN_CONFIGS[task]
 
+
+        if os.path.isdir(ckpt_dir):
+            model_root = ckpt_dir
+        else:
+            repo_name = ckpt_dir.split("/")[-1]
+            local_dir = Path.cwd() / repo_name
+            local_dir.mkdir(parents=True, exist_ok=True)
+            model_root = Path(snapshot_download(
+                repo_id=ckpt_dir,
+                local_dir=str(local_dir),
+                local_dir_use_symlinks=False
+            ))
+
         common_kwargs = dict(
             config=cfg,
-            checkpoint_dir=ckpt_dir,
+            checkpoint_dir=model_root,
             device_id=device_id,
             rank=rank,
             t5_fsdp=t5_fsdp,
