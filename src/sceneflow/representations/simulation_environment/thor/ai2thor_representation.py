@@ -3,11 +3,14 @@ from __future__ import annotations
 from typing import Any, Dict, Optional, Union, List
 from pathlib import Path
 
+from ...base_representation import BaseRepresentation
+
 from .ai2thor.controller import Controller
 from .ai2thor.platform import CloudRendering
-PROJECT_ROOT = Path(__file__).resolve().parents[5]  # 视你的目录层级而定
 
+PROJECT_ROOT = Path(__file__).resolve().parents[5] 
 AI2THOR_DIR = PROJECT_ROOT / "submodules" / "ai2thor"
+
 
 def find_thor_exec(ai2thor_dir: Path) -> str:
     # 找到 thor-Linux64-<hash> 文件夹
@@ -19,10 +22,7 @@ def find_thor_exec(ai2thor_dir: Path) -> str:
     exec_path = build / build.name
 
     if not exec_path.exists() or exec_path.is_dir() or exec_path.name.endswith("_Data"):
-        cands = [
-            p for p in build.iterdir()
-            if p.is_file() and not p.name.endswith("_Data")
-        ]
+        cands = [p for p in build.iterdir() if p.is_file() and not p.name.endswith("_Data")]
         if not cands:
             raise FileNotFoundError(f"No executable file found under {build}")
         exec_path = cands[0]
@@ -32,13 +32,8 @@ def find_thor_exec(ai2thor_dir: Path) -> str:
 
 EXEC = find_thor_exec(AI2THOR_DIR)
 
-class Ai2ThorRepresentation:
-    """
-    - controller_init(): 初始化 Controller
-    - step(): 执行动作，返回 Event
-    - get_representation(): 从 Event 里取 frame / metadata 等
-    """
 
+class Ai2ThorRepresentation(BaseRepresentation):
     def __init__(
         self,
         executable_path: Optional[str] = EXEC,
@@ -55,8 +50,10 @@ class Ai2ThorRepresentation:
         snapToGrid: bool = True,
         agentMode: str = "default",
     ):
-        self.executable_path = executable_path                              # 可选，ai2thor可执行文件路径
-        self.scene = scene                                                  # 默认场景，具体可以在https://ai2thor.allenai.org/ithor/documentation/scenes查看详情
+        super().__init__()
+
+        self.executable_path = executable_path                              # ai2thor可执行文件路径
+        self.scene = scene                                                  # 默认场景
         self.visibilityDistance = visibilityDistance                        # 可见距离
         self.gridSize = gridSize                                            # 移动距离
         self.rotateStepDegrees = rotateStepDegrees                          # 旋转角度
@@ -70,8 +67,30 @@ class Ai2ThorRepresentation:
         self.agentMode = agentMode                                          # agent模式
 
         self.controller: Optional[Controller] = None                        # Controller实例，初始为None
+        self._last_event: Any = None
 
-    def controller_init(self) -> None:
+    @classmethod
+    def from_pretrained(cls, pretrained_model_path: str = "", device=None, **kwargs):
+        # ai2thor 不是权重模型；保持接口一致即可
+        return cls(**kwargs)
+
+    # ===== inventory helper =====
+    @staticmethod
+    def _get_inventory_objects(md: Dict[str, Any]) -> List[Dict[str, Any]]:
+        inv_top = md.get("inventoryObjects", None)
+        if isinstance(inv_top, list):
+            return inv_top
+        agent = md.get("agent", {}) or {}
+        inv_agent = agent.get("inventoryObjects", None)
+        if isinstance(inv_agent, list):
+            return inv_agent
+        return []
+
+    def _ensure_controller(self) -> None:
+        """内部使用：保证 controller 已初始化。"""
+        if self.controller is not None:
+            return
+
         kwargs: Dict[str, Any] = dict(
             agentMode=self.agentMode,
             visibilityDistance=float(self.visibilityDistance),
@@ -88,33 +107,27 @@ class Ai2ThorRepresentation:
 
         if self.executable_path is not None:
             kwargs["local_executable_path"] = self.executable_path
-            
+
         if self.headless:
             kwargs["platform"] = CloudRendering
 
         self.controller = Controller(**kwargs)
+        self._last_event = self.controller.last_event
 
-    def reset(self, scene: Optional[str] = None, **kwargs) -> Any:
-        if self.controller is None:
-            raise RuntimeError("Controller not initialized. Call controller_init() first.")
-        if scene is None:
-            scene = self.scene
-        return self.controller.reset(scene=scene, **kwargs)
+    def _close(self) -> None:
+        if self.controller is not None:
+            self.controller.stop()
+            self.controller = None
+        self._last_event = None
 
-    def step(self, action: Union[str, Dict[str, Any]]) -> Any:
-        if self.controller is None:
-            raise RuntimeError("Controller not initialized. Call controller_init() first.")
-        if isinstance(action, str):
-            return self.controller.step(action)
-        if isinstance(action, dict):
-            return self.controller.step(**action)
-        raise TypeError(f"Unsupported action type: {type(action)}")
-
-    def get_representation(
+    def _event_to_obs(
         self,
         event: Any,
+        *,
         include_depth: bool = False,
         include_instance: bool = False,
+        attach_focus: bool = False,
+        focus_check_visible: bool = False,
     ) -> Dict[str, Any]:
         md = getattr(event, "metadata", {}) or {}
         obs: Dict[str, Any] = {
@@ -126,6 +139,7 @@ class Ai2ThorRepresentation:
             "lastActionSuccess": md.get("lastActionSuccess", None),
             "errorMessage": md.get("errorMessage", ""),
             "isSceneAtRest": md.get("isSceneAtRest", None),
+            "actionReturn": md.get("actionReturn", None),
         }
 
         if include_depth:
@@ -136,66 +150,142 @@ class Ai2ThorRepresentation:
             obs["instance_masks"] = getattr(event, "instance_masks", None)
             obs["instance_detections2D"] = getattr(event, "instance_detections2D", None)
 
+        if attach_focus:
+            # 通过环境 Query 得到 focus
+            focus_id = self._get_object_in_frame(0.5, 0.5, checkVisible=focus_check_visible)
+            focus_meta = self._get_object_meta(md, focus_id) if focus_id is not None else None
+            obs["focus"] = {
+                "objectId": focus_id,
+                "object": focus_meta,
+            }
+
+            # inventory 简化信息（供 operator interact 使用）
+            inv = self._get_inventory_objects(md)
+            obs["inventory"] = {
+                "has_in_hand": len(inv) > 0,
+                "held_object_id": (inv[0].get("objectId") if len(inv) > 0 else None),
+            }
+
         return obs
 
-    def get_object_in_frame(self, x: float, y: float, checkVisible: bool = False) -> Optional[str]:
-        if self.controller is None:
-            raise RuntimeError("Controller not initialized. Call controller_init() first.")
-        q = self.controller.step(action="GetObjectInFrame", x=float(x), y=float(y), checkVisible=bool(checkVisible))
-        return q.metadata.get("actionReturn", None)
-
-    def get_coordinate_from_raycast(self, x: float, y: float):
-        if self.controller is None:
-            raise RuntimeError("Controller not initialized. Call controller_init() first.")
-        q = self.controller.step(action="GetCoordinateFromRaycast", x=float(x), y=float(y))
-        return q.metadata.get("actionReturn", None)
-
-    # ===== NEW: inventory helper =====
-    @staticmethod
-    def _get_inventory_objects(md: Dict[str, Any]) -> List[Dict[str, Any]]:
-        inv_top = md.get("inventoryObjects", None)
-        if isinstance(inv_top, list):
-            return inv_top
-        agent = md.get("agent", {}) or {}
-        inv_agent = agent.get("inventoryObjects", None)
-        if isinstance(inv_agent, list):
-            return inv_agent
-        return []
-
-    def agent_has_in_hand(self, event: Any) -> bool:
-        md = getattr(event, "metadata", {}) or {}
-        inv = self._get_inventory_objects(md)
-        return len(inv) > 0
-
-    def held_object_id(self, event: Any) -> Optional[str]:
-        md = getattr(event, "metadata", {}) or {}
-        inv = self._get_inventory_objects(md)
-        if len(inv) == 0:
+    def _get_object_meta(self, md: Dict[str, Any], object_id: Optional[str]) -> Optional[Dict[str, Any]]:
+        if object_id is None:
             return None
-        return inv[0].get("objectId", None)
-
-    # ===== NEW: object meta helper =====
-    def get_object_meta(self, event: Any, object_id: str) -> Optional[Dict[str, Any]]:
-        md = getattr(event, "metadata", {}) or {}
         for o in md.get("objects", []):
             if o.get("objectId") == object_id:
                 return o
         return None
 
-    # ===== NEW: focus helper (center) =====
-    def get_focus_object(self, event: Any, checkVisible: bool = False) -> Optional[str]:
-        return self.get_object_in_frame(0.5, 0.5, checkVisible=checkVisible)
-    
-    def get_focus_coordinate(self) -> Optional[Dict[str, float]]:
-        """Raycast at center crosshair (0.5, 0.5)."""
-        coord = self.get_coordinate_from_raycast(0.5, 0.5)
-        if not isinstance(coord, dict):
+    def _get_object_in_frame(self, x: float, y: float, checkVisible: bool = False) -> Optional[str]:
+        if self.controller is None:
             return None
-        if not all(k in coord for k in ("x", "y", "z")):
-            return None
-        return {"x": float(coord["x"]), "y": float(coord["y"]), "z": float(coord["z"])}
+        q = self.controller.step(action="GetObjectInFrame", x=float(x), y=float(y), checkVisible=bool(checkVisible))
+        self._last_event = q
+        return q.metadata.get("actionReturn", None)
 
-    def close(self) -> None:
-        if self.controller is not None:
-            self.controller.stop()
-            self.controller = None
+    def _get_coordinate_from_raycast(self, x: float, y: float):
+        if self.controller is None:
+            return None
+        q = self.controller.step(action="GetCoordinateFromRaycast", x=float(x), y=float(y))
+        self._last_event = q
+        return q.metadata.get("actionReturn", None)
+
+    def get_representation(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        BaseRepresentation 模版接口
+
+        data 约定：
+        - {"mode": "init"|"reset"|"close"|"observe"}
+        - {"mode":"step", "action": <str|dict>}
+        - {"mode":"query", "query":"focus"|"raycast", ...}
+
+        常用 kwargs：
+        - include_depth/include_instance
+        - attach_focus/focus_check_visible（把 focus + inventory 附到 obs 里，供 operator 用）
+        """
+        if not isinstance(data, dict):
+            raise TypeError(f"data must be dict, got {type(data)}")
+
+        mode = str(data.get("mode", "observe"))
+
+        include_depth = bool(data.get("include_depth", False))
+        include_instance = bool(data.get("include_instance", False))
+        attach_focus = bool(data.get("attach_focus", False))
+        focus_check_visible = bool(data.get("focus_check_visible", False))
+
+        if mode == "init":
+            self._ensure_controller()
+            assert self.controller is not None
+            self._last_event = self.controller.last_event
+            return self._event_to_obs(
+                self._last_event,
+                include_depth=include_depth,
+                include_instance=include_instance,
+                attach_focus=attach_focus,
+                focus_check_visible=focus_check_visible,
+            )
+
+        if mode == "reset":
+            self._ensure_controller()
+            assert self.controller is not None
+            scene = data.get("scene", None) or self.scene
+            ev = self.controller.reset(scene=scene)
+            self._last_event = ev
+            return self._event_to_obs(
+                ev,
+                include_depth=include_depth,
+                include_instance=include_instance,
+                attach_focus=attach_focus,
+                focus_check_visible=focus_check_visible,
+            )
+
+        if mode == "close":
+            self._close()
+            return {"closed": True}
+
+        if mode == "step":
+            self._ensure_controller()
+            assert self.controller is not None
+            action = data.get("action", None)
+            if action is None:
+                raise ValueError("mode=step requires data['action']")
+            if isinstance(action, str):
+                ev = self.controller.step(action)
+            elif isinstance(action, dict):
+                ev = self.controller.step(**action)
+            else:
+                raise TypeError(f"Unsupported action type: {type(action)}")
+            self._last_event = ev
+            return self._event_to_obs(
+                ev,
+                include_depth=include_depth,
+                include_instance=include_instance,
+                attach_focus=attach_focus,
+                focus_check_visible=focus_check_visible,
+            )
+
+        if mode == "query":
+            # query 也通过 get_representation 走
+            self._ensure_controller()
+            query = str(data.get("query", ""))
+            if query == "raycast":
+                coord = self._get_coordinate_from_raycast(float(data.get("x", 0.5)), float(data.get("y", 0.5)))
+                return {"actionReturn": coord}
+            if query == "focus":
+                oid = self._get_object_in_frame(float(data.get("x", 0.5)), float(data.get("y", 0.5)),
+                                                checkVisible=bool(data.get("checkVisible", False)))
+                md = getattr(self._last_event, "metadata", {}) or {}
+                return {"actionReturn": oid, "object": self._get_object_meta(md, oid)}
+            return {"error": f"Unknown query: {query}"}
+
+        # observe: 不 step，仅把 last_event 转成 obs
+        self._ensure_controller()
+        if self._last_event is None and self.controller is not None:
+            self._last_event = self.controller.last_event
+        return self._event_to_obs(
+            self._last_event,
+            include_depth=include_depth,
+            include_instance=include_instance,
+            attach_focus=attach_focus,
+            focus_check_visible=focus_check_visible,
+        )

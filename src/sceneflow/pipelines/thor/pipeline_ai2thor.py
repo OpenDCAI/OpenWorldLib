@@ -1,50 +1,46 @@
 from __future__ import annotations
 
-import os
 import json
+import os
 import time
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Set
 
 import cv2
 import numpy as np
+import json
 
+from ..pipeline_utils import PipelineABC
 from ...operators.ai2thor_operator import Ai2ThorOperator
 from ...representations.simulation_environment.thor.ai2thor_representation import Ai2ThorRepresentation
+from ...memories.simulation_environment.thor.ai2thor_memory import Ai2ThorMemory
 
 
 class _InputState:
-    """Keyboard state only (mouse handled by OpenCV window)."""
     def __init__(self):
-        self.pressed = set()
-        self.quit = False
-        self.save_snapshot = False
+        self.pressed: Set[str] = set()
+        self.quit: bool = False
+        self.save_snapshot: bool = False
 
 
-class Ai2ThorPipeline:
-    """
-    Unified pipeline.
+def _sign(x: float) -> float:
+    if x > 0:
+        return 1.0
+    if x < 0:
+        return -1.0
+    return 0.0
 
-    Modes:
-    - Human (policy=None):
-        W/A/S/D move; mouse move -> look; LMB up -> click_to_action()
-        ESC quits, P snapshot, Q (in cv2 window) quits.
-    - MLLM/Agent (policy!=None):
-        policy(obs)->tokens; tokens action space:
-          forward/backward/left/right/camera_l/camera_r/camera_up/camera_down/interact
-        Q quits in cv2 window.
 
-    Outputs:
-      - video.avi
-      - actions.jsonl
-      - frames/*.jpg (optional)
-    """
+class Ai2ThorPipeline(PipelineABC):
     def __init__(
         self,
         operators: Optional[Ai2ThorOperator] = None,
         representation: Optional[Ai2ThorRepresentation] = None,
+        memory_module: Optional[Ai2ThorMemory] = None,
     ):
+        super().__init__()
         self.operators = operators
         self.representation = representation
+        self.memory_module = memory_module
 
     @classmethod
     def from_pretrained(
@@ -52,22 +48,18 @@ class Ai2ThorPipeline:
         *,
         operators: Optional[Ai2ThorOperator] = None,
         representation: Optional[Ai2ThorRepresentation] = None,
+        memory_module: Optional[Ai2ThorMemory] = None,
         op_cfg: Optional[Dict[str, Any]] = None,
         rep_cfg: Optional[Dict[str, Any]] = None,
+        mem_cfg: Optional[Dict[str, Any]] = None,
     ) -> "Ai2ThorPipeline":
         if representation is None:
-            rep_cfg = {} if rep_cfg is None else dict(rep_cfg)
-            representation = Ai2ThorRepresentation(**rep_cfg)
-
+            representation = Ai2ThorRepresentation(**({} if rep_cfg is None else dict(rep_cfg)))
         if operators is None:
-            op_cfg = {} if op_cfg is None else dict(op_cfg)
-            operators = Ai2ThorOperator(**op_cfg)
-
-        return cls(operators=operators, representation=representation)
-
-    @staticmethod
-    def _ensure_dir(p: str) -> None:
-        os.makedirs(p, exist_ok=True)
+            operators = Ai2ThorOperator(**({} if op_cfg is None else dict(op_cfg)))
+        if memory_module is None:
+            memory_module = Ai2ThorMemory(**({} if mem_cfg is None else dict(mem_cfg)))
+        return cls(operators=operators, representation=representation, memory_module=memory_module)
 
     def _start_keyboard_listener(self, state: _InputState):
         try:
@@ -99,76 +91,127 @@ class Ai2ThorPipeline:
         return kb
 
     @staticmethod
-    def _rgb_to_bgr_uint8(frame_rgb: np.ndarray, w: int, h: int) -> np.ndarray:
-        frame_bgr = cv2.cvtColor(frame_rgb, cv2.COLOR_RGB2BGR)
-        if frame_bgr.shape[1] != w or frame_bgr.shape[0] != h:
-            frame_bgr = cv2.resize(frame_bgr, (w, h))
-        if frame_bgr.dtype != np.uint8:
-            frame_bgr = frame_bgr.astype(np.uint8)
-        return frame_bgr
-
-    @staticmethod
     def _draw_crosshair(img: np.ndarray, cx: int, cy: int, size: int = 10, thickness: int = 1) -> None:
         cv2.line(img, (cx - size, cy), (cx + size, cy), (255, 255, 255), thickness, cv2.LINE_AA)
         cv2.line(img, (cx, cy - size), (cx, cy + size), (255, 255, 255), thickness, cv2.LINE_AA)
 
+    def _inputs_to_tokens(
+        self,
+        pressed_keys: Set[str],
+        mouse: Dict[str, Any],
+        *,
+        rot_step_pixels: float,
+        look_step_pixels: float,
+        max_yaw_per_tick: int,
+        max_pitch_per_tick: int,
+    ) -> List[str]:
+        tokens: List[str] = []
+
+        if "w" in pressed_keys:
+            tokens.append("forward")
+        elif "s" in pressed_keys:
+            tokens.append("backward")
+        elif "a" in pressed_keys:
+            tokens.append("left")
+        elif "d" in pressed_keys:
+            tokens.append("right")
+
+        dx = float(mouse.get("dx", 0.0))
+        dy = float(mouse.get("dy", 0.0))
+
+        deadzone = 0.5
+        if abs(dx) < deadzone:
+            dx = 0.0
+        if abs(dy) < deadzone:
+            dy = 0.0
+
+        if abs(dx) >= float(rot_step_pixels):
+            n = min(int(abs(dx) // float(rot_step_pixels)), int(max_yaw_per_tick))
+            if n > 0:
+                tok = "camera_r" if dx > 0 else "camera_l"
+                tokens.extend([tok] * n)
+                mouse["dx"] = dx - (_sign(dx) * n * float(rot_step_pixels))
+        else:
+            mouse["dx"] = dx
+
+        if abs(dy) >= float(look_step_pixels):
+            n = min(int(abs(dy) // float(look_step_pixels)), int(max_pitch_per_tick))
+            if n > 0:
+                tok = "camera_up" if dy < 0 else "camera_down"
+                tokens.extend([tok] * n)
+                mouse["dy"] = dy - (_sign(dy) * n * float(look_step_pixels))
+        else:
+            mouse["dy"] = dy
+
+        return tokens
+
     def process(
         self,
-        output_dir: str,
         *,
-        policy: Optional[Callable[[Dict[str, Any]], List[str]]] = None,  # None=human；否则=agent(token)模式
+        policy: Optional[Callable[[Dict[str, Any]], List[str]]] = None,
+        fps: int = 20,
+        max_steps: Optional[int] = 200,          # ticks
+        max_actions: Optional[int] = None,
 
-        fps: int = 20,                               # 渲染/执行节奏（影响控制灵敏度 & 视频帧率）
-        max_steps: Optional[int] = None,             # 最大 step 数；None=不限（一般按 q/esc 退出）
+        include_depth: bool = False,
+        include_instance: bool = False,
 
-        save_frames: bool = False,                   # 是否额外保存逐帧 jpg（调试用，体积大）
-        save_frame_every: int = 3,                   # 每 N step 存一张（越小越密）
+        window_name: str = "thor",
+        show_window: bool = True,
 
-        include_depth: bool = False,                 # obs 里是否带 depth（开了会更慢/更占存储）
-        include_instance: bool = False,              # obs 里是否带 instance seg（开了会更慢）
+        rot_step_pixels: float = 6.0,
+        look_step_pixels: float = 8.0,
+        max_yaw_per_tick: int = 3,
+        max_pitch_per_tick: int = 2,
 
-        flush_every: int = 30,                       # actions.jsonl 每 N step flush（防崩溃丢日志）
-        window_name: str = "thor",                   # OpenCV 窗口名（多实例时区分）
+        overlay_crosshair: bool = True,
+        overlay_error: bool = True,
+        overlay_focus: bool = True,
+        focus_check_visible: bool = False,
 
-        rot_step_pixels: float = 6.0,                # 人类模式：鼠标 dx 达到多少像素触发一次 yaw
-        look_step_pixels: float = 8.0,               # 人类模式：鼠标 dy 达到多少像素触发一次 pitch
+        record_frames: bool = True,
+        record_actions: bool = True,
+        record_depth: bool = False,            # 可选：把 depth 当 image(subtype=depth) 存入 memory
+        record_instance: bool = False,         # 可选：把 instance seg 当 image(subtype=instance) 存入 memory
+        record_instance_payload: bool = False, # 可选：把 masks/detections 当 other(subtype=instance_payload)
+        slim_focus: bool = True,
+    ) -> Dict[str, Any]:
+        if self.representation is None:
+            raise ValueError("representation is None")
+        if self.operators is None:
+            raise ValueError("operators is None")
+        if self.memory_module is None:
+            self.memory_module = Ai2ThorMemory()
 
-        overlay_focus: bool = True,                  # 画面叠加 focus 信息（闭环 debug 很有用）
-        overlay_error: bool = True,                  # 画面叠加 lastActionSuccess/errorMessage
-        overlay_crosshair: bool = True,              # 画面中心准星（方便对准 focus）
-    ) -> None:
+        mem = self.memory_module
+        mem.manage(action="reset")
+        mem.manage(action="set_meta", meta={
+            "fps": int(fps),
+            "window_name": str(window_name),
+            "include_depth": bool(include_depth),
+            "include_instance": bool(include_instance),
+            "focus_check_visible": bool(focus_check_visible),
+        })
 
-        self._ensure_dir(output_dir)
-        frames_dir = os.path.join(output_dir, "frames")
-        if save_frames:
-            self._ensure_dir(frames_dir)
+        # ---- init env (ONLY get_representation) ----
+        obs = self.representation.get_representation({
+            "mode": "init",
+            "include_depth": include_depth,
+            "include_instance": include_instance,
+            "attach_focus": True,
+            "focus_check_visible": focus_check_visible,
+        })
 
-        # ---- init environment ----
-        self.representation.controller_init()
-        controller = self.representation.controller
-        assert controller is not None
-        event = controller.last_event
-
-        first_frame = getattr(event, "frame", None)
-        if first_frame is None:
+        frame0 = obs.get("frame", None)
+        if not isinstance(frame0, np.ndarray):
             raise RuntimeError("No frame from AI2-THOR (event.frame is None).")
 
-        h, w = first_frame.shape[:2]
+        if show_window:
+            cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
 
-        # ---- OpenCV window ----
-        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-
-        # ---- Human-mode mouse state ----
-        mouse: Dict[str, Any] = {
-            "last": None,
-            "dx": 0.0,
-            "dy": 0.0,
-            "click": False,
-            "click_time": 0.0,
-        }
+        mouse: Dict[str, Any] = {"last": None, "dx": 0.0, "dy": 0.0, "click": False}
 
         def on_mouse(evt, x, y, flags, param):
-            # accumulate dx/dy on move
             if evt == cv2.EVENT_MOUSEMOVE:
                 if mouse["last"] is None:
                     mouse["last"] = (x, y)
@@ -179,211 +222,233 @@ class Ai2ThorPipeline:
                 mouse["last"] = (x, y)
             elif evt in (cv2.EVENT_LBUTTONDOWN, cv2.EVENT_RBUTTONDOWN, cv2.EVENT_LBUTTONUP, cv2.EVENT_RBUTTONUP):
                 mouse["last"] = (x, y)
-
-            # click interaction
             if evt == cv2.EVENT_LBUTTONUP:
                 mouse["click"] = True
-                mouse["click_time"] = time.time()
 
-        # Only set mouse callback in human mode (optional, but keeps things clean)
-        if policy is None:
+        if show_window and policy is None:
             cv2.setMouseCallback(window_name, on_mouse)
 
-        # ---- video writer ----
-        video_path = os.path.join(output_dir, "video.avi")
-        fourcc = cv2.VideoWriter_fourcc(*"MJPG")
-        writer = cv2.VideoWriter(video_path, fourcc, fps, (w, h))
-        if not writer.isOpened():
-            raise RuntimeError(f"VideoWriter failed to open: {video_path}")
-
-        # ---- logs ----
-        log_f = open(os.path.join(output_dir, "actions.jsonl"), "w", encoding="utf-8")
-
-        def _log(step: int, mode: str, action: Dict[str, Any], ev_after: Any, extra: Dict[str, Any]):
-            md = getattr(ev_after, "metadata", {}) or {}
-            record = {
-                "step": step,
-                "time": time.time(),
-                "mode": mode,  # "human" or "agent"
-                "action": action,
-                "lastActionSuccess": md.get("lastActionSuccess", None),
-                "errorMessage": md.get("errorMessage", ""),
-                "sceneName": md.get("sceneName", ""),
-                "agent": md.get("agent", {}),
-                "actionReturn": md.get("actionReturn", None),
-                **extra,
-            }
-            log_f.write(json.dumps(record, ensure_ascii=False) + "\n")
-
-        # ---- keyboard listener (human mode only) ----
         state = _InputState()
         kb_listener = None
         if policy is None:
             kb_listener = self._start_keyboard_listener(state)
 
-        step_idx = 0
-        tick = 1.0 / float(fps)
+        tick_dt = 1.0 / float(fps)
         next_time = time.time()
+
+        last_percep: Dict[str, Any] = {}
 
         try:
             while True:
-                # cv2 window key
-                k = cv2.waitKey(1) & 0xFF
-                if k == ord("q"):
-                    state.quit = True
-
+                # quit
+                if show_window:
+                    k = cv2.waitKey(1) & 0xFF
+                    if k == ord("q"):
+                        state.quit = True
                 if state.quit:
                     break
-                if max_steps is not None and step_idx >= int(max_steps):
+
+                if max_steps is not None and mem.tick_count >= int(max_steps):
+                    break
+                if max_actions is not None and mem.action_count >= int(max_actions):
                     break
 
                 now = time.time()
                 if now < next_time:
                     time.sleep(min(0.001, next_time - now))
                     continue
-                next_time += tick
+                next_time += tick_dt
 
-                # ---- update focus each tick ----
-                self.operators.update_focus(self.representation, event)
+                # observe (ONLY get_representation)
+                obs = self.representation.get_representation({
+                    "mode": "observe",
+                    "include_depth": include_depth,
+                    "include_instance": include_instance,
+                    "attach_focus": True,
+                    "focus_check_visible": focus_check_visible,
+                })
 
-                # ---- get obs + frame ----
-                obs = self.representation.get_representation(
-                    event, include_depth=include_depth, include_instance=include_instance
-                )
-                
-                # 把 focus 信息也给 policy（闭环需要）
-                obs["focus"] = self.operators.get_focus_info_for_overlay()  # 可能是 None
-                obs["agent"] = (getattr(event, "metadata", {}) or {}).get("agent", {})
-                
+                # perception update (ONLY BaseOperator template)
+                last_percep = self.operators.process_perception(obs)
+
                 frame = obs.get("frame", None)
-                if frame is None:
-                    step_idx += 1
-                    continue
+                frame_bgr = None
+                if isinstance(frame, np.ndarray):
+                    frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
 
-                frame_bgr = self._rgb_to_bgr_uint8(frame, w, h)
+                    if overlay_crosshair:
+                        h, w = frame_bgr.shape[:2]
+                        self._draw_crosshair(frame_bgr, w // 2, h // 2)
 
-                # ---- overlays ----
-                if overlay_crosshair:
-                    self._draw_crosshair(frame_bgr, w // 2, h // 2, size=10, thickness=1)
+                    if overlay_focus:
+                        fid = last_percep.get("focus_object_id", None)
+                        ftype = last_percep.get("focus_object_type", "")
+                        txt = f"FOCUS: {ftype} | {str(fid)[:48]}" if fid else "FOCUS: None"
+                        cv2.putText(frame_bgr, txt, (10, 22),
+                                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
 
-                if overlay_focus:
-                    info = self.operators.get_focus_info_for_overlay()
-                    if info is not None:
-                        t1 = f'FOCUS: {info.get("objectType","")} | {str(info.get("objectId",""))[:48]}'
-                        t2 = (
-                            f'pickup:{info.get("pickupable")} open:{info.get("openable")} '
-                            f'toggle:{info.get("toggleable")} recept:{info.get("receptacle")} dist:{info.get("distance")}'
-                        )
-                        cv2.putText(frame_bgr, t1, (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
-                        cv2.putText(frame_bgr, t2, (10, 44), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
-                    else:
-                        cv2.putText(frame_bgr, "FOCUS: None", (10, 22), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+                    if overlay_error:
+                        if not obs.get("lastActionSuccess", True):
+                            err = str(obs.get("errorMessage", "") or "")
+                            if err:
+                                cv2.putText(frame_bgr, f"ERR: {err[:80]}", (10, 44),
+                                            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
 
-                if overlay_error:
-                    md_now = getattr(event, "metadata", {}) or {}
-                    if not md_now.get("lastActionSuccess", True):
-                        err = str(md_now.get("errorMessage", "") or "")
-                        if err:
-                            cv2.putText(frame_bgr, f"ERR: {err[:80]}", (10, 66), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+                    if show_window:
+                        cv2.imshow(window_name, frame_bgr)
 
-                # ---- show + record ----
-                cv2.imshow(window_name, frame_bgr)
-                writer.write(frame_bgr)
+                # record frames
+                if record_frames and isinstance(frame, np.ndarray):
+                    payload = {"frame": frame}
 
-                # ---- snapshot (human mode) ----
-                if policy is None and state.save_snapshot:
-                    snap_path = os.path.join(output_dir, f"snapshot_{int(time.time())}.jpg")
-                    cv2.imwrite(snap_path, frame_bgr, [int(cv2.IMWRITE_JPEG_QUALITY), 95])
+                    if include_depth:
+                        payload["depth_frame"] = obs.get("depth_frame", None)
+
+                    if include_instance:
+                        payload["instance_segmentation_frame"] = obs.get("instance_segmentation_frame", None)
+                        payload["instance_masks"] = obs.get("instance_masks", None)
+                        payload["instance_detections2D"] = obs.get("instance_detections2D", None)
+
+                    self.memory_module.record(
+                        payload,
+                        metadata={
+                            "type": "image",
+                            "tick": int(mem.tick_count),
+                            "sceneName": obs.get("sceneName", ""),
+                        },
+                    )
+
+
+                if include_depth and record_depth:
+                    d = obs.get("depth_frame", None)
+                    if isinstance(d, np.ndarray):
+                        mem.record(d, metadata={
+                            "type": "image",
+                            "subtype": "depth",
+                            "tick": int(mem.tick_count),
+                        })
+
+                if include_instance and record_instance:
+                    inst = obs.get("instance_segmentation_frame", None)
+                    if isinstance(inst, np.ndarray):
+                        mem.record(inst, metadata={
+                            "type": "image",
+                            "subtype": "instance",
+                            "tick": int(mem.tick_count),
+                        })
+
+                if include_instance and record_instance_payload:
+                    payload = {
+                        "instance_masks": obs.get("instance_masks", None),
+                        "instance_detections2D": obs.get("instance_detections2D", None),
+                    }
+                    mem.record(payload, metadata={
+                        "type": "other",
+                        "subtype": "instance_payload",
+                        "tick": int(mem.tick_count),
+                    })
+
+                # optional: snapshot key = manual jpg save (still allowed)
+                if policy is None and state.save_snapshot and show_window and frame_bgr is not None:
+                    # 这里属于“用户手动保存”
                     state.save_snapshot = False
+                    # 不在 process 内落盘最终产物；只做即时截图，如果你想完全零落盘，把这段删掉即可
+                    snap = {"frame_bgr": frame_bgr.copy(), "tick": int(mem.tick_count)}
+                    mem.record(snap, metadata={"type": "other", "subtype": "snapshot"})
 
-                # ---- decide actions ----
-                actions: List[Dict[str, Any]] = []
+                # decide tokens
+                tokens: List[str] = []
                 mode = "agent" if policy is not None else "human"
-                extra_for_log: Dict[str, Any] = {}
 
                 if policy is None:
-                    # 1) click action
                     if mouse.get("click", False):
                         mouse["click"] = False
-                        a_click = self.operators.click_to_action(self.representation, event)
-                        if a_click is not None:
-                            actions.append(a_click)
-                            extra_for_log = {
-                                "kind": "click",
-                                "pressed": sorted(list(state.pressed)),
-                                "mouse": {
-                                    "dx": float(mouse.get("dx", 0.0)),
-                                    "dy": float(mouse.get("dy", 0.0)),
-                                },
-                            }
-
-                    # 2) nav actions
-                    nav_actions = self.operators.inputs_to_actions(
+                        tokens.append("interact")
+                    tokens.extend(self._inputs_to_tokens(
                         pressed_keys=state.pressed,
                         mouse=mouse,
                         rot_step_pixels=rot_step_pixels,
                         look_step_pixels=look_step_pixels,
-                    )
-                    if nav_actions:
-                        # if we already had click, keep kind mixed; else kind nav
-                        if "kind" not in extra_for_log:
-                            extra_for_log = {
-                                "kind": "nav",
-                                "pressed": sorted(list(state.pressed)),
-                                "mouse": {
-                                    "dx": float(mouse.get("dx", 0.0)),
-                                    "dy": float(mouse.get("dy", 0.0)),
-                                },
-                            }
-                        actions.extend(nav_actions)
-
+                        max_yaw_per_tick=max_yaw_per_tick,
+                        max_pitch_per_tick=max_pitch_per_tick,
+                    ))
                 else:
-                    # Agent mode: policy(obs)->tokens -> operator.process_interaction(...)
-                    tokens = policy(obs)
-                    if not isinstance(tokens, list):
-                        tokens = []
-                    tokens = [str(t) for t in tokens]
+                    out = policy(obs)
+                    tokens = [str(t) for t in out] if isinstance(out, list) else []
 
-                    # put tokens into operator buffer then translate to actions
+                # tokens -> actions (ONLY BaseOperator template)
+                actions: List[Dict[str, Any]] = []
+                raycast = None
+                if tokens:
+                    mem.push_interaction(tokens)
                     self.operators.get_interaction(tokens)
-                    actions = self.operators.process_interaction(self.representation, event)
 
-                    extra_for_log = {"tokens": tokens}
+                    if "interact" in tokens:
+                        q = self.representation.get_representation({
+                            "mode": "query",
+                            "query": "raycast",
+                            "x": 0.5,
+                            "y": 0.78,
+                        })
+                        ar = q.get("actionReturn", None)
+                        if isinstance(ar, dict) and all(k in ar for k in ("x", "y", "z")):
+                            raycast = {"x": float(ar["x"]), "y": float(ar["y"]), "z": float(ar["z"])}
 
-                # ---- execute actions ----
-                if not actions:
-                    step_idx += 1
-                    continue
+                    actions = self.operators.process_interaction(raycast=raycast)
+                else:
+                    actions = []
 
-                for a in actions:
-                    event = self.representation.step(a)
-                    obs2 = self.representation.get_representation(
-                        event, include_depth=include_depth, include_instance=include_instance
-                    )
+                # execute actions (ONLY get_representation)
+                if actions:
+                    for a in actions:
+                        obs_after = self.representation.get_representation({
+                            "mode": "step",
+                            "action": a,
+                            "include_depth": include_depth,
+                            "include_instance": include_instance,
+                            "attach_focus": True,
+                            "focus_check_visible": focus_check_visible,
+                        })
 
-                    # if look failed, clear dy (human mode safety)
-                    if policy is None and a.get("action") in ("LookUp", "LookDown") and not obs2.get("lastActionSuccess", True):
-                        mouse["dy"] = 0.0
+                        # slim focus (来自 obs_after["focus"]["object"])
+                        focus_obj = None
+                        focus = obs_after.get("focus", None)
+                        if isinstance(focus, dict):
+                            focus_obj = focus.get("object", None)
 
-                    _log(step_idx, mode, a, event, extra_for_log)
+                        if slim_focus and isinstance(focus_obj, dict):
+                            focus_obj = {
+                                "objectId": focus_obj.get("objectId"),
+                                "objectType": focus_obj.get("objectType", ""),
+                                "pickupable": focus_obj.get("pickupable", False),
+                                "openable": focus_obj.get("openable", False),
+                                "isOpen": focus_obj.get("isOpen", False),
+                                "toggleable": focus_obj.get("toggleable", False),
+                                "isToggled": focus_obj.get("isToggled", False),
+                                "receptacle": focus_obj.get("receptacle", False),
+                                "visible": focus_obj.get("visible", False),
+                                "distance": focus_obj.get("distance", None),
+                            }
 
-                    if step_idx % max(1, flush_every) == 0:
-                        log_f.flush()
+                        if record_actions:
+                            mem.record(a, metadata={
+                                "type": "action",
+                                "mode": mode,
+                                "tokens": list(tokens),
+                                "action": a,
+                                "tick": int(mem.tick_count),
+                                "lastActionSuccess": obs_after.get("lastActionSuccess", None),
+                                "errorMessage": obs_after.get("errorMessage", ""),
+                                "sceneName": obs_after.get("sceneName", ""),
+                                "agent": obs_after.get("agent", {}),
+                                "focus": focus_obj,
+                                "inventory": obs_after.get("inventory", None),
+                            })
+                            mem.bump_action()
 
-                    if save_frames and (step_idx % max(1, save_frame_every) == 0):
-                        f2 = obs2.get("frame", None)
-                        if f2 is not None:
-                            f2b = self._rgb_to_bgr_uint8(f2, w, h)
-                            cv2.imwrite(
-                                os.path.join(frames_dir, f"{step_idx:06d}.jpg"),
-                                f2b,
-                                [int(cv2.IMWRITE_JPEG_QUALITY), 90],
-                            )
+                # tick advances
+                mem.bump_tick()
 
-                    step_idx += 1
-
-        except KeyboardInterrupt:
-            print("Interrupted by user.")
         finally:
             try:
                 if kb_listener is not None:
@@ -391,18 +456,122 @@ class Ai2ThorPipeline:
             except Exception:
                 pass
             try:
-                log_f.close()
+                if show_window:
+                    cv2.destroyAllWindows()
             except Exception:
                 pass
             try:
-                writer.release()
+                if self.representation is not None:
+                    self.representation.get_representation({"mode": "close"})
             except Exception:
                 pass
-            try:
-                self.representation.close()
-            except Exception:
-                pass
-            cv2.destroyAllWindows()
 
-    def __call__(self, output_dir: str, **kwargs) -> None:
-        return self.process(output_dir=output_dir, **kwargs)
+        export = self.memory_module.process(None, target_format="export")
+
+        return {
+            "export": export,
+            "memory": self.memory_module,
+        }
+
+
+    def __call__(self, *args, **kwds):
+        return self.process(*args, **kwds)
+
+    # ---------------- User manual saving (save ALL) ----------------
+    def save_results(
+        self,
+        results: Dict[str, Any],
+        output_dir: str,
+        *,
+        fps: int = 20,
+        save_video: bool = True,
+        save_actions: bool = True,
+        save_meta: bool = True,
+        save_frames: bool = False,            # 可选：逐帧 rgb
+        save_depth: bool = True,              # 深度图，可选
+        save_instance: bool = True,           # 分割图
+        save_instance_payloads: bool = True,  # masks/det2d json
+    ):
+
+
+        os.makedirs(output_dir, exist_ok=True)
+        export = results.get("export", None)
+        if not isinstance(export, dict):
+            raise ValueError("results['export'] is missing. Call pipeline(...) first.")
+
+        # 1) meta
+        meta_path = os.path.join(output_dir, "meta.json")
+        if save_meta:
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(export.get("meta", {}), f, ensure_ascii=False, indent=2)
+
+        # 2) actions
+        actions_path = os.path.join(output_dir, "actions.jsonl")
+        if save_actions:
+            with open(actions_path, "w", encoding="utf-8") as f:
+                for a in export.get("actions", []):
+                    f.write(json.dumps(a, ensure_ascii=False) + "\n")
+
+        # 3) video (RGB -> BGR)
+        video_path = os.path.join(output_dir, "video.avi")
+        frames = export.get("frames_rgb", [])
+        if save_video and len(frames) > 0:
+            h, w = frames[0].shape[:2]
+            fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+            vw = cv2.VideoWriter(video_path, fourcc, float(fps), (w, h))
+            if not vw.isOpened():
+                raise RuntimeError(f"VideoWriter failed to open: {video_path}")
+            for fr in frames:
+                bgr = cv2.cvtColor(fr, cv2.COLOR_RGB2BGR)
+                vw.write(bgr)
+            vw.release()
+
+        # 4) optional: rgb frames
+        frames_dir = None
+        if save_frames and len(frames) > 0:
+            frames_dir = os.path.join(output_dir, "frames")
+            os.makedirs(frames_dir, exist_ok=True)
+            for i, fr in enumerate(frames):
+                bgr = cv2.cvtColor(fr, cv2.COLOR_RGB2BGR)
+                cv2.imwrite(os.path.join(frames_dir, f"{i:06d}.jpg"), bgr)
+
+        # 5) depth
+        depth_dir = None
+        depth_frames = export.get("depth_frames", [])
+        if save_depth and len(depth_frames) > 0:
+            depth_dir = os.path.join(output_dir, "depth")
+            os.makedirs(depth_dir, exist_ok=True)
+            for i, d in enumerate(depth_frames):
+                # 常见 depth 是 float32，保存成 npy 最稳
+                np.save(os.path.join(depth_dir, f"{i:06d}.npy"), d)
+
+        # 6) instance segmentation frame
+        instance_dir = None
+        inst_frames = export.get("instance_segmentation_frames", [])
+        if save_instance and len(inst_frames) > 0:
+            instance_dir = os.path.join(output_dir, "instance_segmentation")
+            os.makedirs(instance_dir, exist_ok=True)
+            for i, inst in enumerate(inst_frames):
+                # 可能是彩色或label图；用 png 保存
+                cv2.imwrite(os.path.join(instance_dir, f"{i:06d}.png"), inst)
+
+        # 7) instance payloads (masks/det2d)
+        instance_payloads_path = None
+        payloads = export.get("instance_payloads", [])
+        if save_instance_payloads and len(payloads) > 0:
+            instance_payloads_path = os.path.join(output_dir, "instance_payloads.jsonl")
+            with open(instance_payloads_path, "w", encoding="utf-8") as f:
+                for p in payloads:
+                    f.write(json.dumps(p, ensure_ascii=False) + "\n")
+
+        return {
+            "output_dir": output_dir,
+            "video_path": video_path if save_video else None,
+            "actions_path": actions_path if save_actions else None,
+            "meta_path": meta_path if save_meta else None,
+            "frames_dir": frames_dir,
+            "depth_dir": depth_dir,
+            "instance_dir": instance_dir,
+            "instance_payloads_path": instance_payloads_path,
+        }
+
