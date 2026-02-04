@@ -8,13 +8,13 @@ from sceneflow.pipelines.wan.pipeline_wan_2p2 import Wan2p2Args, Wan2p2Pipeline
 from sceneflow.base_models.diffusion_model.video.wan_2p2.configs import WAN_CONFIGS
 
 
-pretrained_model_path: str = "/home/dataset-local/usr/lh/hdl/sceneflow/Wan2.2/Wan2.2-TI2V-5B"
+pretrained_model_path: str = "Wan-AI/Wan2.2-TI2V-5B"
 
 args = Wan2p2Args(
     task="ti2v-5B",
     size="1280*704",
     prompt=None,
-    image="/home/dataset-local/usr/lh/hdl/sceneflow/Wan2.2/Wan2.2-TI2V-5B/examples/i2v_input.JPG",
+    image="",
     save_file="./wan2p2_interactive_output.mp4",
     base_seed=42,
 )

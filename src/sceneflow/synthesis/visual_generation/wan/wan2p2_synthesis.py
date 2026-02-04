@@ -35,7 +35,6 @@ class Wan2p2Synthesis:
         self.device_id = device_id
         self.rank = rank
 
-    # ===== 构造函数 =====
 
     @classmethod
     def from_pretrained(
@@ -60,7 +59,7 @@ class Wan2p2Synthesis:
 
         if "ti2v" not in task:
             raise ValueError(
-                f"Wan2p2Synthesis.from_pretrained 目前只支持 ti2v 相关任务，收到 task={task!r}"
+                f"Wan2p2Synthesis.from_pretrained only support ti2v task, got task={task!r}"
             )
         cfg = WAN_CONFIGS[task]
 
@@ -89,7 +88,6 @@ class Wan2p2Synthesis:
             convert_model_dtype=convert_model_dtype,
         )
 
-        # 仅构建 ti2v 管线
         model = wan_2p2.WanTI2V(**common_kwargs)
 
         return cls(

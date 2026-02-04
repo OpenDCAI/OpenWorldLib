@@ -39,7 +39,6 @@ class Wan2p2Operator(BaseOperator):
         self.interaction_template = ["text_prompt", "image_prompt"]
         self.interaction_template_init()
 
-    # ===== interaction 相关 =====
 
     def get_interaction(self, interaction):
         if self.check_interaction(interaction):
@@ -129,9 +128,6 @@ class Wan2p2Operator(BaseOperator):
             input_image = None
         else:
             input_image = _load_input_image(input_path)
-            logging.info(
-                f"[Wan2p2Operator] 成功加载图片: {input_path}, 图片尺寸: {input_image.size}"
-            )
 
         return {
             "input_image": input_image,

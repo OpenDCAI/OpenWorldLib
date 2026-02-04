@@ -218,11 +218,7 @@ class Wan2p2Pipeline:
         - 每次调用都会复用 __call__ 完整生成一段视频；
         - 始终将该段视频记录到 memory_module（拆帧追加到 all_frames）；
         - 返回本轮生成的视频张量。
-
-        注意：
-          - 会话级别的 memory 重置由外部调用
         """
-        # 直接复用 __call__ 的逻辑（包括 prompt / image / image_path 默认处理）
         video = self.__call__(
             prompt=prompt,
             image_path=image_path,
