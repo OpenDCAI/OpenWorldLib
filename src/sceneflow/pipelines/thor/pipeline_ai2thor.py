@@ -318,7 +318,6 @@ class Ai2ThorPipeline(PipelineABC):
                         },
                     )
 
-
                 if include_depth and record_depth:
                     d = obs.get("depth_frame", None)
                     if isinstance(d, np.ndarray):
@@ -473,7 +472,6 @@ class Ai2ThorPipeline(PipelineABC):
             "memory": self.memory_module,
         }
 
-
     def __call__(self, *args, **kwds):
         return self.process(*args, **kwds)
 
@@ -492,8 +490,6 @@ class Ai2ThorPipeline(PipelineABC):
         save_instance: bool = True,           # 分割图
         save_instance_payloads: bool = True,  # masks/det2d json
     ):
-
-
         os.makedirs(output_dir, exist_ok=True)
         export = results.get("export", None)
         if not isinstance(export, dict):
@@ -574,4 +570,3 @@ class Ai2ThorPipeline(PipelineABC):
             "instance_dir": instance_dir,
             "instance_payloads_path": instance_payloads_path,
         }
-

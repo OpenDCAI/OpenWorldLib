@@ -151,7 +151,6 @@ class Ai2ThorMemory(BaseMemory):
             "meta": dict(self._episode_meta),
         }
 
-
     # ---------------- 5. manage (lifecycle) ----------------
     def manage(self, **kwargs):
         action = str(kwargs.get("action", "reset")).lower().strip()
