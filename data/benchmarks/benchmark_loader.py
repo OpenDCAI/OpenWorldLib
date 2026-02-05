@@ -1,90 +1,181 @@
-import os
-from typing import List, Dict, Union, Any
-from huggingface_hub import snapshot_download, hf_hub_download
-import torch
+"""
+Benchmark data loader module.
+Supports loading benchmark data from local paths or HuggingFace datasets.
+"""
+
+import json
+from pathlib import Path
+from typing import Dict, List, Union, Optional
+import importlib
+
+# Optional imports
+try:
+    from huggingface_hub import hf_hub_download, snapshot_download
+    HF_AVAILABLE = True
+except ImportError:
+    HF_AVAILABLE = False
+    hf_hub_download = None
+    snapshot_download = None
 
 
-benchmark_info_map = {}
-
-# cache path for HF
-HF_CACHE_DIR = os.environ.get("HF_CACHE_DIR", None)
-
-def load_benchmark_data(data_path: str) -> Dict[str, Any]:
+class BenchmarkLoader:
     """
-    load corresponding info from specific tasks
-    :param data_path: str data oath:
-                      1. 本地绝对路径：/xxx/benchmarks/task1_data
-                      2. 本地相对路径：./task2_data 或 benchmarks/task3_data
-                      3. HF仓库路径：username/task-benchmark 或 username/task-benchmark:main
-    :return: standard data info
+    Universal benchmark loader that can load different types of benchmarks
+    based on task category and benchmark name.
     """
-    # 初始化返回结果
-    result = {
-        "data_path": data_path,  # 原始传入路径
-        "data_type": None,       # local / hf
-        "local_real_path": None, # 最终实际的本地路径（HF会下载到缓存，也会填充此值）
-        "data": None,            # 核心：加载后的benchmark原始数据
-        "meta": {}               # 附加元信息（如数据量、样本格式等）
-    }
-
-    # -------------------------- load from local path --------------------------
-    if os.path.exists(data_path):
-        result["data_type"] = "local"
-        result["local_real_path"] = os.path.abspath(data_path)
-        # 校验本地路径是文件/文件夹
-        if not (os.path.isfile(data_path) or os.path.isdir(data_path)):
-            raise FileNotFoundError(f"本地路径无效：{data_path}，非文件/文件夹")
-        
-        # 【核心】加载本地数据：请根据你的实际数据格式修改此部分！
-        # 示例：支持读取文件夹下的所有样本文件/单一json/csv/txt，此处为通用示例
-        if os.path.isdir(data_path):
-            # 示例：遍历文件夹获取所有样本文件名（可替换为读取json/csv等）
-            sample_files = [f for f in os.listdir(data_path) if not f.startswith(".")]
-            sample_files.sort()  # 排序保证一致性
-            result["data"] = sample_files
-            result["meta"]["sample_num"] = len(sample_files)
-            result["meta"]["sample_type"] = "dir_files"
-        else:
-            # 示例：读取单一文件（以json为例，可替换为csv/txt/pickle等）
-            import json
-            with open(data_path, "r", encoding="utf-8") as f:
-                raw_data = json.load(f)
-            result["data"] = raw_data
-            result["meta"]["sample_num"] = len(raw_data) if isinstance(raw_data, (list, dict)) else 1
-            result["meta"]["sample_type"] = os.path.splitext(data_path)[-1]
     
-    # -------------------------- load from huggingface position --------------------------
-    else:
-        # 判定为HF路径：格式为 用户名/仓库名 或 用户名/仓库名:分支
+    def __init__(self):
+        self.benchmark_registry = {}
+        self._register_benchmarks()
+    
+    def _register_benchmarks(self):
+        """Register all available benchmarks"""
+        # Generation benchmarks
+        self.benchmark_registry['navigation_video_generation'] = {
+            'loader_module': 'benchmarks.generation.navigation_video_generation.benchmark_load',
+            'benchmarks': {}  # Will be populated by the module
+        }
+        # Add more benchmark types as needed
+    
+    def load_benchmark(
+        self,
+        task_type: str,
+        benchmark_name: str,
+        data_path: Optional[Union[str, Path]] = None,
+        hf_repo_id: Optional[str] = None,
+        split: str = "test",
+        **kwargs
+    ) -> List[Dict]:
+        """
+        Load benchmark data from local path or HuggingFace.
+        
+        Args:
+            task_type: Type of task (e.g., 'navigation_video_generation')
+            benchmark_name: Name of the benchmark
+            data_path: Local path to the benchmark data
+            hf_repo_id: HuggingFace repository ID (e.g., 'username/dataset-name')
+            split: Dataset split to load (default: 'test')
+            **kwargs: Additional arguments for specific loaders
+            
+        Returns:
+            List of benchmark samples, each as a dictionary
+        """
+        
+        if task_type not in self.benchmark_registry:
+            raise ValueError(f"Unknown task type: {task_type}")
+        
+        # Get the loader module for this task type
+        loader_info = self.benchmark_registry[task_type]
+        loader_module_name = loader_info['loader_module']
+        
         try:
-            result["data_type"] = "hf"
-            # 下载HF仓库到本地缓存，返回缓存的本地绝对路径
-            local_cache = snapshot_download(
-                repo_id=data_path,
-                cache_dir=HF_CACHE_DIR,
-                resume_download=True,  # 断点续传
-                ignore_patterns=[".git*", "README.md"]  # 忽略无关文件
+            # Import the specific benchmark loader
+            loader_module = importlib.import_module(loader_module_name)
+            
+            # Call the load function from the module
+            if hasattr(loader_module, 'load_benchmark'):
+                return loader_module.load_benchmark(
+                    benchmark_name=benchmark_name,
+                    data_path=data_path,
+                    hf_repo_id=hf_repo_id,
+                    split=split,
+                    **kwargs
+                )
+            else:
+                raise AttributeError(
+                    f"Module {loader_module_name} does not have 'load_benchmark' function"
+                )
+                
+        except ImportError as e:
+            raise ImportError(
+                f"Failed to import loader module {loader_module_name}: {e}"
             )
-            result["local_real_path"] = local_cache
+    
+    def list_benchmarks(self, task_type: Optional[str] = None) -> Dict:
+        """
+        List all available benchmarks.
+        
+        Args:
+            task_type: Optional task type filter
+            
+        Returns:
+            Dictionary of available benchmarks by task type
+        """
+        if task_type:
+            if task_type not in self.benchmark_registry:
+                raise ValueError(f"Unknown task type: {task_type}")
+            return {task_type: self.benchmark_registry[task_type]}
+        
+        return self.benchmark_registry
 
-            # 【核心】加载HF缓存中的数据：与本地加载逻辑一致，保证下游使用无感知
-            sample_files = [f for f in os.listdir(local_cache) if not f.startswith(".")]
-            sample_files.sort()
-            result["data"] = sample_files
-            result["meta"]["sample_num"] = len(sample_files)
-            result["meta"]["hf_repo"] = data_path
-            result["meta"]["sample_type"] = "hf_dir_files"
 
-        except Exception as e:
-            raise RuntimeError(f"HF路径加载失败：{data_path}，错误信息：{str(e)}") \
-                from e
+def load_json_file(file_path: Union[str, Path]) -> Union[Dict, List]:
+    """
+    Load data from a JSON file.
+    
+    Args:
+        file_path: Path to the JSON file
+        
+    Returns:
+        Parsed JSON data (dict or list)
+    """
+    file_path = Path(file_path)
+    
+    if not file_path.exists():
+        raise FileNotFoundError(f"File not found: {file_path}")
+    
+    with open(file_path, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+    
+    return data
 
-    return result
 
-
-def load_batch_benchmarks(path_list: List[str]) -> Dict[str, Any]:
-    """批量加载多个benchmark数据"""
-    batch_result = {}
-    for idx, path in enumerate(path_list):
-        batch_result[f"benchmark_{idx+1}"] = load_benchmark_data(path)
-    return batch_result
+def download_from_hf(
+    repo_id: str,
+    filename: Optional[str] = None,
+    repo_type: str = "dataset",
+    local_dir: Optional[Union[str, Path]] = None,
+    **kwargs
+) -> Path:
+    """
+    Download data from HuggingFace Hub.
+    
+    Args:
+        repo_id: HuggingFace repository ID
+        filename: Specific file to download (if None, downloads entire repo)
+        repo_type: Type of repository ('dataset' or 'model')
+        local_dir: Local directory to save the data
+        **kwargs: Additional arguments for hf_hub_download/snapshot_download
+        
+    Returns:
+        Path to the downloaded data
+    """
+    
+    if not HF_AVAILABLE:
+        raise ImportError(
+            "huggingface_hub is required to download from HuggingFace. "
+            "Install it with: pip install huggingface-hub"
+        )
+    
+    if filename:
+        # Download single file
+        downloaded_path = hf_hub_download(
+            repo_id=repo_id,
+            filename=filename,
+            repo_type=repo_type,
+            **kwargs
+        )
+    else:
+        # Download entire repository
+        if local_dir is None:
+            local_dir = Path.home() / ".cache" / "sceneflow" / "benchmarks" / repo_id.replace("/", "_")
+        
+        downloaded_path = snapshot_download(
+            repo_id=repo_id,
+            repo_type=repo_type,
+            local_dir=str(local_dir),
+            local_dir_use_symlinks=False,
+            **kwargs
+        )
+    
+    return Path(downloaded_path)
