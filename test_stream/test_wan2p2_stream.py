@@ -4,32 +4,26 @@ from typing import Optional
 import imageio
 from PIL import Image
 
-from sceneflow.pipelines.wan.pipeline_wan_2p2 import Wan2p2Args, Wan2p2Pipeline
+from sceneflow.pipelines.wan.pipeline_wan_2p2 import Wan2p2Pipeline
 from sceneflow.base_models.diffusion_model.video.wan_2p2.configs import WAN_CONFIGS
 
 
 pretrained_model_path: str = "Wan-AI/Wan2.2-TI2V-5B"
 
-args = Wan2p2Args(
+pipeline = Wan2p2Pipeline.from_pretrained(
+    synthesis_model_path=pretrained_model_path,
     task="ti2v-5B",
     size="1280*704",
     prompt=None,
     image="",
     save_file="./wan2p2_interactive_output.mp4",
     base_seed=42,
-)
-
-pipeline = Wan2p2Pipeline.from_pretrained(
-    synthesis_model_path=pretrained_model_path,
-    args=args,
     device_id=0,
     rank=0,
 )
 
 
-
-cfg = WAN_CONFIGS[pipeline.args.task]
-
+cfg = WAN_CONFIGS[pipeline.task]
 pipeline.memory_module.manage(action="reset")
 
 default_prompt = (
@@ -56,9 +50,8 @@ last_frame_img: Optional[Image.Image] = None
 while True:
     print(f"\n[Turn {turn_idx}] Use prompt: {user_prompt}")
 
-    # 第一轮：不带图像条件；后续轮：用上一轮的最后一帧
     if last_frame_img is None:
-        image_path = pipeline.args.image  # 通常为空字符串
+        image_path = pipeline.image 
         print("  This is the initial generation")
     else:
         image_path = None
@@ -92,14 +85,10 @@ if not all_frames:
 
 print("\nStarting to export the final video based on all frames in memory...")
 
-save_path = pipeline.args.save_file or "./wan2p2_interactive_output.mp4"
+save_path = pipeline.save_file or "./wan2p2_interactive_output.mp4"
 imageio.mimsave(
     save_path,
     all_frames,
     fps=cfg.sample_fps,
 )
-print(f"Interactive generation ended, saved to: {pipeline.args.save_file}")
-
-
-
-
+print(f"Interactive generation ended, saved to: {pipeline.save_file}")

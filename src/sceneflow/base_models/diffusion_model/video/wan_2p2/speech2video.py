@@ -26,14 +26,14 @@ from .distributed.sequence_parallel import sp_attn_forward, sp_dit_forward
 from .distributed.util import get_world_size
 from .modules.s2v.audio_encoder import AudioEncoder
 from .modules.s2v.model_s2v import WanModel_S2V, sp_attn_forward_s2v
-from .modules.t5 import T5EncoderModel
+from ..wan_2p1.modules.t5 import T5EncoderModel
 from .modules.vae2_1 import Wan2_1_VAE
-from .utils.fm_solvers import (
+from ..wan_2p1.utils.fm_solvers import (
     FlowDPMSolverMultistepScheduler,
     get_sampling_sigmas,
     retrieve_timesteps,
 )
-from .utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
+from ..wan_2p1.utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
 
 
 def load_safetensors(path):

@@ -2,7 +2,7 @@
 import torch
 import torch.distributed as dist
 
-from ..modules.attention import flash_attention
+from ...wan_2p1.modules.attention import flash_attention
 from .util import all_to_all
 
 

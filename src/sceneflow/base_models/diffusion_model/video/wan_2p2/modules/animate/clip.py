@@ -8,8 +8,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms as T
 
-from ..attention import flash_attention
-from ..tokenizers import HuggingfaceTokenizer
+from ....wan_2p1.modules.attention import flash_attention
+from ....wan_2p1.modules.tokenizers import HuggingfaceTokenizer
 from .xlm_roberta import XLMRoberta
 
 __all__ = [

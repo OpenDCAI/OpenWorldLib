@@ -27,11 +27,12 @@ from ..model import (
     WanRMSNorm,
     WanModel,
     WanSelfAttention,
-    flash_attention,
     rope_params,
     sinusoidal_embedding_1d,
     rope_apply
 )
+
+from ....wan_2p1.modules.attention import flash_attention
 
 from .face_blocks import FaceEncoder, FaceAdapter
 from .motion_encoder import Generator

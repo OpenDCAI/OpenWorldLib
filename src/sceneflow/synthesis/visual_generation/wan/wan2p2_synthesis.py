@@ -104,7 +104,16 @@ class Wan2p2Synthesis:
         self,
         *,
         processed_inputs: Dict[str, Any],
-        args: Any,
+        task: Optional[str] = None,
+        size: str = "1280*720",
+        frame_num: Optional[int] = None,
+        sample_shift: Optional[float] = None,
+        sample_solver: str = "unipc",
+        sample_steps: Optional[int] = None,
+        sample_guide_scale: Optional[float] = None,
+        base_seed: int = -1,
+        offload_model: Optional[bool] = None,
+        **kwargs
     ) -> Any:
 
         prompt: str = processed_inputs["prompt"]
@@ -118,15 +127,16 @@ class Wan2p2Synthesis:
         video = self.model.generate(
             prompt,
             img=img,
-            size=SIZE_CONFIGS[args.size],
-            max_area=MAX_AREA_CONFIGS[args.size],
-            frame_num=args.frame_num,
-            shift=args.sample_shift,
-            sample_solver=args.sample_solver,
-            sampling_steps=args.sample_steps,
-            guide_scale=args.sample_guide_scale,
-            seed=args.base_seed,
-            offload_model=args.offload_model,
+            size=SIZE_CONFIGS[size],
+            max_area=MAX_AREA_CONFIGS[size],
+            frame_num=frame_num,
+            shift=sample_shift,
+            sample_solver=sample_solver,
+            sampling_steps=sample_steps,
+            guide_scale=sample_guide_scale,
+            seed=base_seed,
+            offload_model=offload_model,
         )
 
         return video
+        

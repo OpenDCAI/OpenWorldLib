@@ -23,10 +23,10 @@ from ..model import (
     WanLayerNorm,
     WanModel,
     WanSelfAttention,
-    flash_attention,
     rope_params,
     sinusoidal_embedding_1d,
 )
+from ....wan_2p1.modules.attention import flash_attention
 from .audio_utils import AudioInjector_WAN, CausalAudioEncoder
 from .motioner import FramePackMotioner, MotionerTransformers
 from .s2v_utils import rope_precompute

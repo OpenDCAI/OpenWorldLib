@@ -21,15 +21,15 @@ from .distributed.util import get_world_size
 
 from .modules.animate import WanAnimateModel
 from .modules.animate import CLIPModel
-from .modules.t5 import T5EncoderModel
+from ..wan_2p1.modules.t5 import T5EncoderModel
 from .modules.vae2_1 import Wan2_1_VAE
 from .modules.animate.animate_utils import TensorList, get_loraconfig
-from .utils.fm_solvers import (
+from ..wan_2p1.utils.fm_solvers import (
     FlowDPMSolverMultistepScheduler,
     get_sampling_sigmas,
     retrieve_timesteps,
 )
-from .utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
+from ..wan_2p1.utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
 
 
 

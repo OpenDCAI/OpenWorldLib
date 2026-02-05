@@ -305,9 +305,9 @@ class QwenPromptExpander(PromptExpander):
                 Qwen2_5_VLForConditionalGeneration,
             )
             try:
-                from .qwen_vl_utils import process_vision_info
+                from ...wan_2p1.utils.qwen_vl_utils import process_vision_info
             except:
-                from qwen_vl_utils import process_vision_info
+                from ...wan_2p1.utils.qwen_vl_utils import process_vision_info
             self.process_vision_info = process_vision_info
             min_pixels = 256 * 28 * 28
             max_pixels = 1280 * 28 * 28
