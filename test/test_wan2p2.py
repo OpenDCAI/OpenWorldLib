@@ -6,7 +6,7 @@ from sceneflow.base_models.diffusion_model.video.wan_2p2.utils.utils import save
 from sceneflow.base_models.diffusion_model.video.wan_2p2.configs import WAN_CONFIGS
 
 
-pretrained_model_path = "/home/dataset-local/usr/lh/hdl/sceneflow/Wan2.2/Wan2.2-TI2V-5B"
+pretrained_model_path: str = "Wan-AI/Wan2.2-TI2V-5B"
 
 pipeline = Wan2p2Pipeline.from_pretrained(
     synthesis_model_path=pretrained_model_path,
@@ -16,7 +16,7 @@ pipeline = Wan2p2Pipeline.from_pretrained(
         "Summer beach vacation style, a white cat wearing sunglasses "
         "sits on a surfboard..."
     ),
-    image="/home/dataset-local/usr/lh/hdl/sceneflow/Wan2.2/Wan2.2-TI2V-5B/examples/i2v_input.JPG",
+    image="",
     save_file="./wan_app_demo_output.mp4",
     base_seed=42,
     device_id=0,
