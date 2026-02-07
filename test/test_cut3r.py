@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 sys.path.append("..")
 
-from src.sceneflow.pipelines.cut3r.pipeline_cut3r import (
+from sceneflow.pipelines.cut3r.pipeline_cut3r import (
     CUT3RPipeline,
 )
 
