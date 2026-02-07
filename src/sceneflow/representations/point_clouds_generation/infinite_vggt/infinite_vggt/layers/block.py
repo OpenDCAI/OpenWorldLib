@@ -7,9 +7,9 @@ import torch
 from torch import nn, Tensor
 
 from .attention import Attention
-from .drop_path import DropPath
-from .layer_scale import LayerScale
-from .mlp import Mlp
+from ......base_models.three_dimensions.point_clouds.vggt.vggt.layers.drop_path import DropPath
+from ......base_models.three_dimensions.point_clouds.vggt.vggt.layers.layer_scale import LayerScale
+from ......base_models.three_dimensions.point_clouds.vggt.vggt.layers.mlp import Mlp
 
 XFORMERS_AVAILABLE = False
 

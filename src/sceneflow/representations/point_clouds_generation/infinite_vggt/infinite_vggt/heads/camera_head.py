@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from ..layers import Mlp
+from ......base_models.three_dimensions.point_clouds.vggt.vggt.layers.mlp import Mlp
 from ..layers.block import Block
-from .head_act import activate_pose
+from ......base_models.three_dimensions.point_clouds.vggt.vggt.heads.head_act import activate_pose
 
 
 class CameraHead(nn.Module):
