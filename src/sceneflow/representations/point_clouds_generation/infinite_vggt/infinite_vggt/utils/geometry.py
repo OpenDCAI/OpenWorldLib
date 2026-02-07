@@ -9,7 +9,7 @@ import torch
 import numpy as np
 from dataclasses import dataclass
 
-from .pose_enc import pose_encoding_to_extri_intri
+from ......base_models.three_dimensions.point_clouds.vggt.vggt.utils.pose_enc import pose_encoding_to_extri_intri
 
 
 @dataclass
