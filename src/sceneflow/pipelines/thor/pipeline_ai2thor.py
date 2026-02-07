@@ -184,6 +184,7 @@ class Ai2ThorPipeline(PipelineABC):
             self.memory_module = Ai2ThorMemory()
 
         mem = self.memory_module
+
         mem.manage(action="reset")
         mem.manage(action="set_meta", meta={
             "fps": int(fps),
@@ -192,6 +193,9 @@ class Ai2ThorPipeline(PipelineABC):
             "include_instance": bool(include_instance),
             "focus_check_visible": bool(focus_check_visible),
         })
+
+        tick_idx: int = 0
+        action_idx: int = 0
 
         # ---- init env (ONLY get_representation) ----
         obs = self.representation.get_representation({
@@ -248,9 +252,9 @@ class Ai2ThorPipeline(PipelineABC):
                 if state.quit:
                     break
 
-                if max_steps is not None and mem.tick_count >= int(max_steps):
+                if max_steps is not None and tick_idx >= int(max_steps):
                     break
-                if max_actions is not None and mem.action_count >= int(max_actions):
+                if max_actions is not None and action_idx >= int(max_actions):
                     break
 
                 now = time.time()
@@ -309,11 +313,11 @@ class Ai2ThorPipeline(PipelineABC):
                         payload["instance_masks"] = obs.get("instance_masks", None)
                         payload["instance_detections2D"] = obs.get("instance_detections2D", None)
 
-                    self.memory_module.record(
+                    mem.record(
                         payload,
                         metadata={
                             "type": "image",
-                            "tick": int(mem.tick_count),
+                            "tick": int(tick_idx),
                             "sceneName": obs.get("sceneName", ""),
                         },
                     )
@@ -324,7 +328,7 @@ class Ai2ThorPipeline(PipelineABC):
                         mem.record(d, metadata={
                             "type": "image",
                             "subtype": "depth",
-                            "tick": int(mem.tick_count),
+                            "tick": int(tick_idx),
                         })
 
                 if include_instance and record_instance:
@@ -333,7 +337,7 @@ class Ai2ThorPipeline(PipelineABC):
                         mem.record(inst, metadata={
                             "type": "image",
                             "subtype": "instance",
-                            "tick": int(mem.tick_count),
+                            "tick": int(tick_idx),
                         })
 
                 if include_instance and record_instance_payload:
@@ -344,16 +348,14 @@ class Ai2ThorPipeline(PipelineABC):
                     mem.record(payload, metadata={
                         "type": "other",
                         "subtype": "instance_payload",
-                        "tick": int(mem.tick_count),
+                        "tick": int(tick_idx),
                     })
 
                 # optional: snapshot key = manual jpg save (still allowed)
                 if policy is None and state.save_snapshot and show_window and frame_bgr is not None:
-                    # 这里属于“用户手动保存”
                     state.save_snapshot = False
-                    # 不在 process 内落盘最终产物；只做即时截图，如果你想完全零落盘，把这段删掉即可
-                    snap = {"frame_bgr": frame_bgr.copy(), "tick": int(mem.tick_count)}
-                    mem.record(snap, metadata={"type": "other", "subtype": "snapshot"})
+                    snap = {"frame_bgr": frame_bgr.copy(), "tick": int(tick_idx)}
+                    mem.record(snap, metadata={"type": "other", "subtype": "snapshot", "tick": int(tick_idx)})
 
                 # decide tokens
                 tokens: List[str] = []
@@ -379,7 +381,13 @@ class Ai2ThorPipeline(PipelineABC):
                 actions: List[Dict[str, Any]] = []
                 raycast = None
                 if tokens:
-                    mem.push_interaction(tokens)
+                    mem.record(list(tokens), metadata={
+                        "type": "other",
+                        "subtype": "interaction",
+                        "tick": int(tick_idx),
+                        "mode": mode,
+                    })
+
                     self.operators.get_interaction(tokens)
 
                     if "interact" in tokens:
@@ -435,7 +443,7 @@ class Ai2ThorPipeline(PipelineABC):
                                 "mode": mode,
                                 "tokens": list(tokens),
                                 "action": a,
-                                "tick": int(mem.tick_count),
+                                "tick": int(tick_idx),
                                 "lastActionSuccess": obs_after.get("lastActionSuccess", None),
                                 "errorMessage": obs_after.get("errorMessage", ""),
                                 "sceneName": obs_after.get("sceneName", ""),
@@ -443,10 +451,9 @@ class Ai2ThorPipeline(PipelineABC):
                                 "focus": focus_obj,
                                 "inventory": obs_after.get("inventory", None),
                             })
-                            mem.bump_action()
+                            action_idx += 1
 
-                # tick advances
-                mem.bump_tick()
+                tick_idx += 1
 
         finally:
             try:
@@ -465,11 +472,11 @@ class Ai2ThorPipeline(PipelineABC):
             except Exception:
                 pass
 
-        export = self.memory_module.process(None, target_format="export")
+        export = mem.process(None, target_format="export")
 
         return {
             "export": export,
-            "memory": self.memory_module,
+            "memory": mem,
         }
 
     def __call__(self, *args, **kwds):
@@ -538,7 +545,7 @@ class Ai2ThorPipeline(PipelineABC):
             depth_dir = os.path.join(output_dir, "depth")
             os.makedirs(depth_dir, exist_ok=True)
             for i, d in enumerate(depth_frames):
-                # 常见 depth 是 float32，保存成 npy 最稳
+                # 常见 depth 是 float32，保存成 npy 
                 np.save(os.path.join(depth_dir, f"{i:06d}.npy"), d)
 
         # 6) instance segmentation frame

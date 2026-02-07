@@ -11,16 +11,11 @@ ContextQuery = Union[Dict[str, Any], str, None]
 
 
 class Ai2ThorMemory(BaseMemory):
-    
     TYPE_LIST = {"image", "video", "text", "audio", "action", "other"}
-    
+
     def __init__(self, capacity: Optional[int] = None, **kwargs):
         super().__init__(capacity=capacity, **kwargs)
         self._episode_meta: Dict[str, Any] = {}
-        self._tick_count: int = 0
-        self._action_count: int = 0
-        
-        self._interaction_history: List[List[str]] = []
 
     # ---------------- 1. record (ingestion) ----------------
     def record(self, data, metadata: Optional[Dict[str, Any]] = None, **kwargs):
@@ -29,13 +24,13 @@ class Ai2ThorMemory(BaseMemory):
 
         t = str(metadata.get("type", "other"))
         if t not in self.TYPE_LIST:
-            t = "other"
             metadata = dict(metadata)
+            metadata["type_original"] = t
             metadata["type"] = "other"
-            metadata["type_original"] = str(metadata.get("type", ""))
+            t = "other"
 
         item = {
-            "content": data,
+            "content": data,                 # 关键：完整保存 content（dict/ndarray/any）
             "type": t,
             "timestamp": time.time(),
             "metadata": metadata,
@@ -80,7 +75,6 @@ class Ai2ThorMemory(BaseMemory):
             st = float(since_time)
             items = [it for it in items if float(it.get("timestamp", 0.0)) >= st]
 
-        # custom filter
         flt = context_query.get("filter", None)
         if callable(flt):
             items = [it for it in items if bool(flt(it))]
@@ -105,12 +99,11 @@ class Ai2ThorMemory(BaseMemory):
         items = self.select(refined_data) if refined_data is not None else list(self.storage)
         items = self.compress(items)
 
-        frames_rgb = []
-        depth_frames = []
-        instance_frames = []
-        instance_payloads = []
-
-        actions = []
+        frames_rgb: List[np.ndarray] = []
+        depth_frames: List[np.ndarray] = []
+        instance_frames: List[np.ndarray] = []
+        instance_payloads: List[Dict[str, Any]] = []
+        actions: List[Dict[str, Any]] = []
 
         for it in items:
             t = it.get("type", "other")
@@ -118,17 +111,25 @@ class Ai2ThorMemory(BaseMemory):
             content = it.get("content", None)
 
             if t == "image":
+                # 1) content 直接是 ndarray（当 rgb frame）
                 if isinstance(content, np.ndarray):
                     frames_rgb.append(content)
-                elif isinstance(content, dict):
-                    if isinstance(content.get("frame"), np.ndarray):
-                        frames_rgb.append(content["frame"])
-                    if isinstance(content.get("depth_frame"), np.ndarray):
-                        depth_frames.append(content["depth_frame"])
-                    if isinstance(content.get("instance_segmentation_frame"), np.ndarray):
-                        instance_frames.append(content["instance_segmentation_frame"])
 
-                    # masks/detections2D 可能不是 ndarray（dict/None），单独收集
+                # 2) content 是 dict，按 pipeline 的 payload 结构拆
+                elif isinstance(content, dict):
+                    fr = content.get("frame", None)
+                    if isinstance(fr, np.ndarray):
+                        frames_rgb.append(fr)
+
+                    d = content.get("depth_frame", None)
+                    if isinstance(d, np.ndarray):
+                        depth_frames.append(d)
+
+                    inst = content.get("instance_segmentation_frame", None)
+                    if isinstance(inst, np.ndarray):
+                        instance_frames.append(inst)
+
+                    # masks/detections2D：不是 ndarray，也要导出去（json-friendly）
                     if ("instance_masks" in content) or ("instance_detections2D" in content):
                         instance_payloads.append({
                             "tick": md.get("tick", None),
@@ -141,6 +142,13 @@ class Ai2ThorMemory(BaseMemory):
                 if isinstance(content, dict) and "action" not in rec:
                     rec["action"] = content
                 actions.append(rec)
+
+            elif t == "other":
+                if isinstance(md, dict) and md.get("subtype") == "instance_payload":
+                    if isinstance(content, dict):
+                        instance_payloads.append({"tick": md.get("tick", None), **content})
+                    else:
+                        instance_payloads.append({"tick": md.get("tick", None), "payload": content})
 
         return {
             "frames_rgb": frames_rgb,
@@ -158,9 +166,6 @@ class Ai2ThorMemory(BaseMemory):
         if action == "reset":
             self.storage = []
             self._episode_meta = {}
-            self._tick_count = 0
-            self._action_count = 0
-            self._interaction_history = []
             return
 
         if action == "set_meta":
@@ -171,23 +176,3 @@ class Ai2ThorMemory(BaseMemory):
 
         if action == "close":
             return
-
-    # ------- counters / histories -------
-    def bump_tick(self) -> int:
-        self._tick_count += 1
-        return self._tick_count
-
-    def bump_action(self) -> int:
-        self._action_count += 1
-        return self._action_count
-
-    def push_interaction(self, tokens: List[str]):
-        self._interaction_history.append([str(t) for t in tokens])
-
-    @property
-    def tick_count(self) -> int:
-        return int(self._tick_count)
-
-    @property
-    def action_count(self) -> int:
-        return int(self._action_count)
