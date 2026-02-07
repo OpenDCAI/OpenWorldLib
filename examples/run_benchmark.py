@@ -2,7 +2,7 @@
 SceneFlow Benchmark Runner
 Usage:
     python -m examples.run_benchmark
-        --task_type navigation_video_gen
+        --task_type navigation_video_generation
         --benchmark_name sf_nav_vidgen_test
         --data_path ./data/benchmarks/navigation_video_gen/sf_nav_vidgen_test
         --model_type matrix-game2
@@ -11,15 +11,20 @@ Usage:
         --num_samples 5
 """
 
+import os
+import sys
 import argparse
 import json
 from pathlib import Path
 from tqdm import tqdm
 
-from ..data.benchmarks.tasks_map import tasks_map
-from ..data.benchmarks.benchmark_loader import BenchmarkLoader
-from .pipeline_mapping import video_gen_pipe, reasoning_pipe, three_dim_pipe
-from .evaluation_tasks.eval_func_mapping import eval_func_mapping
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
+from data.benchmarks.tasks_map import tasks_map
+from data.benchmarks.benchmark_loader import BenchmarkLoader
+from examples.pipeline_mapping import video_gen_pipe, reasoning_pipe, three_dim_pipe
+from examples.evaluation_tasks.eval_func_mapping import eval_func_mapping
 
 
 # collect evaluation pipelines

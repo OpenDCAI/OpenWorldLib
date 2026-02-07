@@ -5,7 +5,7 @@ from .navigation_video_generation import (
 
 
 eval_func_mapping = {
-    "navigation_video_generation": {
+    "navigation_video_gen": {
         "reference_func": nav_video_gen_ref_func,
         "eval_func": nav_video_gen_eval_func
     }
