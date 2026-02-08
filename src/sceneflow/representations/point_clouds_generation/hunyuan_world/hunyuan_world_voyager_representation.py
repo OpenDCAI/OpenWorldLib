@@ -10,8 +10,8 @@ from typing import Dict, Union
 from ...base_representation import BaseRepresentation
 # import the corresponding depth model
 from ....base_models.three_dimensions.depth.moge.model.v1 import MoGeModel
-from ...depth_generation.depth_anything.depth_anything_v1.dpt import DepthAnything
-from ...depth_generation.depth_anything.depth_anything_v1.adapter import DepthAnythingAdapter
+from ....base_models.three_dimensions.depth.depth_anything.depth_anything_v1.dpt import DepthAnything
+from ....base_models.three_dimensions.depth.depth_anything.depth_anything_v1.adapter import DepthAnythingAdapter
 
 """
 # Use DepthAnything as the depth model
