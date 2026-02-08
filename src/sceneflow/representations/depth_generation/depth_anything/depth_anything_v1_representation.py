@@ -9,8 +9,8 @@ import cv2
 from torchvision.transforms import Compose
 
 from ...base_representation import BaseRepresentation
-from .depth_anything_v1.dpt import DepthAnything
-from .depth_anything_v1.util.transform import (
+from ....base_models.three_dimensions.depth.depth_anything.depth_anything_v1.dpt import DepthAnything
+from ....base_models.three_dimensions.depth.depth_anything.depth_anything_v1.util.transform import (
     NormalizeImage,
     PrepareForNet,
     Resize,
