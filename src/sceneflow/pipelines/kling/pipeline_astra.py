@@ -5,17 +5,16 @@ import imageio
 from PIL import Image
 from dataclasses import dataclass
 from typing import Optional, Dict, Any, List
-from huggingface_hub import snapshot_download, hf_hub_download
 
 from ...operators.astra_operator import AstraOperator
 from ...synthesis.visual_generation.kling.astra_synthesis import AstraSynthesis
 from ...memories.visual_synthesis.kling.astra_memory import AstraMemory
 
-# 定义默认配置，模拟 argparse 的行为
+
 @dataclass
 class AstraConfig:
-    # 核心模型路径 (由 from_pretrained 传入)
-    dit_path: str = ""
+    # pretrained model paths
+    astra_path: str = ""
     wan_model_path: str = ""
     
     # 生成参数 (默认值)
@@ -45,6 +44,7 @@ class AstraConfig:
     device: str = "cuda"
     add_icons: bool = True
 
+
 class AstraPipeline(object):
     def __init__(self, operator, synthesis, memory, config):
         self.operator = operator
@@ -52,61 +52,19 @@ class AstraPipeline(object):
         self.memory = memory
         self.config = config
         self.device = synthesis.device
-    # 解析路径的辅助函数
-    @staticmethod
-    def _resolve_path(path_or_id, is_file=False):
-        """
-        如果路径存在，直接返回；
-        如果不存在，尝试作为 HuggingFace Repo ID 下载。
-        """
-        if os.path.exists(path_or_id):
-            return path_or_id
-        
-        print(f"Path '{path_or_id}' not found locally, attempting to download from HuggingFace...")
-        try:
-            # 如果是基础模型文件夹 (Wan)
-            if not is_file:
-                return snapshot_download(repo_id=path_or_id)
-            
-            #用户传入的是 Repo ID，下载整个 Repo 并自动寻找 .ckpt/.safetensors
-            folder_path = snapshot_download(repo_id=path_or_id)
-            
-            # 自动寻找常见的权重文件名
-            candidates = ["diffusion_pytorch_model.ckpt", "diffusion_pytorch_model.safetensors", "model.ckpt", "model.safetensors"]
-            for name in candidates:
-                p = os.path.join(folder_path, name)
-                if os.path.exists(p):
-                    return p
-            
-            # 如果没找到，尝试在子文件夹里找
-            for root, dirs, files in os.walk(folder_path):
-                for file in files:
-                    if file.endswith(".ckpt") or file.endswith(".safetensors"):
-                        return os.path.join(root, file)
-            
-            raise FileNotFoundError(f"Downloaded {path_or_id} but could not find model weights (.ckpt/.safetensors)")
-            
-        except Exception as e:
-            print(f"Error downloading from HF: {e}")
-            # 如果下载失败，返回原路径让后续报错更明确
-            return path_or_id
 
     @classmethod
     def from_pretrained(cls, 
-                        dit_path: str, 
+                        astra_path: str, 
                         wan_model_path: str, 
                         device: str = "cuda", 
                         **kwargs):
         """
-        加载权重并初始化各组件
+        pretrained model loading
         """
-        print("Resolving model paths...")
-        resolved_wan_path = cls._resolve_path(wan_model_path, is_file=False)
-        resolved_dit_path = cls._resolve_path(dit_path, is_file=True)
-        
         config = AstraConfig(
-            dit_path=resolved_dit_path,
-            wan_model_path=resolved_wan_path,
+            astra_path=astra_path,
+            wan_model_path=wan_model_path,
             device=device
         )
         for k, v in kwargs.items():
@@ -121,16 +79,6 @@ class AstraPipeline(object):
         return cls(operator, synthesis, memory, config)
         
     def process(self, input_: str, interaction: Dict[str, Any]):
-        """
-        功能：预处理输入数据，将原始图片和文本转换为模型可用的 Tensor 信号
-        
-        Input:
-            input_ (str): 图片的路径
-            interaction (dict): 包含 'prompt' (str) 和 'direction' (str) 等交互信息
-        
-        Output:
-            processed_data (dict): 包含 encoded latents, embeddings 等
-        """
         args = self.config
         condition_image = input_
         prompt = interaction.get("prompt", "")
@@ -140,8 +88,7 @@ class AstraPipeline(object):
         print(f"Processing image: {condition_image}")
         frames = self.operator.process_perception(condition_image=condition_image)
         latents = self.synthesis.encode_frames(frames)
-        
-        # 裁剪尺寸
+
         target_height, target_width = 60, 104
         C, T, H, W = latents.shape
         if H > target_height or W > target_width:
@@ -253,8 +200,6 @@ class AstraPipeline(object):
         print("Decoding video...")
         # decode_video 返回的是 uint8 numpy array [T, H, W, C]
         video_np = self.synthesis.decode_video(final_video_latents)
-        
-        # 5. 格式转换：转为 PIL Image List 方便用户保存
+
         pil_frames = [Image.fromarray(frame) for frame in video_np]
-        
         return pil_frames
