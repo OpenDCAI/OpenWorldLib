@@ -57,6 +57,100 @@ class WallOssSynthesis(BaseSynthesis):
         self.device = torch.device(device) if device is not None else self._get_default_device()
         
     @classmethod
+    def get_default_config(cls, processor_path: str = "") -> Dict:
+        """
+        Get default training config for Wall-OSS model.
+        
+        This config is used for inference when no external config is provided.
+        For training, you should provide a complete config via train_config parameter.
+        
+        Returns:
+            Dict: Default configuration dictionary
+        """
+        return {
+            # Model and paths configuration
+            "model_type": "qwen2_5",
+            "use_fast_tokenizer": False,
+            "processor_path": processor_path,
+            # Robot configuration - Define degrees of freedom for each component
+            "dof_config": {
+                "follow_left_ee_cartesian_pos": 3,
+                "follow_left_ee_rotation": 3,
+                "follow_left_gripper": 1,
+                "follow_right_ee_cartesian_pos": 3,
+                "follow_right_ee_rotation": 3,
+                "follow_right_gripper": 1,
+                "head_actions": 2,
+                "height": 1,
+                "car_pose": 3,
+            },
+            
+            # Agent proprioception configuration
+            "agent_pos_config": {
+                "follow_left_ee_cartesian_pos": 3,
+                "follow_left_ee_rotation": 3,
+                "follow_left_gripper": 1,
+                "follow_right_ee_cartesian_pos": 3,
+                "follow_right_ee_rotation": 3,
+                "follow_right_gripper": 1,
+                "head_actions": 2,
+                "height": 1,
+                "car_pose": 3,
+            },
+            
+            # Enable customized robot configuration
+            "enable_customized_robot_config": True,
+            "customized_robot_config": {
+                "name": "physical-intelligence/libero",
+                "customized_dof_config": {
+                    "action_left_shoulder": 1,
+                    "action_left_elbow": 1,
+                    "action_left_forearm_roll": 1,
+                    "action_left_wrist_angle": 1,
+                    "action_left_wrist_rotate": 1,
+                    "action_left_gripper": 1,
+                    "action_right_waist": 1,
+                    "action_right_shoulder": 1,
+                    "action_right_elbow": 1,
+                    "action_right_forearm_roll": 1,
+                    "action_right_wrist_angle": 1,
+                    "action_right_wrist_rotate": 1,
+                    "action_right_gripper": 1,
+                },
+                "customized_agent_pos_config": {
+                    "state_left_shoulder": 1,
+                    "state_left_elbow": 1,
+                    "state_left_forearm_roll": 1,
+                    "state_left_wrist_angle": 1,
+                    "state_left_wrist_rotate": 1,
+                    "state_left_gripper": 1,
+                    "state_right_waist": 1,
+                    "state_right_shoulder": 1,
+                    "state_right_elbow": 1,
+                    "state_right_forearm_roll": 1,
+                    "state_right_wrist_angle": 1,
+                    "state_right_wrist_rotate": 1,
+                    "state_right_gripper": 1,
+                },
+            },
+            
+            # Data configuration (for reference, not used during inference)
+            "data": {
+                "action_horizon": 32,
+                "resolution": {
+                    "face_view": 256,
+                    "left_wrist_view": 256,
+                    "right_wrist_view": 256,
+                    "move1_view": 256,
+                    "move2_view": 256,
+                    "top_view": 256,
+                    "wall_view": 256,
+                    "multi_modal": 256,
+                },
+            },
+        }
+    
+    @classmethod
     def from_pretrained(
         cls,
         pretrained_model_path: str,
@@ -70,8 +164,9 @@ class WallOssSynthesis(BaseSynthesis):
         
         Args:
             pretrained_model_path: Path to pretrained model directory
-            train_config_path: Path to training config YAML file
-            train_config: Training config dictionary (overrides train_config_path)
+            train_config_path: (Optional) Path to training config YAML file
+            train_config: (Optional) Training config dictionary (overrides train_config_path)
+                         If not provided, uses default config
             device: Device for inference
             **kwargs: Additional arguments
             
@@ -96,7 +191,8 @@ class WallOssSynthesis(BaseSynthesis):
                     with open(config_path, "r") as f:
                         train_config = yaml.load(f, Loader=yaml.FullLoader)
                 else:
-                    train_config = {}
+                    # Use default config
+                    train_config = cls.get_default_config(pretrained_model_path)
         
         # Load processor
         from transformers import AutoProcessor

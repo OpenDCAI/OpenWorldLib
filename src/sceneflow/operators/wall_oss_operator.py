@@ -25,7 +25,6 @@ class WallOssOperator(BaseOperator):
     
     def __init__(
         self,
-        processor=None,
         system_prompt: Optional[str] = None,
         operation_types: List[str] = None,
     ):
@@ -33,7 +32,6 @@ class WallOssOperator(BaseOperator):
         Initialize Wall-OSS Operator
         
         Args:
-            processor: AutoProcessor instance
             system_prompt: System prompt for the model
             operation_types: List of operation types
         """
@@ -45,8 +43,6 @@ class WallOssOperator(BaseOperator):
             ]
         
         super().__init__(operation_types)
-        
-        self.processor = processor
         
         # Default system prompt for Wall-OSS VLA
         if system_prompt is None:

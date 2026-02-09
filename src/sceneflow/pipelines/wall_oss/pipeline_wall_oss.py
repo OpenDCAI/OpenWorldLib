@@ -57,8 +57,10 @@ class WallOssPipeline:
         
         Args:
             pretrained_model_path: Path to pretrained Wall-OSS model
-            train_config_path: Path to training config YAML file
-            train_config: Training config dictionary (overrides train_config_path)
+            train_config_path: (Optional) Path to training config YAML file.
+                              If not provided, uses default config from synthesis model.
+            train_config: (Optional) Training config dictionary (overrides train_config_path).
+                         If not provided, uses default config from synthesis model.
             device: Device for inference
             system_prompt: Custom system prompt
             logger: Logger instance
@@ -87,7 +89,6 @@ class WallOssPipeline:
             logger.info("Initializing Wall-OSS operator...")
         
         operator = WallOssOperator(
-            processor=synthesis_model.processor,
             system_prompt=system_prompt,
         )
         
@@ -215,31 +216,6 @@ class WallOssPipeline:
         )
         
         return result
-    
-    def save_pretrained(self, save_directory: str):
-        """
-        Save pipeline to directory
-        
-        Args:
-            save_directory: Directory to save to
-        """
-        os.makedirs(save_directory, exist_ok=True)
-        
-        # Save operator config
-        if self.operator:
-            operator_config = {
-                'system_prompt': self.operator.system_prompt,
-                'operation_types': self.operator.opration_types if hasattr(self.operator, 'opration_types') else []
-            }
-            torch.save(operator_config, os.path.join(save_directory, "operator_config.pt"))
-        
-        # Save pipeline config
-        pipeline_config = {
-            'device': self.device,
-        }
-        torch.save(pipeline_config, os.path.join(save_directory, "pipeline_config.pt"))
-        
-        print(f"Wall-OSS Pipeline saved to {save_directory}")
     
     def update_operator_config(self, **kwargs):
         """
