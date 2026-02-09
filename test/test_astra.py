@@ -17,12 +17,10 @@ def test():
     wan_model_path = "Wan-AI/Wan2.1-T2V-1.3B" 
 
     image_path = "./data/test_case1/ref_image.png"
-
-    # 交互控制
     interaction = {
         "prompt": "A cozy snowy fairy-tale village with thatched cottages covered in thick snow.",
-        "direction": "left" # interaction list: forward, backward, left, right, forward_left, s_curve
-    } 
+        "direction": ["forward", "left", "right"] # interaction list: forward, backward, left, right, forward_left, s_curve
+    }
 
     output_path = "astra_test.mp4"
 
@@ -31,7 +29,7 @@ def test():
         astra_path=astra_path,
         wan_model_path=wan_model_path,
         device="cuda",
-        moe_num_experts=3 # 确保与模型权重匹配
+        moe_num_experts=3 # ensure match with the default setting
     )
 
     print("Running Inference...")
