@@ -1,8 +1,8 @@
 from typing import Optional, Generator, List
 import torch
 from ..pipeline_utils import PipelineABC
+from ...operators.hunyuan_worldplay_operator import HunyuanWorldPlayOperator
 from ...synthesis.visual_generation.hunyuan_world.hunyuan_worldplay_synthesis import HunyuanWorldPlaySynthesis
-from ...synthesis.visual_generation.hunyuan_world.hunyuan_worldplay.generate import pose_to_input, save_video
 
 
 class HunyuanWorldPlayPipeline(PipelineABC):
@@ -74,13 +74,15 @@ class HunyuanWorldPlayPipeline(PipelineABC):
             action_ckpt=action_ckpt,
             **kwargs
         )
+        operators = HunyuanWorldPlayOperator()
         
         return cls(
             synthesis_model=synthesis_model,
+            operators=operators,
             device=device
         )
 
-    def process(self, *, input_, interaction):
+    def process(self, *, input_, interaction, video_length: int):
         """
         处理输入
         
@@ -91,14 +93,24 @@ class HunyuanWorldPlayPipeline(PipelineABC):
         Returns:
             处理后的数据
         """
-        pass
+        if self.operators is None:
+            raise ValueError("operators must be provided")
+        self.operators.get_interaction(interaction)
+        latent_frames = (video_length - 1) // 4 + 1
+        operator_condition = self.operators.process_interaction(latent_frames=latent_frames)
+        self.operators.delete_last_interaction()
+        return {
+            "reference_image": input_,
+            "operator_condition": operator_condition,
+        }
 
     def __call__(
         self,
         *,
         prompt: str,
-        reference_image: str,
-        pose: str,
+        reference_image: Optional[str] = None,
+        pose: Optional[str] = None,
+        interaction_signal: Optional[str] = None,
         aspect_ratio: str = '16:9',
         video_length: int = 125,
         num_inference_steps: int = 4,
@@ -143,8 +155,15 @@ class HunyuanWorldPlayPipeline(PipelineABC):
         Returns:
             HunyuanVideoPipelineOutput: 包含生成的视频帧
         """
-        latent_frames = (video_length - 1) // 4 + 1
-        viewmats, Ks, action = pose_to_input(pose, latent_frames)
+        pose_value = interaction_signal if interaction_signal is not None else pose
+        if pose_value is None:
+            raise ValueError("pose or interaction_signal must be provided")
+        processed = self.process(
+            input_=reference_image,
+            interaction=pose_value,
+            video_length=video_length,
+        )
+        operator_condition = processed["operator_condition"]
         
         output = self.synthesis_model(
             enable_sr=enable_sr,
@@ -158,15 +177,15 @@ class HunyuanWorldPlayPipeline(PipelineABC):
             output_type=output_type,
             prompt_rewrite=prompt_rewrite,
             return_pre_sr_video=return_pre_sr_video,
-            viewmats=viewmats.unsqueeze(0),
-            Ks=Ks.unsqueeze(0),
-            action=action.unsqueeze(0),
+            viewmats=operator_condition["viewmats"].unsqueeze(0),
+            Ks=operator_condition["Ks"].unsqueeze(0),
+            action=operator_condition["action"].unsqueeze(0),
             few_step=few_step,
             chunk_latent_frames=chunk_latent_frames,
             model_type=model_type,
             user_height=user_height,
             user_width=user_width,
-            reference_image=reference_image,
+            reference_image=processed["reference_image"],
             **kwargs
         )
         
