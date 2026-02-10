@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.attention_processor import Attention
-from diffusers.models.controlnets.controlnet import zero_module
 from diffusers.models.modeling_utils import ModelMixin
 from diffusers.models.normalization import RMSNorm
 from diffusers.models.transformers.transformer_cosmos import CosmosPatchEmbed, CosmosTransformerBlock
@@ -13,6 +12,13 @@ from torchvision import transforms
 
 from ..acceleration import get_sequence_parallel_group, split_forward_gather_backward
 from .transformer_cosmos2_5 import Cosmos25AttnProcessor2_0, Cosmos25RotaryPosEmbed, Cosmos25TimeEmbed
+
+
+def zero_module(module):
+    """Zero out the parameters of a module and return it."""
+    for p in module.parameters():
+        nn.init.zeros_(p)
+    return module
 
 
 class Cosmos25ControlNet3DModel(ModelMixin, ConfigMixin):

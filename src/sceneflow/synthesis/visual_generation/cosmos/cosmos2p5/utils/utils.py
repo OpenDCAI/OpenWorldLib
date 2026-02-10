@@ -1,4 +1,5 @@
 import os
+import torch
 import socket
 
 
@@ -19,10 +20,11 @@ def find_free_port() -> int:
 def load_official_weights(model, official_ckpt_path):
     print(f"Loading official weights from: {official_ckpt_path}")
     official_state = torch.load(official_ckpt_path, map_location="cpu", weights_only=False)
-    official_state = {k: v for k, v in official_state.items() if not k.endswith('_extra_state')}
-    
+
+    ignore_prefixes = ('accum_', 'pos_embedder.', 'loss.')
+
     mapping = {
-        'net.blocks.': 'transformer_blocks.',
+        'blocks.': 'transformer_blocks.',
         'adaln_modulation_self_attn.1': 'norm1.linear_1',
         'adaln_modulation_self_attn.2': 'norm1.linear_2',
         'adaln_modulation_cross_attn.1': 'norm2.linear_1',
@@ -50,14 +52,24 @@ def load_official_weights(model, official_ckpt_path):
         'crossattn_proj.0': 'text_embed.0',
         'final_layer.adaln_modulation.1': 'norm_out.linear_1',
         'final_layer.adaln_modulation.2': 'norm_out.linear_2',
-        'final_layer.linear': 'proj_out'
+        'final_layer.linear': 'proj_out',
+        'action_embedder_B_D.fc1': 'action_embed.fc1',
+        'action_embedder_B_D.fc2': 'action_embed.fc2',
+        'action_embedder_B_3D.fc1': 'action_embed_3d.fc1',
+        'action_embedder_B_3D.fc2': 'action_embed_3d.fc2',
     }
 
     new_state_dict = {}
     for k, v in official_state.items():
+        if k.endswith('_extra_state'):
+            continue
+            
         new_k = k
         if new_k.startswith('net.'): new_k = new_k[4:]
         if new_k.startswith('model.'): new_k = new_k[6:]
+
+        if new_k.startswith(ignore_prefixes):
+            continue
 
         for old, new in mapping.items():
             if old in new_k:
@@ -66,8 +78,12 @@ def load_official_weights(model, official_ckpt_path):
         new_state_dict[new_k] = v
 
     missing, unexpected = model.load_state_dict(new_state_dict, strict=True)
-    if len(missing) == 0:
+    
+    if len(missing) == 0 and len(unexpected) == 0:
         print("Successfully loaded official weights on-the-fly!")
+    else:
+        raise RuntimeError(f"Weight loading failed.\nMissing: {missing}\nUnexpected: {unexpected}")
+
     return model
 
 

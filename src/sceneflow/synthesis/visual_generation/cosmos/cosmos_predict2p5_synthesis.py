@@ -16,7 +16,7 @@ from ....base_models.diffusion_model.video.wan_2p1.utils.fm_solvers_unipc import
 from ....base_models.diffusion_model.video.wan_2p1.modules.vae import WanVAE
 from .cosmos2p5.utils.utils import load_official_weights, get_cosmos_2b_config
 from .cosmos2p5.utils.registry import COSMOS_2P5_TASKS, COSMOS_2P5_REGISTRY
-from .cosmos2p5.models import (
+from .cosmos2p5.modules import (
     Cosmos25ControlNet3DModel, Cosmos25MultiControlNet3DModel, Cosmos25Transformer3DModel, Reason1TextEncoder
 )
 
@@ -34,10 +34,10 @@ class CosmosPredict2p5Synthesis:
     def __init__(
         self,
         task: str = "img2world",
-        text_encoder: Any,
-        transformer: Any,
-        vae: Any,
-        scheduler: Any,
+        text_encoder: Any = None,
+        transformer: Any = None,
+        vae: Any = None,
+        scheduler: Any = None,
     ):
         self.task = task 
 
@@ -91,7 +91,7 @@ class CosmosPredict2p5Synthesis:
                 token=token
             ))
         if transformer_path_obj.is_dir():
-            transformer_ckpt = transformer_path_obj / "base/post_trained/81edfebe-bd6a-4039-8c1d-737df1a790bf_ema_bf16.pt"
+            transformer_ckpt = transformer_path_obj / "base/post-trained/81edfebe-bd6a-4039-8c1d-737df1a790bf_ema_bf16.pt"
         else:
             transformer_ckpt = transformer_path_obj
         if not transformer_ckpt.exists():
@@ -128,14 +128,13 @@ class CosmosPredict2p5Synthesis:
         transformer = Cosmos25Transformer3DModel(**config_args)
         load_official_weights(transformer, str(transformer_ckpt))
         text_encoder = Reason1TextEncoder(str(text_encoder_path))
-        vae = WanVAE(str(vae_ckpt))
+        vae = WanVAE(vae_pth=str(vae_ckpt), dtype=dtype, device=device)  # Vae device & dtype specify in initalization
         scheduler = FlowUniPCMultistepScheduler(num_train_timesteps=1000, shift=1, use_dynamic_shifting=False)
         
         # Move to device & change dtype
         device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         transformer = transformer.to(device, dtype)
         text_encoder = text_encoder.to(device, dtype)
-        vae = vae.to(device, dtype)
         
         instance = cls(
             text_encoder=text_encoder,
@@ -246,6 +245,13 @@ class CosmosPredict2p5Synthesis:
 
             # Encode images to latents and create the mask
             cond_latents = self.encode(cond_images).to(dtype)
+            # Reshape to desire tensor
+            if cond_latents.ndim == 4:
+                cond_latents = cond_latents.unsqueeze(0)
+            expected_t = (num_frames - 1) // self.vae_scale_factor_temporal + 1
+            if cond_latents.shape[2] != expected_t and cond_latents.shape[-1] == expected_t:
+                cond_latents = cond_latents.unsqueeze(0).permute(0, 1, 4, 2, 3)
+            # Compute cond mask
             cond_masks = torch.zeros((1, 1, cond_latents.shape[2], 1, 1), device=device, dtype=dtype)
             cond_masks[:, :, :num_cond_frames] = 1
         return cond_latents, cond_masks
@@ -359,7 +365,6 @@ class CosmosPredict2p5Synthesis:
             num_inference_steps,
             device=device,
             shift=5.0,
-            use_kerras_sigma=use_kerras_sigma,
         )
         timesteps = self.scheduler.timesteps
 
@@ -479,7 +484,7 @@ class CosmosPredict2p5Synthesis:
 
         # Decode latents to video
         if not output_type == 'latent':
-            video = self.decode(latents)
+            video = self.decode(latents).unsqueeze(0)
             video = self.video_processor.postprocess_video(video=video, output_type=output_type)
         else:
             video = latents

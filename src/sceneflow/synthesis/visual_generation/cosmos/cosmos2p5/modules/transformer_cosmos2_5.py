@@ -13,7 +13,7 @@ from einops import rearrange, repeat
 from torchvision import transforms
 
 from ..acceleration import gather_forward_split_backward, get_sequence_parallel_group, split_forward_gather_backward
-from ..modules import Attention as _AttentionOp
+from .attention import Attention as _AttentionOp
 
 
 class Cosmos25AttnProcessor2_0:

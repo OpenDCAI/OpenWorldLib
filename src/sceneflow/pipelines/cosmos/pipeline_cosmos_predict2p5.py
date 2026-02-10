@@ -12,8 +12,8 @@ class CosmosPredict2p5Pipeline:
 
     def __init__(
         self,
-        operator: Optional[CosmosPrecict2p5Operator] = None,
-        synthesis_model: Optional[CosmosPrecict2p5Synthesis] = None,
+        operator: Optional[CosmosPredict2p5Operator] = None,
+        synthesis_model: Optional[CosmosPredict2p5Synthesis] = None,
         memory_module: Optional[CosmosPredict2p5Memory] = None,
         device: str = "cuda",
         weight_dtype: torch.dtype = torch.bfloat16,
@@ -31,12 +31,13 @@ class CosmosPredict2p5Pipeline:
         transformer_name_or_path: Optional[str] = None,
         text_encoder_name_or_path: Optional[str] = None,
         vae_name_or_path: Optional[str] = None,
-        token = None,
+        token: Optional[str] = None,
         task: str = 'img2world',
         device: str = "cuda",
-        dtype: Optional[torch.dtype] = torch.float16,
+        dtype: Optional[torch.dtype] = torch.bfloat16,
         **kwargs,
     ) -> "CosmosPredict2p5Pipeline":
+        print(transformer_name_or_path)
         if transformer_name_or_path is None:
             transformer_name_or_path = "nvidia/Cosmos-Predict2.5"
         if text_encoder_name_or_path is None:
@@ -44,12 +45,12 @@ class CosmosPredict2p5Pipeline:
         if vae_name_or_path is None:
             vae_name_or_path = "Wan-AI/Wan2.1-T2V-1.3B"
 
-        print(f"Loading MatrixGame2 synthesis model ...")
-        print(f"- Transformer | {transformer_name_or_path}")
-        print(f"- Text Encoder | {text_encoder_name_or_path}")
-        print(f"- VAE | {vae_name_or_path}")
+        print(f"Loading Cosmos-Predict2.5 synthesis model ...")
+        print(f"    - Loading transformer from : {transformer_name_or_path}")
+        print(f"    - Loading Text Encoder from : {text_encoder_name_or_path}")
+        print(f"    - Loading VAE from : {vae_name_or_path}")
 
-        synthesis_model = CosmosPrecict2p5Synthesis.from_pretrained(
+        synthesis_model = CosmosPredict2p5Synthesis.from_pretrained(
             task=task,
             transformer_model_path=transformer_name_or_path,
             text_encoder_model_path=text_encoder_name_or_path,
@@ -58,7 +59,7 @@ class CosmosPredict2p5Pipeline:
             device=torch.device(device),
             dtype=dtype,
         )
-        operator = CosmosPrecict2p5Operator()
+        operator = CosmosPredict2p5Operator()
         memory_module = CosmosPredict2p5Memory()
 
         pipeline = cls(
@@ -220,6 +221,7 @@ class CosmosPredict2p5Pipeline:
                 f"[CosmosPredict2p5Pipeline.stream] Expected torch.Tensor from predict, got {type(video)}"
             )
 
+        video = video.squeeze(0)
         self.memory_module.record(video)
         print(
             f"[CosmosPredict2p5Pipeline.stream] Recorded segment. "
