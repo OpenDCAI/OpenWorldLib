@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional
 import torch
 import json
-
+import re
 
 def reference_func(
     pipe,
@@ -66,26 +66,142 @@ def reference_func(
 
 # eval function need finish
 def eval_func(
-    pipe,
-    input_data_info: Dict[str, Any]
+    input_data_info: Dict[str, Any],
+    eval_pipeline: None,
 ) -> Dict[str, Any]:
     """
+    使用多模态 LLM 评估生成的导航视频质量。
+    
+    Args:
+        pipe: 生成视频的 pipeline（MatrixGame2Pipeline），此参数保留以兼容接口
+        input_data_info: 单条测例字典，包含：
+            - ref_image: 参考图片的绝对路径
+            - interaction_signal: 交互信号列表
+            - scene_description: 场景描述
+            - generated_video_path: 生成的视频路径（从 reference_results 传入）
+            - eval_prompt: 评估提示词函数（从 data_info 传入）
+        eval_pipeline: 已初始化的评估用 MLLM pipeline（可选）
+        eval_model_path: 评估模型路径（如果 eval_pipeline 为 None 则使用此路径加载）
+        device: 设备类型
+    
+    Returns:
+        包含评估结果的字典：
+        {
+            'sample_id': str,
+            'generated_video_path': str,
+            'scores': {
+                'navigation_fidelity': float,
+                'visual_quality': float,
+                'temporal_consistency': float,
+                'scene_consistency': float,
+                'motion_smoothness': float,
+                'overall': float
+            },
+            'comments': str,
+            'raw_response': str  # LLM 的原始响应
+        }
     """
+    generated_video_path = input_data_info.get("generated_video_path")
+    if not generated_video_path:
+        raise ValueError("generated_video_path not found in input_data_info")
     
-    # First, generate the reference video
-    gen_result = reference_func(pipe, input_data_info)
+    ref_image_path = input_data_info["ref_image"]
+    if not Path(ref_image_path).exists():
+        raise FileNotFoundError(f"Reference image not found: {ref_image_path}")
     
-    # Extract evaluation parameters
-    eval_prompt = input_data_info.get('eval_prompt', '')
-    gt_video_path = input_data_info.get('gt_video_path', None)
-    eval_metrics = input_data_info.get('eval_metrics', ['visual_quality', 'motion_consistency'])
+    prompt_text = input_data_info.get("eval_prompt")
+    if not prompt_text:
+        raise ValueError("eval_prompt text not found in input_data_info")    
+    if not isinstance(prompt_text, str):
+        raise ValueError(f"eval_prompt should be a string, got {type(prompt_text)}")
+
     
-    # Initialize evaluation results
-    eval_results = {
+    try:
+        response = eval_pipeline(
+            text=prompt_text,
+            images=[ref_image_path],  # 参考图片
+            videos=[generated_video_path],  # 生成的视频
+            max_new_tokens=1024
+        )
+        
+        # response 可能是字符串或列表，统一处理
+        if isinstance(response, list):
+            response_text = response[0] if response else ""
+        else:
+            response_text = str(response)
+        
+    except Exception as e:
+        return {
+            'sample_id': input_data_info.get('id', 'unknown'),
+            'generated_video_path': generated_video_path,
+            'error': f"Evaluation failed: {str(e)}"
+        }
+    
+    # 6. 解析 LLM 输出，提取分数
+    scores = _parse_evaluation_scores(response_text)
+    
+    # 7. 构建返回结果
+    result = {
         'sample_id': input_data_info.get('id', 'unknown'),
-        'generated_video_path': gen_result['video_path'],
-        'metrics': {}
+        'generated_video_path': generated_video_path,
+        'scores': scores,
+        'raw_response': response_text
     }
     
-    # Evaluate based on prompt (if provided)
+    if 'comments' in scores:
+        result['comments'] = scores['comments']
+    
+    return result
+
+
+def _parse_evaluation_scores(response_text: str) -> Dict[str, Any]:
+    """
+    从 LLM 响应中解析评估分数。
+    
+    期望格式：
+    [Navigation Fidelity Score]: <number>
+    [Visual Quality Score]: <number>
+    [Temporal Consistency Score]: <number>
+    [Scene Consistency Score]: <number>
+    [Motion Smoothness Score]: <number>
+    [Overall Score]: <float>
+    [Comments]: <string>
+    """
+    scores = {}
+    
+    # 定义正则表达式模式
+    patterns = {
+        'navigation_fidelity': r'\[Navigation Fidelity Score\]:\s*(\d+(?:\.\d+)?)',
+        'visual_quality': r'\[Visual Quality Score\]:\s*(\d+(?:\.\d+)?)',
+        'temporal_consistency': r'\[Temporal Consistency Score\]:\s*(\d+(?:\.\d+)?)',
+        'scene_consistency': r'\[Scene Consistency Score\]:\s*(\d+(?:\.\d+)?)',
+        'motion_smoothness': r'\[Motion Smoothness Score\]:\s*(\d+(?:\.\d+)?)',
+        'overall': r'\[Overall Score\]:\s*(\d+\.?\d*)',
+        'comments': r'\[Comments\]:\s*(.+?)(?=\n\n|\n\[|$)'
+    }
+    
+    # 提取分数
+    for key, pattern in patterns.items():
+        match = re.search(pattern, response_text, re.IGNORECASE | re.DOTALL)
+        if match:
+            if key == 'comments':
+                scores[key] = match.group(1).strip()
+            else:
+                try:
+                    scores[key] = float(match.group(1))
+                except ValueError:
+                    scores[key] = None
+        else:
+            scores[key] = None
+    
+    # 验证分数范围
+    for key in ['navigation_fidelity', 'visual_quality', 'temporal_consistency', 
+                'scene_consistency', 'motion_smoothness']:
+        if scores.get(key) is not None:
+            scores[key] = max(1, min(10, scores[key]))
+    
+    if scores.get('overall') is not None:
+        scores['overall'] = max(1.0, min(10.0, scores['overall']))
+    
+    return scores
 
