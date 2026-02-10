@@ -1,42 +1,18 @@
 from __future__ import annotations
 
 from typing import Any, Dict, Optional, Union, List
-from pathlib import Path
 
 from ...base_representation import BaseRepresentation
 
 from .ai2thor.controller import Controller
 from .ai2thor.platform import CloudRendering
 
-PROJECT_ROOT = Path(__file__).resolve().parents[5] 
-AI2THOR_DIR = PROJECT_ROOT / "submodules" / "ai2thor"
-
-
-def find_thor_exec(ai2thor_dir: Path) -> str:
-    # 找到 thor-Linux64-<hash> 文件夹
-    builds = sorted(ai2thor_dir.glob("thor-Linux64-*"))
-    if not builds:
-        raise FileNotFoundError(f"No thor-Linux64-* found under {ai2thor_dir}")
-    build = builds[0]
-
-    exec_path = build / build.name
-
-    if not exec_path.exists() or exec_path.is_dir() or exec_path.name.endswith("_Data"):
-        cands = [p for p in build.iterdir() if p.is_file() and not p.name.endswith("_Data")]
-        if not cands:
-            raise FileNotFoundError(f"No executable file found under {build}")
-        exec_path = cands[0]
-
-    return str(exec_path)
-
-
-EXEC = find_thor_exec(AI2THOR_DIR)
-
 
 class Ai2ThorRepresentation(BaseRepresentation):
     def __init__(
         self,
-        executable_path: Optional[str] = EXEC,
+        executable_path: Optional[str] = None,
+        quality: Optional[str] = None,
         scene: str = "FloorPlan212",
         visibilityDistance: float = 1.5,
         gridSize: float = 0.25,
@@ -53,6 +29,7 @@ class Ai2ThorRepresentation(BaseRepresentation):
         super().__init__()
 
         self.executable_path = executable_path                              # ai2thor可执行文件路径
+        self.quality = quality                                              # 渲染质量
         self.scene = scene                                                  # 默认场景
         self.visibilityDistance = visibilityDistance                        # 可见距离
         self.gridSize = gridSize                                            # 移动距离
@@ -66,15 +43,14 @@ class Ai2ThorRepresentation(BaseRepresentation):
         self.snapToGrid = snapToGrid                                        # 是否贴合网格移动
         self.agentMode = agentMode                                          # agent模式
 
-        self.controller: Optional[Controller] = None                        # Controller实例，初始为None
+        self.controller: Optional[Controller] = None                        # Controller实例,初始为None
         self._last_event: Any = None
 
     @classmethod
     def from_pretrained(cls, pretrained_model_path: str = "", device=None, **kwargs):
-        # ai2thor 不是权重模型；保持接口一致即可
+        # ai2thor 不是权重模型;保持接口一致即可
         return cls(**kwargs)
 
-    # ===== inventory helper =====
     @staticmethod
     def _get_inventory_objects(md: Dict[str, Any]) -> List[Dict[str, Any]]:
         inv_top = md.get("inventoryObjects", None)
@@ -87,13 +63,14 @@ class Ai2ThorRepresentation(BaseRepresentation):
         return []
 
     def _ensure_controller(self) -> None:
-        """内部使用：保证 controller 已初始化。"""
+        """内部使用:保证 controller 已初始化。"""
         if self.controller is not None:
             return
 
         kwargs: Dict[str, Any] = dict(
             agentMode=self.agentMode,
             visibilityDistance=float(self.visibilityDistance),
+            quality=self.quality,
             scene=self.scene,
             gridSize=float(self.gridSize),
             snapToGrid=bool(self.snapToGrid),
@@ -159,7 +136,7 @@ class Ai2ThorRepresentation(BaseRepresentation):
                 "object": focus_meta,
             }
 
-            # inventory 简化信息（供 operator interact 使用）
+            # inventory 简化信息(供 operator interact 使用)
             inv = self._get_inventory_objects(md)
             obs["inventory"] = {
                 "has_in_hand": len(inv) > 0,
@@ -194,14 +171,14 @@ class Ai2ThorRepresentation(BaseRepresentation):
         """
         BaseRepresentation 模版接口
 
-        data 约定：
+        data 约定:
         - {"mode": "init"|"reset"|"close"|"observe"}
         - {"mode":"step", "action": <str|dict>}
         - {"mode":"query", "query":"focus"|"raycast", ...}
 
-        常用 kwargs：
+        常用 kwargs:
         - include_depth/include_instance
-        - attach_focus/focus_check_visible（把 focus + inventory 附到 obs 里，供 operator 用）
+        - attach_focus/focus_check_visible(把 focus + inventory 附到 obs 里,供 operator 用)
         """
         if not isinstance(data, dict):
             raise TypeError(f"data must be dict, got {type(data)}")
@@ -278,7 +255,7 @@ class Ai2ThorRepresentation(BaseRepresentation):
                 return {"actionReturn": oid, "object": self._get_object_meta(md, oid)}
             return {"error": f"Unknown query: {query}"}
 
-        # observe: 不 step，仅把 last_event 转成 obs
+        # observe: 不 step,仅把 last_event 转成 obs
         self._ensure_controller()
         if self._last_event is None and self.controller is not None:
             self._last_event = self.controller.last_event
@@ -289,3 +266,4 @@ class Ai2ThorRepresentation(BaseRepresentation):
             attach_focus=attach_focus,
             focus_check_visible=focus_check_visible,
         )
+    

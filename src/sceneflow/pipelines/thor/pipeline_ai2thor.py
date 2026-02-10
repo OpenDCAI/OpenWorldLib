@@ -3,31 +3,14 @@ from __future__ import annotations
 import json
 import os
 import time
-from typing import Any, Callable, Dict, List, Optional, Set
-
-import cv2
 import numpy as np
-import json
+import cv2
+from typing import Any, Callable, Dict, List, Optional, Union
 
 from ..pipeline_utils import PipelineABC
 from ...operators.ai2thor_operator import Ai2ThorOperator
 from ...representations.simulation_environment.thor.ai2thor_representation import Ai2ThorRepresentation
 from ...memories.simulation_environment.thor.ai2thor_memory import Ai2ThorMemory
-
-
-class _InputState:
-    def __init__(self):
-        self.pressed: Set[str] = set()
-        self.quit: bool = False
-        self.save_snapshot: bool = False
-
-
-def _sign(x: float) -> float:
-    if x > 0:
-        return 1.0
-    if x < 0:
-        return -1.0
-    return 0.0
 
 
 class Ai2ThorPipeline(PipelineABC):
@@ -61,143 +44,84 @@ class Ai2ThorPipeline(PipelineABC):
             memory_module = Ai2ThorMemory(**({} if mem_cfg is None else dict(mem_cfg)))
         return cls(operators=operators, representation=representation, memory_module=memory_module)
 
-    def _start_keyboard_listener(self, state: _InputState):
-        try:
-            from pynput import keyboard
-        except Exception as e:
-            raise RuntimeError("pynput is required for keyboard. Install with: pip install pynput") from e
-
-        def on_press(key):
-            if key == keyboard.Key.esc:
-                state.quit = True
-                return False
-            try:
-                k = key.char.lower()
-                if k == "p":
-                    state.save_snapshot = True
-                state.pressed.add(k)
-            except Exception:
-                pass
-
-        def on_release(key):
-            try:
-                k = key.char.lower()
-                state.pressed.discard(k)
-            except Exception:
-                pass
-
-        kb = keyboard.Listener(on_press=on_press, on_release=on_release)
-        kb.start()
-        return kb
-
-    @staticmethod
-    def _draw_crosshair(img: np.ndarray, cx: int, cy: int, size: int = 10, thickness: int = 1) -> None:
-        cv2.line(img, (cx - size, cy), (cx + size, cy), (255, 255, 255), thickness, cv2.LINE_AA)
-        cv2.line(img, (cx, cy - size), (cx, cy + size), (255, 255, 255), thickness, cv2.LINE_AA)
-
-    def _inputs_to_tokens(
-        self,
-        pressed_keys: Set[str],
-        mouse: Dict[str, Any],
-        *,
-        rot_step_pixels: float,
-        look_step_pixels: float,
-        max_yaw_per_tick: int,
-        max_pitch_per_tick: int,
-    ) -> List[str]:
-        tokens: List[str] = []
-
-        if "w" in pressed_keys:
-            tokens.append("forward")
-        elif "s" in pressed_keys:
-            tokens.append("backward")
-        elif "a" in pressed_keys:
-            tokens.append("left")
-        elif "d" in pressed_keys:
-            tokens.append("right")
-
-        dx = float(mouse.get("dx", 0.0))
-        dy = float(mouse.get("dy", 0.0))
-
-        deadzone = 0.5
-        if abs(dx) < deadzone:
-            dx = 0.0
-        if abs(dy) < deadzone:
-            dy = 0.0
-
-        if abs(dx) >= float(rot_step_pixels):
-            n = min(int(abs(dx) // float(rot_step_pixels)), int(max_yaw_per_tick))
-            if n > 0:
-                tok = "camera_r" if dx > 0 else "camera_l"
-                tokens.extend([tok] * n)
-                mouse["dx"] = dx - (_sign(dx) * n * float(rot_step_pixels))
-        else:
-            mouse["dx"] = dx
-
-        if abs(dy) >= float(look_step_pixels):
-            n = min(int(abs(dy) // float(look_step_pixels)), int(max_pitch_per_tick))
-            if n > 0:
-                tok = "camera_up" if dy < 0 else "camera_down"
-                tokens.extend([tok] * n)
-                mouse["dy"] = dy - (_sign(dy) * n * float(look_step_pixels))
-        else:
-            mouse["dy"] = dy
-
-        return tokens
-
     def process(
         self,
+        obs: Dict[str, Any],
         *,
-        policy: Optional[Callable[[Dict[str, Any]], List[str]]] = None,
-        fps: int = 20,
-        max_steps: Optional[int] = 200,          # ticks
-        max_actions: Optional[int] = None,
+        policy: Optional[Callable[[Dict[str, Any]], Union[List[str], str, None]]] = None,
+        use_human_control: bool = False,
+    ) -> Dict[str, Any]:
+        """
+        Process perception and interaction using operators ONLY.
+        No representation calls, no memory recording.
+        """
+        if self.operators is None:
+            raise ValueError("operators is None")
 
+        # 1) Process perception (operator)
+        last_percep = self.operators.process_perception(obs)
+
+        # 2) Get interaction (operator)
+        if use_human_control:
+            self.operators.get_interaction({"type": "human_control", "frame": obs.get("frame", None)})
+        else:
+            out = policy(obs) if policy is not None else None
+            if out is not None and self.operators.check_interaction(out):
+                self.operators.get_interaction(out)
+
+        # 3) Read latest tokens (operator)
+        hist = self.operators.get_interaction_history()
+        tokens: List[str] = hist[-1] if (isinstance(hist, list) and len(hist) > 0 and isinstance(hist[-1], list)) else []
+
+        # 4) Check for quit
+        should_quit = use_human_control and ("quit" in tokens)
+
+        # 5) Process interaction to get actions (operator)
+        actions: List[Dict[str, Any]] = self.operators.process_interaction()
+
+        return {
+            "last_percep": last_percep,
+            "actions": actions,
+            "tokens": tokens,
+            "should_quit": should_quit,
+        }
+
+    def __call__(
+        self,
+        *,
+        policy: Optional[Callable[[Dict[str, Any]], Union[List[str], str, None]]] = None,
+        fps: int = 20,
+        max_steps: Optional[int] = None,
+        max_timesteps: Optional[int] = None,
         include_depth: bool = False,
         include_instance: bool = False,
-
-        window_name: str = "thor",
-        show_window: bool = True,
-
-        rot_step_pixels: float = 6.0,
-        look_step_pixels: float = 8.0,
-        max_yaw_per_tick: int = 3,
-        max_pitch_per_tick: int = 2,
-
-        overlay_crosshair: bool = True,
-        overlay_error: bool = True,
-        overlay_focus: bool = True,
         focus_check_visible: bool = False,
-
         record_frames: bool = True,
         record_actions: bool = True,
-        record_depth: bool = False,            # 可选：把 depth 当 image(subtype=depth) 存入 memory
-        record_instance: bool = False,         # 可选：把 instance seg 当 image(subtype=instance) 存入 memory
-        record_instance_payload: bool = False, # 可选：把 masks/detections 当 other(subtype=instance_payload)
+        record_depth: bool = False,
+        record_instance: bool = False,
+        record_instance_payload: bool = False,
         slim_focus: bool = True,
     ) -> Dict[str, Any]:
         if self.representation is None:
             raise ValueError("representation is None")
-        if self.operators is None:
-            raise ValueError("operators is None")
         if self.memory_module is None:
             self.memory_module = Ai2ThorMemory()
 
         mem = self.memory_module
-
         mem.manage(action="reset")
         mem.manage(action="set_meta", meta={
             "fps": int(fps),
-            "window_name": str(window_name),
             "include_depth": bool(include_depth),
             "include_instance": bool(include_instance),
             "focus_check_visible": bool(focus_check_visible),
+            "max_steps": None if max_steps is None else int(max_steps),
+            "max_timesteps": None if max_timesteps is None else int(max_timesteps),
         })
 
-        tick_idx: int = 0
-        action_idx: int = 0
+        use_human_control = (policy is None)
 
-        # ---- init env (ONLY get_representation) ----
+        # Initialize representation
         obs = self.representation.get_representation({
             "mode": "init",
             "include_depth": include_depth,
@@ -210,51 +134,17 @@ class Ai2ThorPipeline(PipelineABC):
         if not isinstance(frame0, np.ndarray):
             raise RuntimeError("No frame from AI2-THOR (event.frame is None).")
 
-        if show_window:
-            cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-
-        mouse: Dict[str, Any] = {"last": None, "dx": 0.0, "dy": 0.0, "click": False}
-
-        def on_mouse(evt, x, y, flags, param):
-            if evt == cv2.EVENT_MOUSEMOVE:
-                if mouse["last"] is None:
-                    mouse["last"] = (x, y)
-                    return
-                lx, ly = mouse["last"]
-                mouse["dx"] += (x - lx)
-                mouse["dy"] += (y - ly)
-                mouse["last"] = (x, y)
-            elif evt in (cv2.EVENT_LBUTTONDOWN, cv2.EVENT_RBUTTONDOWN, cv2.EVENT_LBUTTONUP, cv2.EVENT_RBUTTONUP):
-                mouse["last"] = (x, y)
-            if evt == cv2.EVENT_LBUTTONUP:
-                mouse["click"] = True
-
-        if show_window and policy is None:
-            cv2.setMouseCallback(window_name, on_mouse)
-
-        state = _InputState()
-        kb_listener = None
-        if policy is None:
-            kb_listener = self._start_keyboard_listener(state)
+        tick_idx: int = 0
+        action_idx: int = 0
 
         tick_dt = 1.0 / float(fps)
         next_time = time.time()
 
-        last_percep: Dict[str, Any] = {}
-
         try:
             while True:
-                # quit
-                if show_window:
-                    k = cv2.waitKey(1) & 0xFF
-                    if k == ord("q"):
-                        state.quit = True
-                if state.quit:
+                if max_steps is not None and action_idx >= int(max_steps):
                     break
-
-                if max_steps is not None and tick_idx >= int(max_steps):
-                    break
-                if max_actions is not None and action_idx >= int(max_actions):
+                if max_timesteps is not None and tick_idx >= int(max_timesteps):
                     break
 
                 now = time.time()
@@ -263,7 +153,7 @@ class Ai2ThorPipeline(PipelineABC):
                     continue
                 next_time += tick_dt
 
-                # observe (ONLY get_representation)
+                # Get observation from representation
                 obs = self.representation.get_representation({
                     "mode": "observe",
                     "include_depth": include_depth,
@@ -272,140 +162,50 @@ class Ai2ThorPipeline(PipelineABC):
                     "focus_check_visible": focus_check_visible,
                 })
 
-                # perception update (ONLY BaseOperator template)
-                last_percep = self.operators.process_perception(obs)
-
-                frame = obs.get("frame", None)
-                frame_bgr = None
-                if isinstance(frame, np.ndarray):
-                    frame_bgr = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-
-                    if overlay_crosshair:
-                        h, w = frame_bgr.shape[:2]
-                        self._draw_crosshair(frame_bgr, w // 2, h // 2)
-
-                    if overlay_focus:
-                        fid = last_percep.get("focus_object_id", None)
-                        ftype = last_percep.get("focus_object_type", "")
-                        txt = f"FOCUS: {ftype} | {str(fid)[:48]}" if fid else "FOCUS: None"
-                        cv2.putText(frame_bgr, txt, (10, 22),
-                                    cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
-
-                    if overlay_error:
-                        if not obs.get("lastActionSuccess", True):
-                            err = str(obs.get("errorMessage", "") or "")
-                            if err:
-                                cv2.putText(frame_bgr, f"ERR: {err[:80]}", (10, 44),
-                                            cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
-
-                    if show_window:
-                        cv2.imshow(window_name, frame_bgr)
-
-                # record frames
-                if record_frames and isinstance(frame, np.ndarray):
-                    payload = {"frame": frame}
-
-                    if include_depth:
-                        payload["depth_frame"] = obs.get("depth_frame", None)
-
-                    if include_instance:
-                        payload["instance_segmentation_frame"] = obs.get("instance_segmentation_frame", None)
-                        payload["instance_masks"] = obs.get("instance_masks", None)
-                        payload["instance_detections2D"] = obs.get("instance_detections2D", None)
-
-                    mem.record(
-                        payload,
-                        metadata={
-                            "type": "image",
-                            "tick": int(tick_idx),
-                            "sceneName": obs.get("sceneName", ""),
-                        },
-                    )
+                # Record frames to memory
+                if record_frames:
+                    frame = obs.get("frame", None)
+                    if isinstance(frame, np.ndarray):
+                        payload = {"frame": frame}
+                        if include_depth:
+                            payload["depth_frame"] = obs.get("depth_frame", None)
+                        if include_instance:
+                            payload["instance_segmentation_frame"] = obs.get("instance_segmentation_frame", None)
+                            payload["instance_masks"] = obs.get("instance_masks", None)
+                            payload["instance_detections2D"] = obs.get("instance_detections2D", None)
+                        mem.record(payload, metadata={"type": "image", "tick": int(tick_idx), "sceneName": obs.get("sceneName", "")})
 
                 if include_depth and record_depth:
                     d = obs.get("depth_frame", None)
                     if isinstance(d, np.ndarray):
-                        mem.record(d, metadata={
-                            "type": "image",
-                            "subtype": "depth",
-                            "tick": int(tick_idx),
-                        })
+                        mem.record(d, metadata={"type": "image", "subtype": "depth", "tick": int(tick_idx)})
 
                 if include_instance and record_instance:
                     inst = obs.get("instance_segmentation_frame", None)
                     if isinstance(inst, np.ndarray):
-                        mem.record(inst, metadata={
-                            "type": "image",
-                            "subtype": "instance",
-                            "tick": int(tick_idx),
-                        })
+                        mem.record(inst, metadata={"type": "image", "subtype": "instance", "tick": int(tick_idx)})
 
                 if include_instance and record_instance_payload:
                     payload = {
                         "instance_masks": obs.get("instance_masks", None),
                         "instance_detections2D": obs.get("instance_detections2D", None),
                     }
-                    mem.record(payload, metadata={
-                        "type": "other",
-                        "subtype": "instance_payload",
-                        "tick": int(tick_idx),
-                    })
+                    mem.record(payload, metadata={"type": "other", "subtype": "instance_payload", "tick": int(tick_idx)})
 
-                # optional: snapshot key = manual jpg save (still allowed)
-                if policy is None and state.save_snapshot and show_window and frame_bgr is not None:
-                    state.save_snapshot = False
-                    snap = {"frame_bgr": frame_bgr.copy(), "tick": int(tick_idx)}
-                    mem.record(snap, metadata={"type": "other", "subtype": "snapshot", "tick": int(tick_idx)})
+                output_dict = self.process(
+                    obs,
+                    policy=policy,
+                    use_human_control=use_human_control,
+                )
 
-                # decide tokens
-                tokens: List[str] = []
-                mode = "agent" if policy is not None else "human"
+                # Check for quit
+                if output_dict["should_quit"]:
+                    break
 
-                if policy is None:
-                    if mouse.get("click", False):
-                        mouse["click"] = False
-                        tokens.append("interact")
-                    tokens.extend(self._inputs_to_tokens(
-                        pressed_keys=state.pressed,
-                        mouse=mouse,
-                        rot_step_pixels=rot_step_pixels,
-                        look_step_pixels=look_step_pixels,
-                        max_yaw_per_tick=max_yaw_per_tick,
-                        max_pitch_per_tick=max_pitch_per_tick,
-                    ))
-                else:
-                    out = policy(obs)
-                    tokens = [str(t) for t in out] if isinstance(out, list) else []
+                actions = output_dict["actions"]
+                tokens = output_dict["tokens"]
 
-                # tokens -> actions (ONLY BaseOperator template)
-                actions: List[Dict[str, Any]] = []
-                raycast = None
-                if tokens:
-                    mem.record(list(tokens), metadata={
-                        "type": "other",
-                        "subtype": "interaction",
-                        "tick": int(tick_idx),
-                        "mode": mode,
-                    })
-
-                    self.operators.get_interaction(tokens)
-
-                    if "interact" in tokens:
-                        q = self.representation.get_representation({
-                            "mode": "query",
-                            "query": "raycast",
-                            "x": 0.5,
-                            "y": 0.78,
-                        })
-                        ar = q.get("actionReturn", None)
-                        if isinstance(ar, dict) and all(k in ar for k in ("x", "y", "z")):
-                            raycast = {"x": float(ar["x"]), "y": float(ar["y"]), "z": float(ar["z"])}
-
-                    actions = self.operators.process_interaction(raycast=raycast)
-                else:
-                    actions = []
-
-                # execute actions (ONLY get_representation)
+                # Execute actions via representation
                 if actions:
                     for a in actions:
                         obs_after = self.representation.get_representation({
@@ -417,33 +217,32 @@ class Ai2ThorPipeline(PipelineABC):
                             "focus_check_visible": focus_check_visible,
                         })
 
-                        # slim focus (来自 obs_after["focus"]["object"])
-                        focus_obj = None
-                        focus = obs_after.get("focus", None)
-                        if isinstance(focus, dict):
-                            focus_obj = focus.get("object", None)
-
-                        if slim_focus and isinstance(focus_obj, dict):
-                            focus_obj = {
-                                "objectId": focus_obj.get("objectId"),
-                                "objectType": focus_obj.get("objectType", ""),
-                                "pickupable": focus_obj.get("pickupable", False),
-                                "openable": focus_obj.get("openable", False),
-                                "isOpen": focus_obj.get("isOpen", False),
-                                "toggleable": focus_obj.get("toggleable", False),
-                                "isToggled": focus_obj.get("isToggled", False),
-                                "receptacle": focus_obj.get("receptacle", False),
-                                "visible": focus_obj.get("visible", False),
-                                "distance": focus_obj.get("distance", None),
-                            }
-
                         if record_actions:
+                            focus_obj = None
+                            focus = obs_after.get("focus", None)
+                            if isinstance(focus, dict):
+                                focus_obj = focus.get("object", None)
+
+                            if slim_focus and isinstance(focus_obj, dict):
+                                focus_obj = {
+                                    "objectId": focus_obj.get("objectId"),
+                                    "objectType": focus_obj.get("objectType", ""),
+                                    "pickupable": focus_obj.get("pickupable", False),
+                                    "openable": focus_obj.get("openable", False),
+                                    "isOpen": focus_obj.get("isOpen", False),
+                                    "toggleable": focus_obj.get("toggleable", False),
+                                    "isToggled": focus_obj.get("isToggled", False),
+                                    "receptacle": focus_obj.get("receptacle", False),
+                                    "visible": focus_obj.get("visible", False),
+                                    "distance": focus_obj.get("distance", None),
+                                }
+
                             mem.record(a, metadata={
                                 "type": "action",
-                                "mode": mode,
                                 "tokens": list(tokens),
                                 "action": a,
                                 "tick": int(tick_idx),
+                                "step": int(action_idx),
                                 "lastActionSuccess": obs_after.get("lastActionSuccess", None),
                                 "errorMessage": obs_after.get("errorMessage", ""),
                                 "sceneName": obs_after.get("sceneName", ""),
@@ -451,36 +250,33 @@ class Ai2ThorPipeline(PipelineABC):
                                 "focus": focus_obj,
                                 "inventory": obs_after.get("inventory", None),
                             })
-                            action_idx += 1
+
+                        action_idx += 1
+                        if max_steps is not None and action_idx >= int(max_steps):
+                            break
 
                 tick_idx += 1
 
         finally:
             try:
-                if kb_listener is not None:
-                    kb_listener.stop()
-            except Exception:
-                pass
-            try:
-                if show_window:
-                    cv2.destroyAllWindows()
-            except Exception:
-                pass
-            try:
-                if self.representation is not None:
-                    self.representation.get_representation({"mode": "close"})
+                self.representation.get_representation({"mode": "close"})
             except Exception:
                 pass
 
         export = mem.process(None, target_format="export")
 
+        if isinstance(export, dict):
+            if "meta" not in export or export["meta"] is None:
+                export["meta"] = {}
+            export["meta"]["tick_count"] = int(tick_idx)
+            export["meta"]["action_count"] = int(action_idx)
+
         return {
             "export": export,
             "memory": mem,
+            "tick_count": tick_idx,
+            "action_count": action_idx
         }
-
-    def __call__(self, *args, **kwds):
-        return self.process(*args, **kwds)
 
     # ---------------- User manual saving (save ALL) ----------------
     def save_results(
@@ -492,10 +288,10 @@ class Ai2ThorPipeline(PipelineABC):
         save_video: bool = True,
         save_actions: bool = True,
         save_meta: bool = True,
-        save_frames: bool = False,            # 可选：逐帧 rgb
-        save_depth: bool = True,              # 深度图，可选
-        save_instance: bool = True,           # 分割图
-        save_instance_payloads: bool = True,  # masks/det2d json
+        save_frames: bool = False,
+        save_depth: bool = True,
+        save_instance: bool = True,
+        save_instance_payloads: bool = True,
     ):
         os.makedirs(output_dir, exist_ok=True)
         export = results.get("export", None)
@@ -545,7 +341,6 @@ class Ai2ThorPipeline(PipelineABC):
             depth_dir = os.path.join(output_dir, "depth")
             os.makedirs(depth_dir, exist_ok=True)
             for i, d in enumerate(depth_frames):
-                # 常见 depth 是 float32，保存成 npy 
                 np.save(os.path.join(depth_dir, f"{i:06d}.npy"), d)
 
         # 6) instance segmentation frame
@@ -555,7 +350,6 @@ class Ai2ThorPipeline(PipelineABC):
             instance_dir = os.path.join(output_dir, "instance_segmentation")
             os.makedirs(instance_dir, exist_ok=True)
             for i, inst in enumerate(inst_frames):
-                # 可能是彩色或label图；用 png 保存
                 cv2.imwrite(os.path.join(instance_dir, f"{i:06d}.png"), inst)
 
         # 7) instance payloads (masks/det2d)
@@ -577,3 +371,4 @@ class Ai2ThorPipeline(PipelineABC):
             "instance_dir": instance_dir,
             "instance_payloads_path": instance_payloads_path,
         }
+        

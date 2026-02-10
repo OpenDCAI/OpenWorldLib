@@ -176,3 +176,4 @@ class Ai2ThorMemory(BaseMemory):
 
         if action == "close":
             return
+        
