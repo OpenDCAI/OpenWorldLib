@@ -14,7 +14,7 @@ import cv2
 from PIL import Image
 
 from ...operators.infinite_vggt_operator import InfiniteVGGTOperator
-from ...representations.point_clouds_generation.infinite_vggt.infinite_vggt_representation import (
+from ...representations.point_clouds_generation.vggt.infinite_vggt_representation import (
     InfiniteVGGTRepresentation,
 )
 
