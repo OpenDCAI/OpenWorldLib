@@ -10,6 +10,7 @@ from pathlib import Path
 from torchvision.transforms import v2
 from typing import Optional
 
+
 class AstraOperator(object): 
     def __init__(self, device="cuda"):
         self.device = device
@@ -129,10 +130,6 @@ class AstraOperator(object):
 
     def delete_last_interaction(self):
         self.current_interaction = self.current_interaction[:-1]
-
-    # =========================================================================
-    # 来自 infer_demo.py 的数学计算和轨迹生成函数
-    # =========================================================================
     
     def compute_relative_pose(self, pose_a, pose_b, use_torch=False):
         """Compute relative pose matrix of camera B with respect to camera A"""

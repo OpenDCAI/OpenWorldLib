@@ -1,6 +1,7 @@
 import torch
 from ...base_memory import BaseMemory
 
+
 class AstraMemory(BaseMemory):
     def __init__(self, capacity=49, **kwargs):
         self.capacity = capacity
@@ -40,7 +41,7 @@ class AstraMemory(BaseMemory):
         )
 
     # =========================================================================
-    # 来自 infer_demo.py 的 FramePack 准备函数 (原封不动)
+    # FramePack preparation with sliding window - Mixture of Experts (MoE) version
     # =========================================================================
     
     def prepare_framepack_sliding_window_with_camera_moe(
