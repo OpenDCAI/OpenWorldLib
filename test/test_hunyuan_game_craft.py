@@ -13,7 +13,6 @@ pipeline = HunyuanGameCraftPipeline.from_pretrained(
     cpu_offload=False,
     seed=250160
 )
-
 output_video = pipeline(
     input_image=input_image,
     interaction_signal=["backward", "camera_l"], # ["forward", "left", "right", "backward", "camera_l", "camera_r", "camera_up", "camera_down"]
@@ -27,3 +26,4 @@ output_video = pipeline(
 
 if torch.distributed.get_rank() == 0:
     imageio.mimsave("hunyuan_game_craft_demo.mp4", output_video, fps=24, quality=8)
+
