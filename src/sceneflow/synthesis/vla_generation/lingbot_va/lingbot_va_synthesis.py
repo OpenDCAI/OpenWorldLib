@@ -20,7 +20,8 @@ from .lingbot_va.modeling_lingbot_va_utils import (
     load_vae,
 )
 from .lingbot_va.scheduling_lingbot_va import FlowMatchScheduler
-from .lingbot_va.data_utils_lingbot_va import data_seq_to_patch, get_mesh_id
+
+from einops import rearrange
 
 
 class LingBotVASynthesis(BaseSynthesis):
@@ -109,6 +110,51 @@ class LingBotVASynthesis(BaseSynthesis):
     ):
         """Single-step transformer forward pass."""
         return self.transformer(input_dict, update_cache=update_cache, cache_name=cache_name, action_mode=action_mode)
+
+    @staticmethod
+    def _data_seq_to_patch(patch_size, data_seq, latent_num_frames, latent_height, latent_width, batch_size=1):
+        """Reshape transformer sequence output back to spatial patch layout."""
+        p_t, p_h, p_w = patch_size
+        post_patch_num_frames = latent_num_frames // p_t
+        post_patch_height = latent_height // p_h
+        post_patch_width = latent_width // p_w
+
+        data_patch = data_seq.reshape(batch_size, post_patch_num_frames,
+                                      post_patch_height, post_patch_width, p_t,
+                                      p_h, p_w, -1)
+        data_patch = data_patch.permute(0, 7, 1, 4, 2, 5, 3, 6)
+        data_patch = data_patch.flatten(6, 7).flatten(4, 5).flatten(2, 3)
+        return data_patch
+
+    @torch.no_grad()
+    def predict_video_noise(
+        self,
+        input_dict: dict,
+        frame_chunk_size: int,
+        latent_height: int,
+        latent_width: int,
+        update_cache: int = 0,
+        cache_name: str = 'pos',
+        batch_size: int = 1,
+    ) -> torch.Tensor:
+        """Transformer forward for video + reshape output back to spatial layout."""
+        raw_output = self.predict(input_dict, action_mode=False, update_cache=update_cache, cache_name=cache_name)
+        return self._data_seq_to_patch(
+            self.config.patch_size, raw_output, frame_chunk_size,
+            latent_height, latent_width, batch_size=batch_size,
+        )
+
+    @torch.no_grad()
+    def predict_action_noise(
+        self,
+        input_dict: dict,
+        frame_chunk_size: int,
+        update_cache: int = 0,
+        cache_name: str = 'pos',
+    ) -> torch.Tensor:
+        """Transformer forward for action + reshape output back to [B, C, F, N, 1]."""
+        raw_output = self.predict(input_dict, action_mode=True, update_cache=update_cache, cache_name=cache_name)
+        return rearrange(raw_output, 'b (f n) c -> b c f n 1', f=frame_chunk_size)
 
     def to(self, device: str | torch.device):
         self.device = device

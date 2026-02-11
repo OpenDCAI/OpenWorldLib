@@ -9,7 +9,30 @@ import torch
 import torch.nn.functional as F
 
 from .base_operator import BaseOperator
-from ..synthesis.vla_generation.lingbot_va.lingbot_va.data_utils_lingbot_va import get_mesh_id
+
+
+def _get_mesh_id(f, h, w, t, f_w=1, f_shift=0, action=False):
+    """Generate 3D positional grid IDs for transformer input."""
+    f_idx = torch.arange(f_shift, f + f_shift) * f_w
+    h_idx = torch.arange(h)
+    w_idx = torch.arange(w)
+    ff, hh, ww = torch.meshgrid(f_idx, h_idx, w_idx, indexing='ij')
+    if action:
+        ff_offset = (torch.ones([h]).cumsum(0) / (h + 1)).view(1, -1, 1)
+        ff = ff + ff_offset
+        hh = torch.ones_like(hh) * -1
+        ww = torch.ones_like(ww) * -1
+
+    grid_id = torch.cat(
+        [
+            ff.unsqueeze(0),
+            hh.unsqueeze(0),
+            ww.unsqueeze(0),
+        ],
+        dim=0,
+    ).flatten(1)
+    grid_id = torch.cat([grid_id, torch.full_like(grid_id[:1], t)], dim=0)
+    return grid_id
 
 
 class LingBotVAOperator(BaseOperator):
@@ -171,7 +194,7 @@ class LingBotVAOperator(BaseOperator):
             input_dict['latent_res_lst'] = {
                 'noisy_latents': latent_model_input,
                 'timesteps': torch.ones([latent_model_input.shape[2]], dtype=torch.float32, device=device) * latent_t,
-                'grid_id': get_mesh_id(
+                'grid_id': _get_mesh_id(
                     latent_model_input.shape[-3] // patch_size[0],
                     latent_model_input.shape[-2] // patch_size[1],
                     latent_model_input.shape[-1] // patch_size[2],
@@ -186,7 +209,7 @@ class LingBotVAOperator(BaseOperator):
             input_dict['action_res_lst'] = {
                 'noisy_latents': action_model_input,
                 'timesteps': torch.ones([action_model_input.shape[2]], dtype=torch.float32, device=device) * action_t,
-                'grid_id': get_mesh_id(
+                'grid_id': _get_mesh_id(
                     action_model_input.shape[-3],
                     action_model_input.shape[-2],
                     action_model_input.shape[-1],

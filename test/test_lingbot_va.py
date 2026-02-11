@@ -63,8 +63,10 @@ def make_robotwin_config():
 MODEL_PATH = 'robbyant/lingbot-va-posttrain-robotwin'
 IMAGE_DIR = 'data/test_vla/robotwin'
 OUTPUT_PATH = 'outputs/lingbot_va_demo.png'
+VIDEO_OUTPUT_PATH = 'outputs/lingbot_va_demo.mp4'
 PROMPT = 'Grab the medium-sized white mug, rotate it, place it on the table, and hook it onto the smooth dark gray rack.'
 NUM_CHUNKS = 10
+DECODE_VIDEO = True
 DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 
@@ -117,8 +119,15 @@ if __name__ == '__main__':
         images=img_dict,
         prompt=PROMPT,
         num_chunks=NUM_CHUNKS,
-        decode_video=False,
+        decode_video=DECODE_VIDEO,
     )
 
     print(f'Predicted actions shape: {output.actions.shape}')
     visualize_action(output.actions, OUTPUT_PATH)
+
+    # Save decoded video
+    if output.video is not None:
+        from diffusers.utils import export_to_video
+        os.makedirs(os.path.dirname(VIDEO_OUTPUT_PATH), exist_ok=True)
+        export_to_video(output.video, VIDEO_OUTPUT_PATH, fps=10)
+        print(f'Saved video to {VIDEO_OUTPUT_PATH}')

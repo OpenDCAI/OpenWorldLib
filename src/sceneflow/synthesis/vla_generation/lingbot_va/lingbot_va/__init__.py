@@ -8,7 +8,6 @@ from .modeling_lingbot_va_utils import (
     load_vae,
 )
 from .scheduling_lingbot_va import FlowMatchScheduler
-from .data_utils_lingbot_va import data_seq_to_patch, get_mesh_id
 
 __all__ = [
     'WanTransformer3DModel',
@@ -18,6 +17,4 @@ __all__ = [
     'load_tokenizer',
     'load_transformer',
     'FlowMatchScheduler',
-    'data_seq_to_patch',
-    'get_mesh_id',
 ]
