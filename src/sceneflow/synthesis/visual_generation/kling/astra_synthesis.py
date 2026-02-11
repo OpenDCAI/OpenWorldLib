@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from huggingface_hub import snapshot_download, hf_hub_download
 from ...base_synthesis import BaseSynthesis
 
 from .astra.pipelines.wan_video_astra import WanVideoAstraPipeline
@@ -18,16 +19,37 @@ class AstraSynthesis(BaseSynthesis):
         self.device = pipe.device
         self.tiler_kwargs = {"tiled": True, "tile_size": (34, 34), "tile_stride": (18, 16)}
 
+    @staticmethod
+    def _resolve_path(path_or_id):
+        """
+        如果路径存在，直接返回；
+        如果不存在，尝试作为 HuggingFace Repo ID 下载。
+        """
+        if os.path.exists(path_or_id):
+            return path_or_id
+        
+        print(f"Path '{path_or_id}' not found locally, attempting to download from HuggingFace...")
+        try:
+            resolved_path = snapshot_download(repo_id=path_or_id)
+            return resolved_path
+            
+        except Exception as e:
+            print(f"Error downloading from HF: {e}")
+            return path_or_id
+
     @classmethod
-    def from_pretrained(cls, config, device="cuda"): # 这里的 config 就是 Pipeline 里创建的 AstraConfig
+    def from_pretrained(cls, config, device="cuda"): # the config is the AstraConfig from the pipeline
+        print("Resolving model paths...")
+        resolved_wan_path = cls._resolve_path(config.wan_model_path)
+        resolved_astra_path = cls._resolve_path(config.astra_path)
         # 1. Model initialization & Patching
         replace_dit_model_in_manager()
         
         model_manager = ModelManager(torch_dtype=torch.bfloat16, device="cpu")
         model_manager.load_models([
-            os.path.join(config.wan_model_path, "diffusion_pytorch_model.safetensors"),
-            os.path.join(config.wan_model_path, "models_t5_umt5-xxl-enc-bf16.pth"),
-            os.path.join(config.wan_model_path, "Wan2.1_VAE.pth"),
+            os.path.join(resolved_wan_path, "diffusion_pytorch_model.safetensors"),
+            os.path.join(resolved_wan_path, "models_t5_umt5-xxl-enc-bf16.pth"),
+            os.path.join(resolved_wan_path, "Wan2.1_VAE.pth"),
         ])
         pipe = WanVideoAstraPipeline.from_model_manager(model_manager, device=device)
 
@@ -54,8 +76,10 @@ class AstraSynthesis(BaseSynthesis):
         add_moe_components(pipe.dit, moe_config)
         
         # 3. Load weights
-        print(f"Loading DiT weights from: {config.dit_path}")
-        dit_state_dict = torch.load(config.dit_path, map_location="cpu")
+        print(f"Loading DiT weights from: {resolved_astra_path} ...")
+        astra_dit_path = os.path.join(resolved_astra_path,
+                                      "models/Astra/checkpoints/diffusion_pytorch_model.ckpt")
+        dit_state_dict = torch.load(astra_dit_path, map_location="cpu")
         pipe.dit.load_state_dict(dit_state_dict, strict=False)
         pipe = pipe.to(device)
         
