@@ -41,7 +41,7 @@
     "is_terminal": false
   },
   "paths": {
-    "main_view": "/ytech_m2v8_hdd/workspace/kling_mm/libozhou/SceneFlow/tmp_out/main_view.png",
-    "wrist_view": "/ytech_m2v8_hdd/workspace/kling_mm/libozhou/SceneFlow/tmp_out/wrist_view.png"
+    "main_view": "./data/test_vla/main_view.png",
+    "wrist_view": "./data/test_vla/wrist_view.png"
   }
 }
