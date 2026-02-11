@@ -1,20 +1,19 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
-import random
-import sys
+from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from PIL import Image
 import torch
 
-from ...operators.yume_5b_operator import Yume5bOperator
-from ...synthesis.visual_generation.yume.yume5b_synthesis import Yume5bSynthesis
 from ...memories.visual_synthesis.wan.wan_2p2_memeory import Wan2p2Memory
+from ...operators.yume_operator import YumeOperator
+from ...synthesis.visual_generation.yume.yume_synthesis import (
+    MODEL_DEFAULTS,
+    SizeLike,
+    YumeSynthesis,
+)
 
-DEFAULT_MODEL_VARIANT = "ti2v-5B"
-SUPPORTED_SIZES = ("704*1280", "1280*704")
-SizeLike = Union[str, Tuple[int, int]]
 
 EXAMPLE_PROMPT = (
     "First-person perspective, walking down a busy neon-lit street at night, "
@@ -22,7 +21,7 @@ EXAMPLE_PROMPT = (
 )
 
 
-class Yume5bPipeline:
+class YumePipeline:
 
     @staticmethod
     def _normalize_size_key(size: SizeLike) -> str:
@@ -41,117 +40,34 @@ class Yume5bPipeline:
     def __init__(
         self,
         *,
-        operator: Yume5bOperator,
-        synthesis_model: Yume5bSynthesis,
+        synthesis_model: YumeSynthesis,
+        operator: Optional[YumeOperator] = None,
         memory_module: Optional[Wan2p2Memory] = None,
-        model_variant: str = DEFAULT_MODEL_VARIANT,
-        size: SizeLike = "1280*704",
-        prompt: Optional[str] = None,
-        image: Optional[str] = None,
-        save_file: Optional[str] = None,
-        num_euler_timesteps: int = 4,
-        sigma_shift: float = 7.0,
-        latent_frame_zero: int = 8,
-        frame_zero: int = 32,
-        rollout_steps: int = 1,
-        base_seed: int = -1,
-        show_progress: bool = True,
     ) -> None:
-        self.operator = operator
+        self.operator = operator if operator is not None else YumeOperator()
         self.synthesis_model = synthesis_model
         self.memory_module = memory_module if memory_module else Wan2p2Memory()
-
-        self.model_variant = model_variant
-        self.size = self._normalize_size_key(size)
-        self.prompt = prompt
-        self.image = image
-        self.save_file = save_file
-        self.num_euler_timesteps = num_euler_timesteps
-        self.sigma_shift = sigma_shift
-        self.latent_frame_zero = latent_frame_zero
-        self.frame_zero = frame_zero
-        self.rollout_steps = rollout_steps
-        self.base_seed = base_seed
-        self.show_progress = show_progress
 
     @classmethod
     def from_pretrained(
         cls,
         synthesis_model_path: str,
         *,
-        size: SizeLike = "1280*704",
-        prompt: Optional[str] = None,
-        image: Optional[str] = None,
-        save_file: Optional[str] = None,
-        num_euler_timesteps: int = 4,
-        sigma_shift: float = 7.0,
-        latent_frame_zero: int = 8,
-        frame_zero: int = 32,
-        rollout_steps: int = 1,
-        base_seed: int = -1,
-        show_progress: bool = True,
-        t5_fsdp: bool = False,
-        t5_cpu: bool = False,
-        dit_fsdp: bool = False,
-        ulysses_size: int = 1,
-        convert_model_dtype: bool = False,
-        device_id: int = 0,
-        rank: int = 0,
+        model_variant: Optional[str] = None,
+        device: Optional[Union[int, str, torch.device]] = None,
         **kwargs,
-    ) -> "Yume5bPipeline":
-        model_variant = kwargs.pop("model_variant", kwargs.pop("task", DEFAULT_MODEL_VARIANT))
-        if model_variant != DEFAULT_MODEL_VARIANT:
-            raise ValueError(
-                f"Unsupported YUME model variant: {model_variant}. "
-                f"Yume5bPipeline currently supports {DEFAULT_MODEL_VARIANT}."
-            )
+    ) -> "YumePipeline":
+        if synthesis_model_path is None:
+            synthesis_model_path = "stdstu123/Yume-5B-720P"
 
-        if prompt is None:
-            prompt = EXAMPLE_PROMPT
-
-        size_key = cls._normalize_size_key(size)
-        if size_key not in SUPPORTED_SIZES:
-            raise ValueError(
-                f"Unsupported size {size}, supported sizes are: {', '.join(SUPPORTED_SIZES)}"
-            )
-
-        if base_seed < 0:
-            base_seed = random.randint(0, sys.maxsize)
-        torch.manual_seed(base_seed)
-        if torch.cuda.is_available():
-            torch.cuda.manual_seed_all(base_seed)
-
-        operator = Yume5bOperator()
-        memory_module = Wan2p2Memory()
-        synthesis_model = Yume5bSynthesis.from_pretrained(
-            task=model_variant,
-            ckpt_dir=synthesis_model_path,
-            device_id=device_id,
-            rank=rank,
-            t5_fsdp=t5_fsdp,
-            dit_fsdp=dit_fsdp,
-            ulysses_size=ulysses_size,
-            t5_cpu=t5_cpu,
-            convert_model_dtype=convert_model_dtype,
-        )
-
-        return cls(
-            operator=operator,
-            synthesis_model=synthesis_model,
-            memory_module=memory_module,
+        print(f"Loading Yume synthesis model from {synthesis_model_path}...")
+        synthesis_model = YumeSynthesis.from_pretrained(
+            pretrained_model_path=synthesis_model_path,
             model_variant=model_variant,
-            size=size_key,
-            prompt=prompt,
-            image=image,
-            save_file=save_file,
-            num_euler_timesteps=num_euler_timesteps,
-            sigma_shift=sigma_shift,
-            latent_frame_zero=latent_frame_zero,
-            frame_zero=frame_zero,
-            rollout_steps=rollout_steps,
-            base_seed=base_seed,
-            show_progress=show_progress,
+            device=device,
+            **kwargs,
         )
+        return cls(synthesis_model=synthesis_model)
 
     @staticmethod
     def _load_seed_video_from_path(
@@ -231,6 +147,31 @@ class Yume5bPipeline:
             return "t2v"
         return "i2v"
 
+    @staticmethod
+    def _build_prompt_schedule(
+        *,
+        prompt: str,
+        caption: Optional[Union[str, Sequence[str]]],
+        prompt_schedule: Optional[Sequence[str]],
+    ) -> Optional[List[str]]:
+        if prompt_schedule is not None:
+            return [line for line in prompt_schedule if line]
+
+        if caption is None:
+            return None
+
+        if isinstance(caption, str):
+            lines = [line.strip() for line in caption.splitlines() if line.strip()]
+            if not lines:
+                lines = [caption.strip()] if caption.strip() else []
+        else:
+            lines = [str(line).strip() for line in caption if str(line).strip()]
+
+        if not lines:
+            return None
+
+        return [f"{line}{prompt}" for line in lines]
+
     def process(
         self,
         *,
@@ -256,51 +197,36 @@ class Yume5bPipeline:
             "image": img,
             "paths": {"image_path": image_path},
             "meta": {
-                "model_variant": self.model_variant,
+                "model_variant": self.synthesis_model.task,
                 "mode": generation_mode,
             },
         }
-
-    @staticmethod
-    def _load_prompt_schedule_from_caption(
-        *,
-        caption_path: str,
-        prompt: str,
-    ) -> List[str]:
-        caption_file = Path(caption_path)
-        if not caption_file.exists():
-            raise FileNotFoundError(f"Caption file not found: {caption_file}")
-
-        with caption_file.open("r", encoding="utf-8") as file:
-            lines = [line.strip() for line in file if line.strip()]
-        if not lines:
-            return [prompt]
-        return [f"{line}{prompt}" for line in lines]
 
     def __call__(
         self,
         *,
         prompt: Optional[str] = None,
+        caption: Optional[Union[str, Sequence[str]]] = None,
         image_path: Optional[str] = None,
         image: Optional[Image.Image] = None,
         video_path: Optional[str] = None,
         seed_video: Optional[torch.Tensor] = None,
-        caption_path: Optional[str] = None,
-        prompt_schedule: Optional[List[str]] = None,
+        prompt_schedule: Optional[Sequence[str]] = None,
         rollout_steps: Optional[int] = None,
+        size: Optional[SizeLike] = None,
+        seed: Optional[int] = None,
         num_euler_timesteps: Optional[int] = None,
         sigma_shift: Optional[float] = None,
         latent_frame_zero: Optional[int] = None,
         frame_zero: Optional[int] = None,
+        guidance_scale: Optional[float] = None,
+        sampling_method: Optional[str] = None,
+        sde_eta: Optional[float] = None,
+        rand_num_img: Optional[float] = None,
         show_progress: Optional[bool] = None,
     ) -> torch.Tensor:
         if prompt is None:
-            if self.prompt is None:
-                raise ValueError("prompt must be provided either in initialization or call().")
-            prompt = self.prompt
-
-        if image is None and image_path is None:
-            image_path = self.image
+            prompt = EXAMPLE_PROMPT
 
         if seed_video is not None and video_path not in (None, ""):
             raise ValueError("Only one of seed_video and video_path can be provided.")
@@ -315,11 +241,11 @@ class Yume5bPipeline:
             seed_video=seed_video,
         )
 
-        if prompt_schedule is None and caption_path is not None:
-            prompt_schedule = self._load_prompt_schedule_from_caption(
-                caption_path=caption_path,
-                prompt=prompt,
-            )
+        resolved_prompt_schedule = self._build_prompt_schedule(
+            prompt=prompt,
+            caption=caption,
+            prompt_schedule=prompt_schedule,
+        )
 
         if seed_video is not None:
             self.operator.get_interaction(prompt)
@@ -333,7 +259,7 @@ class Yume5bPipeline:
                     "video_path": video_path,
                 },
                 "meta": {
-                    "model_variant": self.model_variant,
+                    "model_variant": self.synthesis_model.task,
                     "mode": generation_mode,
                 },
             }
@@ -345,24 +271,34 @@ class Yume5bPipeline:
                 generation_mode=generation_mode,
             )
 
+        defaults = MODEL_DEFAULTS[self.synthesis_model.task]
+
         synthesis_params = {
-            "size": self.size,
+            "size": self._normalize_size_key(size if size is not None else defaults["size"]),
             "num_euler_timesteps": (
                 num_euler_timesteps
                 if num_euler_timesteps is not None
-                else self.num_euler_timesteps
+                else defaults["num_euler_timesteps"]
             ),
-            "sigma_shift": sigma_shift if sigma_shift is not None else self.sigma_shift,
+            "sigma_shift": sigma_shift if sigma_shift is not None else defaults["sigma_shift"],
             "latent_frame_zero": (
                 latent_frame_zero
                 if latent_frame_zero is not None
-                else self.latent_frame_zero
+                else defaults["latent_frame_zero"]
             ),
-            "frame_zero": frame_zero if frame_zero is not None else self.frame_zero,
-            "rollout_steps": rollout_steps if rollout_steps is not None else self.rollout_steps,
-            "prompt_schedule": prompt_schedule,
-            "base_seed": self.base_seed,
-            "show_progress": self.show_progress if show_progress is None else show_progress,
+            "frame_zero": frame_zero if frame_zero is not None else defaults["frame_zero"],
+            "rollout_steps": rollout_steps if rollout_steps is not None else 1,
+            "prompt_schedule": resolved_prompt_schedule,
+            "base_seed": -1 if seed is None else int(seed),
+            "guidance_scale": (
+                guidance_scale if guidance_scale is not None else defaults["guidance_scale"]
+            ),
+            "sampling_method": (
+                sampling_method if sampling_method is not None else "ode"
+            ),
+            "sde_eta": sde_eta if sde_eta is not None else 0.3,
+            "rand_num_img": rand_num_img if rand_num_img is not None else 0.6,
+            "show_progress": True if show_progress is None else show_progress,
         }
 
         return self.synthesis_model.predict(
@@ -374,20 +310,20 @@ class Yume5bPipeline:
         self,
         *,
         prompt: Optional[str] = None,
+        caption: Optional[Union[str, Sequence[str]]] = None,
         image_path: Optional[str] = None,
         image: Optional[Image.Image] = None,
         video_path: Optional[str] = None,
-        caption_path: Optional[str] = None,
-        prompt_schedule: Optional[List[str]] = None,
+        prompt_schedule: Optional[Sequence[str]] = None,
         rollout_steps: Optional[int] = None,
         show_progress: Optional[bool] = None,
     ) -> torch.Tensor:
         video = self.__call__(
             prompt=prompt,
+            caption=caption,
             image_path=image_path,
             image=image,
             video_path=video_path,
-            caption_path=caption_path,
             prompt_schedule=prompt_schedule,
             rollout_steps=rollout_steps,
             show_progress=show_progress,
@@ -395,12 +331,12 @@ class Yume5bPipeline:
 
         if not isinstance(video, torch.Tensor):
             raise TypeError(
-                f"[Yume5bPipeline.stream] Expected torch.Tensor from predict, got {type(video)}"
+                f"[YumePipeline.stream] Expected torch.Tensor from predict, got {type(video)}"
             )
 
         self.memory_module.record(video)
         print(
-            f"[Yume5bPipeline.stream] Recorded segment. "
+            f"[YumePipeline.stream] Recorded segment. "
             f"Total frames in memory: {len(getattr(self.memory_module, 'all_frames', []))}"
         )
 

@@ -18,17 +18,13 @@ def _load_input_image(input_path: Union[str, Path, Image.Image]) -> Image.Image:
     return Image.open(image_path).convert("RGB")
 
 
-class Yume5bOperator(BaseOperator):
-    """
-    Lightweight YUME input processing:
-    - process_perception: optional reference image loading
-    - process_interaction: pass-through prompt
-    """
+class YumeOperator(BaseOperator):
+    """Lightweight operator for YUME prompt/image preprocessing."""
 
     def __init__(self, operation_types=None) -> None:
         if operation_types is None:
             operation_types = ["image_processing", "prompt_processing"]
-        super(Yume5bOperator, self).__init__(operation_types=operation_types)
+        super(YumeOperator, self).__init__(operation_types=operation_types)
         self.interaction_template = ["text_prompt", "image_prompt"]
         self.interaction_template_init()
 
