@@ -5,6 +5,7 @@ import random
 import types
 from contextlib import contextmanager
 from functools import partial
+from huggingface_hub import snapshot_download
 
 import torch
 import torch.distributed as dist
@@ -17,7 +18,6 @@ from ...base_synthesis import BaseSynthesis
 from .lingbot_world.configs import WAN_CONFIGS
 from .lingbot_world.modules.model import WanModel
 from .lingbot_world.modules.t5 import T5EncoderModel
-from sceneflow.base_models.diffusion_model.video.wan_2p2.modules.vae2_1 import Wan2_1_VAE
 from .lingbot_world.utils.fm_solvers import (
     FlowDPMSolverMultistepScheduler,
     get_sampling_sigmas,
@@ -25,9 +25,10 @@ from .lingbot_world.utils.fm_solvers import (
 )
 from .lingbot_world.utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
 from .lingbot_world.distributed.sequence_parallel import sp_dit_forward
-from sceneflow.base_models.diffusion_model.video.wan_2p2.distributed.fsdp import shard_model
-from sceneflow.base_models.diffusion_model.video.wan_2p2.distributed.sequence_parallel import sp_attn_forward
-from sceneflow.base_models.diffusion_model.video.wan_2p2.distributed.util import get_world_size
+from ....base_models.diffusion_model.video.wan_2p2.modules.vae2_1 import Wan2_1_VAE
+from ....base_models.diffusion_model.video.wan_2p2.distributed.fsdp import shard_model
+from ....base_models.diffusion_model.video.wan_2p2.distributed.sequence_parallel import sp_attn_forward
+from ....base_models.diffusion_model.video.wan_2p2.distributed.util import get_world_size
 
 class LingBotSynthesis(BaseSynthesis):
     def __init__(self, 
@@ -78,7 +79,15 @@ class LingBotSynthesis(BaseSynthesis):
                         t5_cpu=False,
                         offload_model=True,
                         **kwargs):
-        
+
+        if not os.path.isdir(pretrained_model_path):
+            print(f"[Rank {rank}] '{pretrained_model_path}' is not a local directory. Attempting download from HuggingFace Hub...")
+            try:
+                pretrained_model_path = snapshot_download(pretrained_model_path)
+                print(f"[Rank {rank}] Model downloaded to: {pretrained_model_path}")
+            except Exception as e:
+                raise ValueError(f"Failed to load model. '{pretrained_model_path}' is neither a local directory nor a valid HuggingFace repo ID. Error: {e}")
+
         if task not in WAN_CONFIGS:
             raise ValueError(f"Unsupported task: {task}")
         config = WAN_CONFIGS[task]

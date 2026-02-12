@@ -8,7 +8,7 @@ from transformers import (
 )
 
 
-from sceneflow.base_models.diffusion_model.video.hunyuan_video.text_encoder import (
+from ......base_models.diffusion_model.video.hunyuan_video.text_encoder import (
         TextEncoder as BaseTextEncoder,
         TextEncoderModelOutput, 
         use_default

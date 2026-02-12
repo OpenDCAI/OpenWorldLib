@@ -24,7 +24,6 @@ from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 
 from ...constants import PRECISION_TO_TYPE
-from sceneflow.base_models.diffusion_model.video.hunyuan_video.vae.autoencoder_kl_causal_3d import AutoencoderKLCausal3D
 from ...text_encoder import TextEncoder
 from einops import rearrange
 from ...modules import HYVideoDiffusionTransformer
@@ -32,7 +31,8 @@ from ...modules import HYVideoDiffusionTransformer
 
 # -----------------------------------------------------------------------------
 # -----------------------------------------------------------------------------
-from sceneflow.base_models.diffusion_model.video.hunyuan_video.diffusion.pipelines.pipeline_hunyuan_video import (
+from .......base_models.diffusion_model.video.hunyuan_video.vae.autoencoder_kl_causal_3d import AutoencoderKLCausal3D
+from .......base_models.diffusion_model.video.hunyuan_video.diffusion.pipelines.pipeline_hunyuan_video import (
     HunyuanVideoPipeline,
     HunyuanVideoPipelineOutput,
     rescale_noise_cfg,

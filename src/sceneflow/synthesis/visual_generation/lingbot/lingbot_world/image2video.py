@@ -16,13 +16,14 @@ import torchvision.transforms.functional as TF
 from tqdm import tqdm
 
 from .distributed.sequence_parallel import sp_dit_forward
-from sceneflow.base_models.diffusion_model.video.wan_2p2.distributed.fsdp import shard_model
-from sceneflow.base_models.diffusion_model.video.wan_2p2.distributed.sequence_parallel import sp_attn_forward
-from sceneflow.base_models.diffusion_model.video.wan_2p2.distributed.util import get_world_size
+from .....base_models.diffusion_model.video.wan_2p2.distributed.fsdp import shard_model
+from .....base_models.diffusion_model.video.wan_2p2.distributed.sequence_parallel import sp_attn_forward
+from .....base_models.diffusion_model.video.wan_2p2.distributed.util import get_world_size
+from .....base_models.diffusion_model.video.wan_2p2.modules.vae2_1 import Wan2_1_VAE
 
 from .modules.model import WanModel
 from .modules.t5 import T5EncoderModel
-from sceneflow.base_models.diffusion_model.video.wan_2p2.modules.vae2_1 import Wan2_1_VAE
+
 from .utils.fm_solvers import (
     FlowDPMSolverMultistepScheduler,
     get_sampling_sigmas,

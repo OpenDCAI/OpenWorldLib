@@ -14,7 +14,7 @@ from .modules.parallel_states import (
 from .modules.fp8_optimization import convert_fp8_linear
 
 
-from sceneflow.base_models.diffusion_model.video.hunyuan_video.vae.autoencoder_kl_causal_3d import AutoencoderKLCausal3D
+from .....base_models.diffusion_model.video.hunyuan_video.vae.autoencoder_kl_causal_3d import AutoencoderKLCausal3D
 from .constants import VAE_PATH, PRECISION_TO_TYPE
 
 def load_vae(vae_type,
