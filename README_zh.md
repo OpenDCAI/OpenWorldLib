@@ -143,4 +143,11 @@ SceneFlow
 如果我们的 **SceneFlow** 为你带来了帮助，欢迎给我们的repo一个star🌟，并考虑引用相关论文：
 ```bibtex
 
+
+@article{zeng2026research,
+  title={Research on World Models Is Not Merely Injecting World Knowledge into Specific Tasks},
+  author={Zeng, Bohan and Zhu, Kaixin and Hua, Daili and Li, Bozhou and Tong, Chengzhuo and Wang, Yuran and Huang, Xinyi and Dai, Yifan and Zhang, Zixiang and Yang, Yifan and others},
+  journal={arXiv preprint arXiv:2602.01630},
+  year={2026}
+}
 ```
