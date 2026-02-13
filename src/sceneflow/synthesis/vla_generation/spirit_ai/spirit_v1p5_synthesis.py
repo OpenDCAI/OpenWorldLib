@@ -3,6 +3,7 @@ import json
 import torch
 from typing import Any, Dict, Optional, Union
 from dataclasses import fields
+from huggingface_hub import snapshot_download, hf_hub_download
 
 from ...base_synthesis import BaseSynthesis        
 from .spirit_v1p5.modeling_spirit_vla import SpiritVLAPolicy
@@ -57,7 +58,14 @@ class SpiritV1p5Synthesis(BaseSynthesis):
         """
         device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         # Load policy
-        policy = SpiritVLAPolicy.from_pretrained(pretrained_model_path, strict=strict)
+        if os.path.isdir(pretrained_model_path):
+            model_root = pretrained_model_path
+        else:
+            # download from HuggingFace repo_id
+            print(f"Downloading weights from HuggingFace repo: {pretrained_model_path}")
+            model_root = snapshot_download(pretrained_model_path)
+            print(f"Model downloaded to: {model_root}")
+        policy = SpiritVLAPolicy.from_pretrained(model_root, strict=strict)
         
         return cls(policy=policy, device=device)
     
