@@ -1,6 +1,5 @@
 from .pipelines import HunyuanVideoGamePipeline
-from .schedulers import FlowMatchDiscreteScheduler
-
+from ......base_models.diffusion_model.video.hunyuan_video.diffusion.schedulers import FlowMatchDiscreteScheduler
 def load_diffusion_pipeline(args, rank, vae, text_encoder, text_encoder_2, model, scheduler=None,
                             device=None, progress_bar_config=None):
     """ Load the denoising scheduler for inference. """
