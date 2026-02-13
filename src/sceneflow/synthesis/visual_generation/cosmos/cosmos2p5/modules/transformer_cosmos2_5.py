@@ -8,12 +8,12 @@ from diffusers.models.attention_processor import Attention
 from diffusers.models.embeddings import Timesteps, apply_rotary_emb
 from diffusers.models.modeling_utils import ModelMixin
 from diffusers.models.normalization import RMSNorm
-from diffusers.models.transformers.transformer_cosmos import CosmosAdaLayerNorm, CosmosPatchEmbed, CosmosTimestepEmbedding, CosmosTransformerBlock
 from einops import rearrange, repeat
 from torchvision import transforms
 
 from ..acceleration import gather_forward_split_backward, get_sequence_parallel_group, split_forward_gather_backward
 from .attention import Attention as _AttentionOp
+from .transformer_cosmos import CosmosAdaLayerNorm, CosmosPatchEmbed, CosmosTimestepEmbedding, CosmosTransformerBlock
 
 
 class Cosmos25AttnProcessor2_0:

@@ -14,6 +14,7 @@ from tqdm import tqdm
 
 from ....base_models.diffusion_model.video.wan_2p1.utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
 from ....base_models.diffusion_model.video.wan_2p1.modules.vae import WanVAE
+from ...base_synthesis import BaseSynthesis
 from .cosmos2p5.utils.utils import load_official_weights, get_cosmos_2b_config
 from .cosmos2p5.utils.registry import COSMOS_2P5_TASKS, COSMOS_2P5_REGISTRY
 from .cosmos2p5.modules import (
@@ -29,7 +30,7 @@ PipelineImageInput = Union[
 ]
 
 
-class CosmosPredict2p5Synthesis:
+class CosmosPredict2p5Synthesis(BaseSynthesis):
 
     def __init__(
         self,
