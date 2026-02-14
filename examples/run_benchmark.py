@@ -38,9 +38,13 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from data.benchmarks.tasks_map import tasks_map
 from data.benchmarks.benchmark_loader import BenchmarkLoader
-from examples.pipeline_mapping import ALL_PIPELINES
+from examples.pipeline_mapping import video_gen_pipe, reasoning_pipe, three_dim_pipe
 from examples.evaluation_tasks.eval_func_mapping import eval_func_mapping
 
+
+# collect evaluation pipelines
+# This loading way is used to verify whether the loaded pipe corresponds to the intended task.
+ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **three_dim_pipe}
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SceneFlow Benchmark Runner")

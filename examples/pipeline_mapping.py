@@ -16,7 +16,14 @@ def load_qwen2p5_omni_pipeline(model_path, device):
 
 
 ## utilize lazy loader to load different tasks pipeline
-ALL_PIPELINES = {
+video_gen_pipe = {
     "matrix-game2": load_matrix_game2_pipeline,
+}
+
+reasoning_pipe = {
     "qwen2p5omni": load_qwen2p5_omni_pipeline,
+}
+
+three_dim_pipe = {
+
 }
