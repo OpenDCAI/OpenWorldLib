@@ -38,12 +38,9 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from data.benchmarks.tasks_map import tasks_map
 from data.benchmarks.benchmark_loader import BenchmarkLoader
-from examples.pipeline_mapping import video_gen_pipe, reasoning_pipe, three_dim_pipe
+from examples.pipeline_mapping import ALL_PIPELINES
 from examples.evaluation_tasks.eval_func_mapping import eval_func_mapping
 
-
-# collect evaluation pipelines
-ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **three_dim_pipe}
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SceneFlow Benchmark Runner")
@@ -82,19 +79,7 @@ def load_pipeline(model_type: str, model_path: str, device: str = "cuda"):
         )
 
     PipeClass = ALL_PIPELINES[model_type]
-
-    if model_type == "matrix-game2":
-        return PipeClass.from_pretrained(
-            synthesis_model_path=model_path,
-            mode="universal",
-            device=device,
-        )
-    elif model_type == "qwen2p5omni":
-        return PipeClass.from_pretrained(
-            pretrained_model_path=model_path,
-            use_audio_in_video=False,
-            device=device,
-        )
+    return PipeClass(model_path, device)
 
 
 def load_existing_results(results_dir: Path) -> List[Dict]:
