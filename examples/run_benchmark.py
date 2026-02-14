@@ -43,6 +43,7 @@ from examples.evaluation_tasks.eval_func_mapping import eval_func_mapping
 
 
 # collect evaluation pipelines
+# This loading way is used to verify whether the loaded pipe corresponds to the intended task.
 ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **three_dim_pipe}
 
 def parse_args():
@@ -82,19 +83,7 @@ def load_pipeline(model_type: str, model_path: str, device: str = "cuda"):
         )
 
     PipeClass = ALL_PIPELINES[model_type]
-
-    if model_type == "matrix-game2":
-        return PipeClass.from_pretrained(
-            synthesis_model_path=model_path,
-            mode="universal",
-            device=device,
-        )
-    elif model_type == "qwen2p5omni":
-        return PipeClass.from_pretrained(
-            pretrained_model_path=model_path,
-            use_audio_in_video=False,
-            device=device,
-        )
+    return PipeClass(model_path, device)
 
 
 def load_existing_results(results_dir: Path) -> List[Dict]:
