@@ -168,9 +168,8 @@ def run_evaluation(eval_pipeline, eval_func, samples, reference_results, output_
         original_sample = sample_map.get(sample_id, {})
         
         # 生成评估提示词文本
-        interaction_signal = original_sample.get("interaction_signal", [])
-        scene_description = original_sample.get("scene_description", "")
-        prompt_text = eval_prompt_func(interaction_signal, scene_description)
+        # eval_prompt 函数接收整个 sample 字典，内部自己提取需要的字段
+        prompt_text = eval_prompt_func(original_sample)
         
         input_data_info = original_sample.copy()
         input_data_info["generated_video_path"] = ref_result.get("generated_video")
