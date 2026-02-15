@@ -1,6 +1,6 @@
 from .attention import FlashAttentionRope, FlashCrossAttentionRope
 from .block import BlockRope, CrossOnlyBlockRope
-from ..dinov2.layers import Mlp
+from sceneflow.base_models.perception_core.general_perception.dinov2.layers import Mlp
 import torch.nn as nn
 from functools import partial
 from torch.utils.checkpoint import checkpoint

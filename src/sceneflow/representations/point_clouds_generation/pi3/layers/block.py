@@ -16,9 +16,9 @@ import torch
 from torch import nn, Tensor
 
 from .attention import Attention, MemEffAttention, CrossAttentionRope, MemEffCrossAttentionRope, FlashAttentionRope
-from ..dinov2.layers.drop_path import DropPath
-from ..dinov2.layers.layer_scale import LayerScale
-from ..dinov2.layers.mlp import Mlp
+from sceneflow.base_models.perception_core.general_perception.dinov2.layers.drop_path import DropPath
+from sceneflow.base_models.perception_core.general_perception.dinov2.layers.layer_scale import LayerScale
+from sceneflow.base_models.perception_core.general_perception.dinov2.layers.mlp import Mlp
 
 
 XFORMERS_ENABLED = os.environ.get("XFORMERS_DISABLED") is None
@@ -483,7 +483,6 @@ class CrossOnlyBlockRope(nn.Module):
         ffn_bias: bool = True,
         act_layer: Callable[..., nn.Module] = nn.GELU,
         norm_layer: Callable[..., nn.Module] = nn.LayerNorm,
-        # attn_class 已被移除，因为它不再被使用
         cross_attn_class: Callable[..., nn.Module] = CrossAttentionRope,
         ffn_layer: Callable[..., nn.Module] = Mlp,
         init_values=None,
@@ -522,7 +521,6 @@ class CrossOnlyBlockRope(nn.Module):
         # ---------------------------
 
         def cross_attn_residual_func(x: Tensor, y: Tensor) -> Tensor:
-            # 注意：self.norm2(x) 是 x 经过 pre-normalization
             return self.ls_y(self.cross_attn(self.norm2(x), y, y, qpos=xpos, kpos=ypos))
 
         def ffn_residual_func(x: Tensor) -> Tensor:

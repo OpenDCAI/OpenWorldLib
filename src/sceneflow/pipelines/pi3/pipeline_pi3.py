@@ -9,6 +9,9 @@ from ...operators.pi3_operator import Pi3Operator
 from ...representations.point_clouds_generation.pi3.pi3_representation import (
     Pi3Representation,
 )
+from ...representations.point_clouds_generation.pi3x.pi3x_representation import (
+    Pi3XRepresentation,
+)
 
 
 class Pi3Result:
@@ -119,7 +122,7 @@ class Pi3Pipeline:
 
     def __init__(
         self,
-        representation_model: Optional[Pi3Representation] = None,
+        representation_model=None,
         reasoning_model: Optional[Any] = None,
         synthesis_model: Optional[Any] = None,
         operator: Optional[Pi3Operator] = None,
@@ -139,11 +142,18 @@ class Pi3Pipeline:
         **kwargs,
     ) -> "Pi3Pipeline":
 
-        representation_model = Pi3Representation.from_pretrained(
-            pretrained_model_path=representation_path,
-            model_type=model_type,
-            **kwargs,
-        )
+        if model_type == "pi3x":
+            representation_model = Pi3XRepresentation.from_pretrained(
+                pretrained_model_path=representation_path,
+                **kwargs,
+            )
+        elif model_type == "pi3":
+            representation_model = Pi3Representation.from_pretrained(
+                pretrained_model_path=representation_path,
+                **kwargs,
+            )
+        else:
+            raise ValueError(f"Unknown model_type: {model_type}. Choose 'pi3x' or 'pi3'.")
         return cls(
             representation_model=representation_model,
             reasoning_model=None,

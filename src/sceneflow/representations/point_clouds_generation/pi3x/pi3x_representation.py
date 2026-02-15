@@ -5,13 +5,14 @@ from typing import Dict, Any, Optional
 
 from huggingface_hub import snapshot_download
 
-from .pi3 import Pi3
-from .utils.geometry import depth_edge
+from .pi3x import Pi3X
+from ..pi3.utils.geometry import depth_edge
 
 
-class Pi3Representation:
+class Pi3XRepresentation:
     """
-    Pi3 representation model for 3D point cloud reconstruction.
+    Pi3X representation model for 3D point cloud reconstruction
+    with multimodal conditioning support.
     """
 
     def __init__(
@@ -21,7 +22,7 @@ class Pi3Representation:
     ):
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = model
-        self.model_type = "pi3"
+        self.model_type = "pi3x"
 
         if self.model is not None:
             self.model = self.model.to(self.device).eval()
@@ -38,13 +39,13 @@ class Pi3Representation:
         pretrained_model_path: str,
         device: Optional[str] = None,
         **kwargs,
-    ) -> "Pi3Representation":
+    ) -> "Pi3XRepresentation":
         """
-        Load a pretrained Pi3 model.
-        Returns: Pi3Representation instance with loaded model.
+        Load a pretrained Pi3X model.
+        Returns: Pi3XRepresentation instance with loaded model.
         """
         try:
-            model = Pi3.from_pretrained(pretrained_model_path)
+            model = Pi3X.from_pretrained(pretrained_model_path)
         except Exception:
             if os.path.isdir(pretrained_model_path):
                 model_root = pretrained_model_path
@@ -58,7 +59,7 @@ class Pi3Representation:
                 raise FileNotFoundError(f"model.safetensors not found in {model_root}")
 
             from safetensors.torch import load_file
-            model = Pi3()
+            model = Pi3X()
             model.load_state_dict(load_file(ckpt_path), strict=False)
 
         return cls(model=model, device=device)
@@ -68,7 +69,7 @@ class Pi3Representation:
         pass
 
     def get_representation(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Run Pi3 inference and return all outputs.
+        """Run Pi3X inference and return all outputs.
         Returns: Dict with numpy arrays for all model outputs.
         """
         if self.model is None:
@@ -87,12 +88,30 @@ class Pi3Representation:
         with torch.no_grad():
             autocast_enabled = self.device == "cuda"
             with torch.amp.autocast("cuda", dtype=self.dtype, enabled=autocast_enabled):
-                res = self.model(imgs)
+                condition_keys = [
+                    "poses", "depths", "intrinsics", "rays",
+                    "mask_add_depth", "mask_add_ray", "mask_add_pose",
+                ]
+                conditions = {}
+                for key in condition_keys:
+                    val = data.get(key)
+                    if val is not None:
+                        if isinstance(val, np.ndarray):
+                            val = torch.from_numpy(val).float()
+                        if isinstance(val, torch.Tensor):
+                            val = val.to(self.device)
+                        conditions[key] = val
+                res = self.model(imgs=imgs, **conditions)
 
         results["points"] = res["points"].cpu().numpy()              # (B, N, H, W, 3)
         results["local_points"] = res["local_points"].cpu().numpy()  # (B, N, H, W, 3)
         results["camera_poses"] = res["camera_poses"].cpu().numpy()  # (B, N, 4, 4)
         results["conf"] = res["conf"].cpu().numpy()                  # (B, N, H, W, 1)
+
+        if "rays" in res:
+            results["rays"] = res["rays"].cpu().numpy()              # (B, N, H, W, 3)
+        if "metric" in res:
+            results["metric"] = res["metric"].cpu().numpy()          # (B,)
 
         # Quality masks: confidence + depth-edge filtering
         conf_tensor = res["conf"]

@@ -6,14 +6,14 @@ from copy import deepcopy
 from huggingface_hub import PyTorchModelHubMixin
 
 from .layers.conv_head import ConvHead
-from .layers.camera_head import CameraHead
-from .dinov2.layers import Mlp, PatchEmbed
-from .layers.attention import FlashAttentionRope
-from .layers.block import BlockRope, PoseInjectBlock
-from .layers.pos_embed import RoPE2D, PositionGetter
-from .dinov2.hub.backbones import dinov2_vitl14, dinov2_vitl14_reg
-from .utils.geometry import se3_inverse, get_pixel, homogenize_points
-from .layers.transformer_head import TransformerDecoder, ContextOnlyTransformerDecoder
+from ..pi3.layers.camera_head import CameraHead
+from sceneflow.base_models.perception_core.general_perception.dinov2.layers import Mlp, PatchEmbed
+from ..pi3.layers.attention import FlashAttentionRope
+from ..pi3.layers.block import BlockRope, PoseInjectBlock
+from ..pi3.layers.pos_embed import RoPE2D, PositionGetter
+from sceneflow.base_models.perception_core.general_perception.dinov2.hub.backbones import dinov2_vitl14, dinov2_vitl14_reg
+from ..pi3.utils.geometry import se3_inverse, get_pixel, homogenize_points
+from ..pi3.layers.transformer_head import TransformerDecoder, ContextOnlyTransformerDecoder
 
 
 class Pi3X(nn.Module, PyTorchModelHubMixin):
@@ -501,7 +501,6 @@ class Pi3X(nn.Module, PyTorchModelHubMixin):
         Raises:
             ValueError: If the method is not 'median' or 'mean'.
         """
-        # 确保输入是 torch.Tensor
         if not isinstance(depths, torch.Tensor):
             depths = torch.tensor(depths, dtype=torch.float32)
 
