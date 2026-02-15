@@ -1,0 +1,17 @@
+Flask==2.0.1
+Werkzeug==2.0.1
+
+numpy
+pyyaml
+requests
+progressbar2
+botocore
+aws-requests-auth
+compress_pickle
+objathor
+
+Pillow
+opencv-python
+
+python-xlib==0.21
+msgpack==1.1.2
