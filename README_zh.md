@@ -57,6 +57,7 @@ pip install -e ".[transformers_high]"
 ```bash
 pip install -e ".[transformers_low]"
 ```
+> 📖 完整安装指南请参阅 [docs/installation.md](docs/installation.md)
 
 
 #### Quickstart
@@ -83,7 +84,6 @@ SceneFlow
 ├─ examples
 ├─ src
 │  └─ sceneflow
-│     ├─ __init__.py
 │     ├─ base_models
 │     │  ├─ diffusion_model
 │     │  │  ├─ image
@@ -102,24 +102,21 @@ SceneFlow
 │     │     ├─ general_3d
 │     │     └─ ...
 │     ├─ memories
-│     │  ├─ base_memory.py
 │     │  ├─ reasoning
 │     │  └─ visual_synthesis
 │     ├─ operators
 │     ├─ pipelines
 │     ├─ reasoning
-│     │  ├─ base_reasoning.py
 │     │  ├─ audio_reasoning
 │     │  ├─ general_reasoning
 │     │  └─ spatial_reasoning
 │     ├─ representations
-│     │  ├─ base_representation.py
 │     │  ├─ point_clouds_generation
 │     │  └─ simulation_environment
 │     └─ synthesis
-│        ├─ base_synthesis.py
 │        ├─ audio_generation
-│        └─ visual_generation
+│        ├─ visual_generation
+│        └─ vla_generation
 ├─ submodules
 ├─ test
 ├─ test_stream
@@ -131,8 +128,8 @@ SceneFlow
 
 
 ### Planning
-- 我们在 [awesome_world_models.md](docs/awesome_world_model.md) 中记录了最前沿的 world models 相关的研究，同时我们欢迎大家在这里提供一些有价值的研究。
-- 我们在 [planning.md](docs/planning.md) 中记录了我们后续的**训练**以及**优化**计划。
+- 我们在 [docs/awesome_world_models.md](docs/awesome_world_model.md) 中记录了最前沿的 world models 相关的研究，同时我们欢迎大家在这里提供一些有价值的研究。
+- 我们在 [docs/planning.md](docs/planning.md) 中记录了我们后续的**训练**以及**优化**计划。
 
 
 ### For Developers
