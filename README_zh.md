@@ -44,19 +44,16 @@ SceneFlow 涵盖以下与 **World Model** 相关的研究方向：
 
 ### Getting Started
 #### Installation
-首先安装torch以及flash_attn
+首先创建conda环境
 ```bash
-pip install torch==2.5.1 torchvision torchaudio
-pip install "flash-attn==2.5.9.post1" --no-build-isolation
+conda create -n "sceneflow" python=3.10 -y
+conda activate "sceneflow"
 ```
-接着安装不同版本的sceneflow，进入`./SceneFlow`，下面分别是高版本transformers安装`[transformers_high]`以及低版本transformers安装`[transformers_low]`，推荐安装高版本transformers:
+接着可以利用已有的安装脚本进行安装
 ```bash
-pip install -e ".[transformers_high]"
+bash scripts/setup/default_install.sh
 ```
-下面是低版本transformers环境安装
-```bash
-pip install -e ".[transformers_low]"
-```
+一些方法有特殊的安装需求，所有安装脚本在 `./scripts/setup`
 > 📖 完整安装指南请参阅 [docs/installation.md](docs/installation.md)
 
 

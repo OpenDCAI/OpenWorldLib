@@ -4,8 +4,8 @@ transformers
 huggingface_hub[cli]
 tokenizers
 accelerate>=1.1.1
-pandas==2.0.3
-numpy==1.24.4
+pandas
+numpy
 einops==0.7.0
 tqdm==4.66.2
 loguru==0.7.2
@@ -34,7 +34,6 @@ sentencepiece
 pydantic
 scikit-image
 huggingface_hub[cli]
-clip @ git+https://github.com/openai/CLIP.git
 dominate
 pycuda
 flask
@@ -42,3 +41,4 @@ flask-socketio
 gradio==4.14.0
 gradio_imageslider
 Pillow
+psutil
