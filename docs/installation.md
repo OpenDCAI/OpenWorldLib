@@ -1,5 +1,7 @@
 ## SceneFlow Installation Details
 
+In this document, we list the installation requirements and installation scripts for different methods, as shown in the table below.
+
 <table>
 <thead>
   <tr>
@@ -17,7 +19,7 @@
   </tr>
   <tr>
     <td align="center">MatrixGame2</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td><code>bash scripts/setup/default_install.sh</code></td>
@@ -32,7 +34,7 @@
   </tr>
   <tr>
     <td align="center">HunyuanWorld-Voyager</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td><code>bash scripts/setup/lower_trans_install.sh</code></td>
@@ -46,17 +48,17 @@
   </tr>
   <tr>
     <td align="center">Astra</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
     <td align="center">Yume</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
     <td align="center">LingBot-World</td>
@@ -136,10 +138,10 @@
   </tr>
   <tr>
     <td align="center">Spirit v1.5</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td><code>bash scripts/setup/default_install.sh</code></td>
+    <td>Pending need set libero</td>
   </tr>
   <tr>
     <td colspan="5" align="center"><b>🎓 Multimodal Reasoning</b></td>
@@ -219,7 +221,7 @@
   </tr>
   <tr>
     <td align="center">Recammaster</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td><code>bash scripts/setup/default_install.sh</code></td>
