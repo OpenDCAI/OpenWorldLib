@@ -309,11 +309,7 @@ def main():
         pipeline = None
         print("Skipping pipeline loading (using existing results)\n")
     else:
-        # Only VLA tasks need norm_stats_path parameter
-        if args.task_type == "vla_evaluation":
-            pipeline = load_pipeline(args.model_type, args.model_path, args.device, args.norm_stats_path)
-        else:
-            pipeline = load_pipeline(args.model_type, args.model_path, args.device)
+        pipeline = load_pipeline(args.model_type, args.model_path, args.device, args.norm_stats_path)
         print("Pipeline loaded\n")
 
     # ── 4. obtain reference / eval function ──
