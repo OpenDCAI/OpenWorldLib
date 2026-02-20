@@ -53,6 +53,13 @@ transformers_high = [
     "peft>=0.17.0",
 ]
 
+3d_ply_default = [
+    "transformers>=4.49.0,<=4.57.3",
+    "tokenizers>=0.20.3",
+    "peft>=0.17.0",
+    "plyfile",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = { find = { where = ["src"] } }

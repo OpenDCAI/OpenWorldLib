@@ -65,7 +65,7 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
     <td colspan="5" align="center"><b>🎨 3D Scene Generation</b></td>
@@ -75,14 +75,14 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</code></td>
+    <td><code>bash scripts/setup/flash_world_install.sh</code></td>
   </tr>
   <tr>
     <td align="center">HunyuanWorld-Mirror</td>
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</code></td>
+    <td>Pending</td>
   </tr>
   <tr>
     <td align="center">VGGT</td>
@@ -141,7 +141,7 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending need set libero</td>
+    <td>default_install.sh but need set libero</td>
   </tr>
   <tr>
     <td colspan="5" align="center"><b>🎓 Multimodal Reasoning</b></td>

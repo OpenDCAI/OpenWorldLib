@@ -51,6 +51,7 @@ conda activate "sceneflow"
 ```
 接着可以利用已有的安装脚本进行安装
 ```bash
+cd SceneFlow
 bash scripts/setup/default_install.sh
 ```
 一些方法有特殊的安装需求，所有安装脚本在 `./scripts/setup`
@@ -58,12 +59,13 @@ bash scripts/setup/default_install.sh
 
 
 #### Quickstart
-可以通过下面的两个指令分别测试 matrix-game-2 生成以及多轮交互效果：
+在安装过基础环境后，可以通过下面的两个指令分别测试 matrix-game-2 生成以及多轮交互效果：
 ```bash
 cd SceneFlow
-python test/test_matrix_game_2.py
-python test_stream/test_matrix_game_2_stream.py
+bash scripts/test_inference/test_matrix_game_2.sh
+bash scripts/test_stream/test_matrix_game_2.sh
 ```
+其他方法的运行脚本可在 `scripts/test_inference` 以及 `scripts/test_stream` 路径下进行查看
 
 
 ### Structure
