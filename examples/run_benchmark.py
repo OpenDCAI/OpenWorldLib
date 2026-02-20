@@ -38,13 +38,13 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from data.benchmarks.tasks_map import tasks_map
 from data.benchmarks.benchmark_loader import BenchmarkLoader
-from examples.pipeline_mapping import video_gen_pipe, reasoning_pipe, three_dim_pipe
+from examples.pipeline_mapping import video_gen_pipe, reasoning_pipe, vla_pipe
 from examples.evaluation_tasks.eval_func_mapping import eval_func_mapping
 
 
 # collect evaluation pipelines
 # This loading way is used to verify whether the loaded pipe corresponds to the intended task.
-ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **three_dim_pipe}
+ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **vla_pipe}
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SceneFlow Benchmark Runner")
@@ -62,6 +62,8 @@ def parse_args():
                         help="evaluation MLLM model type, like qwen2p5omni")
     parser.add_argument("--model_path", type=str,
                         help="model path or HuggingFace model id")
+    parser.add_argument("--norm_stats_path", type=str, default=None,
+                        help="normalization statistics path (for VLA models like spirit-v1p5)")
     parser.add_argument("--output_dir", type=str, default="./benchmark_results")
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--num_samples", type=int, default=None,
@@ -74,7 +76,7 @@ def parse_args():
 
 
 # Pipeline loading here
-def load_pipeline(model_type: str, model_path: str, device: str = "cuda"):
+def load_pipeline(model_type: str, model_path: str, device: str = "cuda", norm_stats_path: str = None):
     """load the pipeline according to the model_type."""
     if model_type not in ALL_PIPELINES:
         raise ValueError(
@@ -83,7 +85,12 @@ def load_pipeline(model_type: str, model_path: str, device: str = "cuda"):
         )
 
     PipeClass = ALL_PIPELINES[model_type]
-    return PipeClass(model_path, device)
+    
+    # VLA pipelines (like spirit-v1p5) need norm_stats_path parameter
+    if model_type in vla_pipe:
+        return PipeClass(model_path, device, norm_stats_path)
+    else:
+        return PipeClass(model_path, device)
 
 
 def load_existing_results(results_dir: Path) -> List[Dict]:
@@ -125,13 +132,25 @@ def load_existing_results(results_dir: Path) -> List[Dict]:
 ## reference generation
 def run_reference(pipeline, reference_func, samples, output_dir, output_key="generated_video"):
     """run reference_func, and collect the generated results"""
-    videos_dir = Path(output_dir) / "videos"
-    videos_dir.mkdir(parents=True, exist_ok=True)
+    
+    # 根据 output_key 动态确定目录名和文件扩展名
+    if output_key == "generated_video":
+        output_subdir = "videos"
+        file_extension = ".mp4"
+    elif output_key == "generated_actions":
+        output_subdir = "actions"
+        file_extension = ".json"
+    else:
+        output_subdir = "outputs"
+        file_extension = ""
+    
+    output_files_dir = Path(output_dir) / output_subdir
+    output_files_dir.mkdir(parents=True, exist_ok=True)
 
     results = []
     for idx, sample in enumerate(tqdm(samples, desc="Generating")):
         sample_id = sample.get("id", f"sample_{idx:04d}")
-        sample["output_path"] = str(videos_dir / f"{sample_id}.mp4")
+        sample["output_path"] = str(output_files_dir / f"{sample_id}{file_extension}")
 
         try:
             output = reference_func(pipeline, sample, output_key=output_key)
@@ -143,8 +162,8 @@ def run_reference(pipeline, reference_func, samples, output_dir, output_key="gen
     return results
 
 
-# Evaluation（占位，后续实现）
-def run_evaluation(eval_pipeline, eval_func, samples, reference_results, output_dir, data_info):
+# Evaluation
+def run_evaluation(eval_pipeline, eval_func, samples, reference_results, output_dir, data_info, output_key):
     print("Running evaluation ...")
     eval_dir = Path(output_dir) / "evaluation"
     eval_dir.mkdir(parents=True, exist_ok=True)
@@ -167,14 +186,20 @@ def run_evaluation(eval_pipeline, eval_func, samples, reference_results, output_
         
         original_sample = sample_map.get(sample_id, {})
         
-        # 生成评估提示词文本
-        interaction_signal = original_sample.get("interaction_signal", [])
-        scene_description = original_sample.get("scene_description", "")
-        prompt_text = eval_prompt_func(interaction_signal, scene_description)
-        
         input_data_info = original_sample.copy()
-        input_data_info["generated_video_path"] = ref_result.get("generated_video")
-        input_data_info["eval_prompt"] = prompt_text
+        
+        # 动态构建生成结果的路径字段名
+        # 例如：generated_video -> generated_video_path
+        #      generated_actions -> generated_actions_path
+        generated_output_path_key = f"{output_key}_path"
+        input_data_info[generated_output_path_key] = ref_result.get(output_key)
+        
+        # 仅当 eval_prompt_func 存在时才生成提示词（用于 MLLM 评估）
+        if eval_prompt_func:
+            interaction_signal = original_sample.get("interaction_signal", [])
+            scene_description = original_sample.get("scene_description", "")
+            prompt_text = eval_prompt_func(interaction_signal, scene_description)
+            input_data_info["eval_prompt"] = prompt_text
         
         try:
             eval_result = eval_func(
@@ -194,25 +219,45 @@ def run_evaluation(eval_pipeline, eval_func, samples, reference_results, output_
     with open(eval_results_file, "w", encoding="utf-8") as f:
         json.dump(eval_results, f, indent=2, ensure_ascii=False, default=str)
     
-    # 计算统计信息
-    successful_evals = [r for r in eval_results if "error" not in r and "scores" in r]
+    # 计算统计信息 - 支持不同类型的评估结果
+    successful_evals = [r for r in eval_results if "error" not in r]
+    
     if successful_evals:
-        avg_scores = {}
-        score_keys = ['navigation_fidelity', 'visual_quality', 'temporal_consistency',
-                     'scene_consistency', 'motion_smoothness', 'overall']
-        
-        for key in score_keys:
-            values = [r["scores"].get(key) for r in successful_evals 
-                     if r["scores"].get(key) is not None]
-            if values:
-                avg_scores[key] = sum(values) / len(values)
-        
-        print(f"\nEvaluation Statistics:")
-        print(f"  Successful evaluations: {len(successful_evals)}/{len(eval_results)}")
-        if avg_scores:
-            print(f"  Average Scores:")
-            for key, value in avg_scores.items():
-                print(f"    {key}: {value:.2f}")
+        # 检查是分数评估（MLLM）还是成功率评估（VLA）
+        if "scores" in successful_evals[0]:
+            # 分数评估统计（导航视频等）
+            avg_scores = {}
+            score_keys = ['navigation_fidelity', 'visual_quality', 'temporal_consistency',
+                         'scene_consistency', 'motion_smoothness', 'overall']
+            
+            for key in score_keys:
+                values = [r["scores"].get(key) for r in successful_evals 
+                         if r["scores"].get(key) is not None]
+                if values:
+                    avg_scores[key] = sum(values) / len(values)
+            
+            print(f"\nEvaluation Statistics:")
+            print(f"  Successful evaluations: {len(successful_evals)}/{len(eval_results)}")
+            if avg_scores:
+                print(f"  Average Scores:")
+                for key, value in avg_scores.items():
+                    print(f"    {key}: {value:.2f}")
+                    
+        elif "success" in successful_evals[0]:
+            # 成功率评估统计（VLA）
+            total_success = sum(1 for r in successful_evals if r.get("success", False))
+            success_rate = total_success / len(successful_evals) * 100
+            
+            print(f"\nEvaluation Statistics:")
+            print(f"  Total samples: {len(successful_evals)}")
+            print(f"  Successful: {total_success}")
+            print(f"  Success rate: {success_rate:.2f}%")
+            
+            # 平均成功步数
+            success_steps = [r['success_step'] for r in successful_evals if r.get('success') and r.get('success_step')]
+            if success_steps:
+                avg_steps = sum(success_steps) / len(success_steps)
+                print(f"  Average success step: {avg_steps:.1f}")
     
     print(f"\nEvaluation results saved to {eval_results_file}")
     
@@ -264,7 +309,7 @@ def main():
         pipeline = None
         print("Skipping pipeline loading (using existing results)\n")
     else:
-        pipeline = load_pipeline(args.model_type, args.model_path, args.device)
+        pipeline = load_pipeline(args.model_type, args.model_path, args.device, args.norm_stats_path)
         print("Pipeline loaded\n")
 
     # ── 4. obtain reference / eval function ──
@@ -302,7 +347,7 @@ def main():
     
     # ── 6. load the evaluation pipeline (if needed) ──
     if args.run_eval:
-        eval_pipeline = load_pipeline(args.eval_model_type, args.eval_model_path, args.device)
+        eval_pipeline = load_pipeline(args.eval_model_type, args.eval_model_path, args.device, None)
         print("Evaluation pipeline loaded\n")
     else:
         eval_pipeline = None
@@ -310,7 +355,7 @@ def main():
     # ── 7. Evaluation ──
     if args.run_eval:
         eval_func = funcs["eval_func"]
-        run_evaluation(eval_pipeline, eval_func, samples, results, output_dir, data_info)
+        run_evaluation(eval_pipeline, eval_func, samples, results, output_dir, data_info, output_key)
 
 
 

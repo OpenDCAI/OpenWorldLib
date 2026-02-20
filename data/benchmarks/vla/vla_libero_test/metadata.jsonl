@@ -1,0 +1,21 @@
+// VLA LIBERO Test Benchmark Metadata (JSONL format)
+// 
+// Image naming convention in images/ folder:
+//   - sample_{XXXX}_main.png   (main camera view)
+//   - sample_{XXXX}_wrist.png  (wrist camera view)
+//   where {XXXX} is a zero-padded 4-digit sample ID (e.g., 0000, 0001, ...)
+//
+// Required fields per line:
+//   - id: sample identifier
+//   - main_view, wrist_view: image filenames (relative to images/)
+//   - raw_state: robot joint state array (8 values for Franka: 7 joints + gripper)
+//   - task: natural language task description
+//   - robot_type: robot platform (e.g., "Franka", "UR5", "ARX5", "aloha")
+//   - benchmark_name: LIBERO benchmark suite (e.g., "libero_10", "libero_90")
+//   - init_state: initial state index (default: 0)
+//
+// Optional fields:
+//   - norm_stats: action normalization statistics (mean & std)
+//   - bddl_file_name: custom BDDL file path
+
+{"id": "sample_0000", "main_view": "sample_0000_main.png", "wrist_view": "sample_0000_wrist.png", "raw_state": [-0.05338004603981972, 0.007029631175100803, 0.6783280968666077, 3.1407692432403564, 0.0017593271331861615, -0.08994418382644653, 0.03878866136074066, -0.03878721222281456], "task": "put the white mug on the left plate and put the yellow and white mug on the right plate", "robot_type": "Franka", "benchmark_name": "libero_10", "init_state": 0, "norm_stats": {"actions": {"mean": [-0.004508008817346169, 0.01545776006735112, 0.0014415159791780568, 0.03079589214638774, 0.0010618009484271655, -0.000533469114040951, 0.0041976174417107555, 0.4469617252987363, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0], "std": [0.15417920014451136, 0.30571177887802325, 0.15007663499914944, 0.30095163807813036, 0.22464838490519815, 0.24632931424803614, 0.2683434474640748, 0.4408657296968051, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}}}
