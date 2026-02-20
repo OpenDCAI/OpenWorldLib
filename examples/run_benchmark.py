@@ -38,13 +38,13 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from data.benchmarks.tasks_map import tasks_map
 from data.benchmarks.benchmark_loader import BenchmarkLoader
-from examples.pipeline_mapping import video_gen_pipe, reasoning_pipe, vla_pipe
+from examples.pipeline_mapping import video_gen_pipe, reasoning_pipe, vla_pipe,three_dim_pipe
 from examples.evaluation_tasks.eval_func_mapping import eval_func_mapping
 
 
 # collect evaluation pipelines
 # This loading way is used to verify whether the loaded pipe corresponds to the intended task.
-ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **vla_pipe}
+ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **vla_pipe, **three_dim_pipe}
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SceneFlow Benchmark Runner")
@@ -309,7 +309,11 @@ def main():
         pipeline = None
         print("Skipping pipeline loading (using existing results)\n")
     else:
-        pipeline = load_pipeline(args.model_type, args.model_path, args.device, args.norm_stats_path)
+        # Only VLA tasks need norm_stats_path parameter
+        if args.task_type == "vla_evaluation":
+            pipeline = load_pipeline(args.model_type, args.model_path, args.device, args.norm_stats_path)
+        else:
+            pipeline = load_pipeline(args.model_type, args.model_path, args.device)
         print("Pipeline loaded\n")
 
     # ── 4. obtain reference / eval function ──
@@ -346,7 +350,9 @@ def main():
         print(f"Results saved to {results_file}")
     
     # ── 6. load the evaluation pipeline (if needed) ──
-    if args.run_eval:
+    # Only load eval pipeline for video generation tasks (requires MLLM evaluation)
+    # VLA tasks don't need eval pipeline (evaluation happens in environment)
+    if args.run_eval and output_key == "generated_video":
         eval_pipeline = load_pipeline(args.eval_model_type, args.eval_model_path, args.device, None)
         print("Evaluation pipeline loaded\n")
     else:

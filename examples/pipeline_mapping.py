@@ -46,3 +46,7 @@ reasoning_pipe = {
 vla_pipe = {
     "spirit-v1p5": load_spirit_v1p5_pipeline,
 }
+
+three_dim_pipe= {
+
+}
