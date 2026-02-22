@@ -27,10 +27,10 @@ In this document, we list the installation requirements and installation scripts
   </tr>
   <tr>
     <td align="center">Hunyuan-GameCraft</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
     <td align="center">HunyuanWorld-Voyager</td>
@@ -72,7 +72,7 @@ In this document, we list the installation requirements and installation scripts
   </tr>
   <tr>
     <td align="center">FlashWorld</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td><code>bash scripts/setup/flash_world_install.sh</code></td>
@@ -200,17 +200,17 @@ In this document, we list the installation requirements and installation scripts
   </tr>
   <tr>
     <td align="center">Wan 2.2</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
     <td align="center">WoW</td>
-    <td align="center">3.9</td>
+    <td align="center">3.10</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
     <td align="center">Cosmos-Predict 2.5</td>

@@ -16,8 +16,8 @@ pipeline = Wan2p2Pipeline.from_pretrained(
         "Summer beach vacation style, a white cat wearing sunglasses "
         "sits on a surfboard..."
     ),
-    image="",
-    save_file="./wan_app_demo_output.mp4",
+    image="./data/test_case1/ref_image.png",
+    save_file="./wan_2p2_demo_output.mp4",
     base_seed=42,
     device_id=0,
     rank=0,

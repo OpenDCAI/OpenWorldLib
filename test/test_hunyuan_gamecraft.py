@@ -26,4 +26,3 @@ output_video = pipeline(
 
 if torch.distributed.get_rank() == 0:
     imageio.mimsave("hunyuan_game_craft_demo.mp4", output_video, fps=24, quality=8)
-

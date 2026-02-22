@@ -2,16 +2,14 @@
 
 <img src="assets/logo.png" alt="sceneflow_logo" width="80%" />
 
-### A Unified Framework for Advanced World Models
+### A Unified Framework for Advanced World Models <!-- omit in toc -->
 
 <a href="https://github.com/OpenDCAI/SceneFlow"><img alt="Build" src="https://img.shields.io/github/stars/OpenDCAI/SceneFlow"></a>
 
 </div>
 
 
-### Table of Contents
-- [A Unified Framework for Advanced World Models](#a-unified-framework-for-advanced-world-models)
-- [Table of Contents](#table-of-contents)
+### Table of Contents <!-- omit in toc -->
 - [Features](#features)
   - [仓库目标](#仓库目标)
   - [支持任务](#支持任务)
@@ -35,7 +33,7 @@ SceneFlow 涵盖以下与 **World Model** 相关的研究方向：
 
 | 任务类别 | 子任务 | 代表性方法/模型 |
 | :--- | :--- | :--- |
-| **Video Generation** | Navigation Generation | lingbot, matrixgame, hunyuan-worldplay, genie3 等 |
+| **Video Generation** | Navigation Generation | lingbot, matrix-game, hunyuan-worldplay, genie3 等 |
 | | Long Video Generation | sora-2, veo-3, wan 等 |
 | **3D Scene Generation** | 3D 场景生成 | flash-world, vggt 等 |
 | **Reasoning** | VQA（视觉问答） | spatialVLM, omnivinci 等具备世界理解的 VLM 模型 |
@@ -73,17 +71,17 @@ bash scripts/test_stream/test_matrix_game_2.sh
 ```txt
 SceneFlow
 ├─ assets
-├─ data
+├─ data                                # 测试数据
 │  ├─ benchmarks
-│  │  ├─ generation
 │  │  └─ reasoning
 │  ├─ test_case
 │  └─ ...
-├─ docs
-├─ examples
+├─ docs                                # 相关文档
+├─ examples                            # 运行benchmark测例
+├─ scripts                             # 所有关键测试脚本
 ├─ src
-│  └─ sceneflow
-│     ├─ base_models
+│  └─ sceneflow                        # 主路径
+│     ├─ base_models                   # 基础模型
 │     │  ├─ diffusion_model
 │     │  │  ├─ image
 │     │  │  ├─ video
@@ -100,26 +98,26 @@ SceneFlow
 │     │     ├─ depth
 │     │     ├─ general_3d
 │     │     └─ ...
-│     ├─ memories
+│     ├─ memories                      # 记忆模块
 │     │  ├─ reasoning
 │     │  └─ visual_synthesis
-│     ├─ operators
-│     ├─ pipelines
-│     ├─ reasoning
+│     ├─ operators                     # 输入、交互信号处理
+│     ├─ pipelines                     # 所有运行管线
+│     ├─ reasoning                     # 推理模块
 │     │  ├─ audio_reasoning
 │     │  ├─ general_reasoning
 │     │  └─ spatial_reasoning
-│     ├─ representations
+│     ├─ representations               # 表征模块
 │     │  ├─ point_clouds_generation
 │     │  └─ simulation_environment
-│     └─ synthesis
+│     └─ synthesis                     # 生成模块
 │        ├─ audio_generation
 │        ├─ visual_generation
 │        └─ vla_generation
-├─ submodules
-├─ test
-├─ test_stream
-└─ tools
+├─ submodules                          # diff-gaussian-raster 等附属安装
+├─ test                                # 所有测试代码
+├─ test_stream                         # 所有交互测试代码
+└─ tools                               # 相关工具
    ├─ installing
    └─ vibe_code
 ```
