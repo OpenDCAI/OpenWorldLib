@@ -31,7 +31,6 @@ def reference_func(
     """
     generation_text = input_data_info["generation_text"]
     
-    # 检测 pipeline 类型，使用对应的参数名
     pipeline_type = type(pipe).__name__
     if "Wan2p2" in pipeline_type:
         output_video = pipe(
@@ -40,8 +39,8 @@ def reference_func(
         )
 
     # 这里保留作为其他pipeline的接口
-    elif "" in pipeline_type:
-        pass
+    # elif "" in pipeline_type:
+    #     pass
     
     output_path = input_data_info.get("output_path", None)
     if output_path is not None:
@@ -135,10 +134,8 @@ def eval_func(
             'error': f"Evaluation failed: {str(e)}"
         }
     
-    # 6. 解析 LLM 输出，提取分数
     scores = _parse_evaluation_scores(response_text)
     
-    # 7. 构建返回结果
     result = {
         'sample_id': input_data_info.get('id', 'unknown'),
         'generated_video_path': generated_video_path,
