@@ -1,2 +1,0 @@
-decord
-librosa # 但这个是s2v 的

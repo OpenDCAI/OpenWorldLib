@@ -34,3 +34,5 @@ def test_spatial_ladder_pipeline_video():
 if __name__ == "__main__":
     test_spatial_ladder_pipeline_image()
     test_spatial_ladder_pipeline_video()
+
+# Note: 运行有报错：AttributeError: 'Qwen2_5_VLProcessor' object has no attribute 'process_vision_info'

@@ -2,16 +2,14 @@
 
 <img src="assets/logo.png" alt="sceneflow_logo" width="80%" />
 
-### A Unified Framework for Advanced World Models
+### A Unified Framework for Advanced World Models <!-- omit in toc -->
 
 <a href="https://github.com/OpenDCAI/SceneFlow"><img alt="Build" src="https://img.shields.io/github/stars/OpenDCAI/SceneFlow"></a>
 
 </div>
 
 
-### Table of Contents
-- [A Unified Framework for Advanced World Models](#a-unified-framework-for-advanced-world-models)
-- [Table of Contents](#table-of-contents)
+### Table of Contents <!-- omit in toc -->
 - [Features](#features)
   - [仓库目标](#仓库目标)
   - [支持任务](#支持任务)
@@ -35,7 +33,7 @@ SceneFlow 涵盖以下与 **World Model** 相关的研究方向：
 
 | 任务类别 | 子任务 | 代表性方法/模型 |
 | :--- | :--- | :--- |
-| **Video Generation** | Navigation Generation | lingbot, matrixgame, hunyuan-worldplay, genie3 等 |
+| **Video Generation** | Navigation Generation | lingbot, matrix-game, hunyuan-worldplay, genie3 等 |
 | | Long Video Generation | sora-2, veo-3, wan 等 |
 | **3D Scene Generation** | 3D 场景生成 | flash-world, vggt 等 |
 | **Reasoning** | VQA（视觉问答） | spatialVLM, omnivinci 等具备世界理解的 VLM 模型 |
@@ -44,28 +42,28 @@ SceneFlow 涵盖以下与 **World Model** 相关的研究方向：
 
 ### Getting Started
 #### Installation
-首先安装torch以及flash_attn
+首先创建conda环境
 ```bash
-pip install torch==2.5.1 torchvision torchaudio
-pip install "flash-attn==2.5.9.post1" --no-build-isolation
+conda create -n "sceneflow" python=3.10 -y
+conda activate "sceneflow"
 ```
-接着安装不同版本的sceneflow，进入`./SceneFlow`，下面分别是高版本transformers安装`[transformers_high]`以及低版本transformers安装`[transformers_low]`，推荐安装高版本transformers:
+接着可以利用已有的安装脚本进行安装
 ```bash
-pip install -e ".[transformers_high]"
+cd SceneFlow
+bash scripts/setup/default_install.sh
 ```
-下面是低版本transformers环境安装
-```bash
-pip install -e ".[transformers_low]"
-```
+一些方法有特殊的安装需求，所有安装脚本在 `./scripts/setup`
+> 📖 完整安装指南请参阅 [docs/installation.md](docs/installation.md)
 
 
 #### Quickstart
-可以通过下面的两个指令分别测试 matrix-game-2 生成以及多轮交互效果：
+在安装过基础环境后，可以通过下面的两个指令分别测试 matrix-game-2 生成以及多轮交互效果：
 ```bash
 cd SceneFlow
-python test/test_matrix_game_2.py
-python test_stream/test_matrix_game_2_stream.py
+bash scripts/test_inference/test_matrix_game_2.sh
+bash scripts/test_stream/test_matrix_game_2.sh
 ```
+其他方法的运行脚本可在 `scripts/test_inference` 以及 `scripts/test_stream` 路径下进行查看
 
 
 ### Structure
@@ -73,18 +71,17 @@ python test_stream/test_matrix_game_2_stream.py
 ```txt
 SceneFlow
 ├─ assets
-├─ data
+├─ data                                # 测试数据
 │  ├─ benchmarks
-│  │  ├─ generation
 │  │  └─ reasoning
 │  ├─ test_case
 │  └─ ...
-├─ docs
-├─ examples
+├─ docs                                # 相关文档
+├─ examples                            # 运行benchmark测例
+├─ scripts                             # 所有关键测试脚本
 ├─ src
-│  └─ sceneflow
-│     ├─ __init__.py
-│     ├─ base_models
+│  └─ sceneflow                        # 主路径
+│     ├─ base_models                   # 基础模型
 │     │  ├─ diffusion_model
 │     │  │  ├─ image
 │     │  │  ├─ video
@@ -101,29 +98,26 @@ SceneFlow
 │     │     ├─ depth
 │     │     ├─ general_3d
 │     │     └─ ...
-│     ├─ memories
-│     │  ├─ base_memory.py
+│     ├─ memories                      # 记忆模块
 │     │  ├─ reasoning
 │     │  └─ visual_synthesis
-│     ├─ operators
-│     ├─ pipelines
-│     ├─ reasoning
-│     │  ├─ base_reasoning.py
+│     ├─ operators                     # 输入、交互信号处理
+│     ├─ pipelines                     # 所有运行管线
+│     ├─ reasoning                     # 推理模块
 │     │  ├─ audio_reasoning
 │     │  ├─ general_reasoning
 │     │  └─ spatial_reasoning
-│     ├─ representations
-│     │  ├─ base_representation.py
+│     ├─ representations               # 表征模块
 │     │  ├─ point_clouds_generation
 │     │  └─ simulation_environment
-│     └─ synthesis
-│        ├─ base_synthesis.py
+│     └─ synthesis                     # 生成模块
 │        ├─ audio_generation
-│        └─ visual_generation
-├─ submodules
-├─ test
-├─ test_stream
-└─ tools
+│        ├─ visual_generation
+│        └─ vla_generation
+├─ submodules                          # diff-gaussian-raster 等附属安装
+├─ test                                # 所有测试代码
+├─ test_stream                         # 所有交互测试代码
+└─ tools                               # 相关工具
    ├─ installing
    └─ vibe_code
 ```
@@ -131,8 +125,8 @@ SceneFlow
 
 
 ### Planning
-- 我们在 [awesome_world_models.md](docs/awesome_world_model.md) 中记录了最前沿的 world models 相关的研究，同时我们欢迎大家在这里提供一些有价值的研究。
-- 我们在 [planning.md](docs/planning.md) 中记录了我们后续的**训练**以及**优化**计划。
+- 我们在 [docs/awesome_world_models.md](docs/awesome_world_model.md) 中记录了最前沿的 world models 相关的研究，同时我们欢迎大家在这里提供一些有价值的研究。
+- 我们在 [docs/planning.md](docs/planning.md) 中记录了我们后续的**训练**以及**优化**计划。
 
 
 ### For Developers
