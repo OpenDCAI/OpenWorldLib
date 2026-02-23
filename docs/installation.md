@@ -89,7 +89,7 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td><code>bash scripts/setup/default_3D_install.sh</code></td>
   </tr>
   <tr>
     <td align="center">Pi3</td>
@@ -110,7 +110,7 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td><code>bash scripts/setup/default_3D_install.sh</code></td>
   </tr>
   <tr>
     <td colspan="5" align="center"><b> 🤖 Vision Language Action</b></td>
@@ -157,22 +157,22 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">Qwen2.5-Omni</td>
     <td align="center">3.9</td>
     <td align="center">12.1</td>
-    <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td>PyTorch 2.6.0</td>
+    <td><code>bash scripts/setup/default_audio_install.sh</code></td>
   </tr>
   <tr>
     <td align="center">SpatialLadder</td>
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td>Pending Need Requirement</td>
   </tr>
   <tr>
     <td align="center">SpatialReasoner</td>
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td>Pending Need Requirement</td>
   </tr>
   <tr>
     <td colspan="5" align="center"><b>🧩 Interactive Video</b></td>
@@ -243,14 +243,14 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">MMAudio</td>
     <td align="center">3.9</td>
     <td align="center">12.1 </td>
-    <td> PyTorch 2.5.1</td>
+    <td> PyTorch 2.6.0</td>
     <td>Pending</td>
   </tr>
   <tr>
     <td align="center">ThinkSound</td>
     <td align="center">3.9</td>
     <td align="center">12.1 </td>
-    <td> PyTorch 2.5.1</td>
+    <td> PyTorch 2.6.0</td>
     <td>Pending</td>
   </tr>
 </tbody>

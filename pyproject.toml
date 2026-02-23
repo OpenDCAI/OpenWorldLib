@@ -60,6 +60,14 @@ transformers_high = [
     "plyfile",
 ]
 
+audio_default = [
+    "transformers>=4.49.0,<=4.57.3",
+    "tokenizers>=0.20.3",
+    "peft>=0.17.0",
+    "qwen_omni_utils",
+    "soundfile",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = { find = { where = ["src"] } }
