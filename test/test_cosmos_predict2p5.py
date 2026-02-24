@@ -17,7 +17,7 @@ Huggingface token is required to download cosmos-series model
 You can also skip download by specifying local ckpts path
 """
 token = "hf_xxxxxxxxxxxxxx"
-transformer_name_or_path = "nvidia/Cosmos-Predict2.5"
+transformer_name_or_path = "nvidia/Cosmos-Predict2.5-2B"   # nvidia/Cosmos-Predict2.5-14B
 text_encoder_name_or_path = "nvidia/Cosmos-Reason1-7B"
 vae_name_or_path = "Wan-AI/Wan2.1-T2V-1.3B"
 
@@ -48,8 +48,8 @@ prompt = (
     "throughout the video. The final frame captures the robotic arm with the pitcher finishing the pour, with the "
     "glass now filled to a higher level, while the pitcher is slightly tilted but still held securely by the gripper."
 )
-image_path = "data/test_case2/robot_arm.png"
-save_path = "data/test_case2/cosmos_predict2p5_call.mp4"
+image_path = "./data/test_vla_image_case1/init_frame.png"
+save_path = "cosmos_predict2p5_demo.mp4"
 
 output_video = pipeline(
     prompt=prompt,
