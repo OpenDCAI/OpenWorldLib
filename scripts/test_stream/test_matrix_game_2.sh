@@ -1,1 +1,0 @@
-CUDA_VISIBLE_DEVICES=0 python test/test_matrix_game_2.py

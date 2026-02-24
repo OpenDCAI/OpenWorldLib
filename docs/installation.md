@@ -217,7 +217,7 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
-    <td>Pending</td>
+    <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
     <td align="center">Recammaster</td>

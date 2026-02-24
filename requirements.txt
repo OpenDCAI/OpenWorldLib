@@ -1,5 +1,5 @@
 opencv-python>=4.9.0.80
-diffusers==0.31.0
+diffusers==0.36.0
 transformers
 huggingface_hub[cli]
 tokenizers
