@@ -1,5 +1,5 @@
 from .base_operator import BaseOperator
-
+from qwen_vl_utils import process_vision_info
 
 class SpatialLadderOperator(BaseOperator):
     """
@@ -30,7 +30,7 @@ class SpatialLadderOperator(BaseOperator):
 
     def process_perception(self, batched_messages, texts, processor):
         """Process vision info and pack model inputs via processor."""
-        vision_info = [processor.process_vision_info(m) for m in batched_messages]
+        vision_info = [process_vision_info(m) for m in batched_messages]
         image_inputs, video_inputs = [], []
         for imgs, vids in vision_info:
             image_inputs.append(imgs if imgs else None)
