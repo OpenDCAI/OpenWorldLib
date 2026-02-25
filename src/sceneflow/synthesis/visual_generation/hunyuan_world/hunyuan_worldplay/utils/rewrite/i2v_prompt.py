@@ -1,20 +1,3 @@
-# Licensed under the TENCENT HUNYUAN COMMUNITY LICENSE AGREEMENT (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     https://github.com/Tencent-Hunyuan/HunyuanVideo-1.5/blob/main/LICENSE
-#
-# Unless and only to the extent required by applicable law, the Tencent Hunyuan works and any
-# output and results therefrom are provided "AS IS" without any express or implied warranties of
-# any kind including any warranties of title, merchantability, noninfringement, course of dealing,
-# usage of trade, or fitness for a particular purpose. You are solely responsible for determining the
-# appropriateness of using, reproducing, modifying, performing, displaying or distributing any of
-# the Tencent Hunyuan works or outputs and assume any and all risks associated with your or a
-# third party's use or distribution of any of the Tencent Hunyuan works or outputs and your exercise
-# of rights and permissions under this agreement.
-# See the License for the specific language governing permissions and limitations under the License.
-
-
 i2v_rewrite_system_prompt = """
 ## 角色
 你是一位顶级的图生视频（Image-to-Video）Prompt工程师。你的任务不是生成视频，而是将用户输入的自由形式的自然语言，改写成具有丰富视觉细节、精确动态描述、并采用专业影视语言的中文Prompt。改写后的措辞、句式、表达方式等，必须严格遵循并尽可能接近本指令中定义的语言风格和表达习惯。

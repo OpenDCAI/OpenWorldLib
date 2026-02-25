@@ -38,6 +38,8 @@ class HunyuanWorldPlayPipeline(PipelineABC):
         enable_group_offloading: bool = None,
         overlap_group_offloading: bool = True,
         action_ckpt: Optional[str] = None,
+        init_infer_state: bool = True,
+        infer_state_kwargs: Optional[dict] = None,
         **kwargs
     ) -> 'HunyuanWorldPlayPipeline':
         """
@@ -61,6 +63,19 @@ class HunyuanWorldPlayPipeline(PipelineABC):
         Returns:
             HunyuanWorldPlayPipeline: Pipeline 实例
         """
+        if init_infer_state:
+            default_infer_state_kwargs = {
+                "sage_blocks_range": "0-53",
+                "use_sageattn": False,
+                "enable_torch_compile": False,
+                "use_fp8_gemm": False,
+                "quant_type": "fp8-per-block",
+                "include_patterns": "double_blocks",
+                "use_vae_parallel": False,
+            }
+            if infer_state_kwargs is not None:
+                default_infer_state_kwargs.update(infer_state_kwargs)
+            cls.initialize_infer_state(**default_infer_state_kwargs)
         synthesis_model = HunyuanWorldPlaySynthesis.from_pretrained(
             synthesis_path,
             transformer_version,
@@ -95,6 +110,7 @@ class HunyuanWorldPlayPipeline(PipelineABC):
         """
         if self.operators is None:
             raise ValueError("operators must be provided")
+        input_ = self.operators.process_perception(input_)
         self.operators.get_interaction(interaction)
         latent_frames = (video_length - 1) // 4 + 1
         operator_condition = self.operators.process_interaction(latent_frames=latent_frames)
@@ -103,6 +119,28 @@ class HunyuanWorldPlayPipeline(PipelineABC):
             "reference_image": input_,
             "operator_condition": operator_condition,
         }
+
+    @staticmethod
+    def initialize_infer_state(**kwargs):
+        from ...synthesis.visual_generation.hunyuan_world.hunyuan_worldplay.commons.infer_state import (
+            initialize_infer_state,
+        )
+
+        return initialize_infer_state(**kwargs)
+
+    @staticmethod
+    def save_video(video, path: str, fps: int = 24):
+        import torch
+        import einops
+        import imageio
+
+        if video.ndim == 5:
+            if video.shape[0] != 1:
+                raise ValueError(f"Expected batch size 1, got shape: {tuple(video.shape)}")
+            video = video[0]
+        vid = (video * 255).clamp(0, 255).to(torch.uint8)
+        vid = einops.rearrange(vid, "c f h w -> f h w c")
+        imageio.mimwrite(path, vid, fps=fps)
 
     def __call__(
         self,
@@ -158,6 +196,10 @@ class HunyuanWorldPlayPipeline(PipelineABC):
         pose_value = interaction_signal if interaction_signal is not None else pose
         if pose_value is None:
             raise ValueError("pose or interaction_signal must be provided")
+        inferred_video_length = self.operators.infer_video_length(pose_value)
+        if video_length != inferred_video_length:
+            print(f"video_length {video_length} != inferred_video_length {inferred_video_length}, auto setting")
+            video_length = inferred_video_length
         processed = self.process(
             input_=reference_image,
             interaction=pose_value,
