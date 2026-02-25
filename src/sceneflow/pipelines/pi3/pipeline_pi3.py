@@ -9,7 +9,7 @@ from ...operators.pi3_operator import Pi3Operator
 from ...representations.point_clouds_generation.pi3.pi3_representation import (
     Pi3Representation,
 )
-from ...representations.point_clouds_generation.pi3x.pi3x_representation import (
+from ...representations.point_clouds_generation.pi3.pi3x_representation import (
     Pi3XRepresentation,
 )
 

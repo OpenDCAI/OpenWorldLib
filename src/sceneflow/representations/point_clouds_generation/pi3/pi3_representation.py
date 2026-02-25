@@ -5,11 +5,12 @@ from typing import Dict, Any, Optional
 
 from huggingface_hub import snapshot_download
 
-from .pi3 import Pi3
-from .utils.geometry import depth_edge
+from .pi3.pi3 import Pi3
+from .pi3.utils.geometry import depth_edge
+from ...base_representation import BaseRepresentation
 
 
-class Pi3Representation:
+class Pi3Representation(BaseRepresentation):
     """
     Pi3 representation model for 3D point cloud reconstruction.
     """

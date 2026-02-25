@@ -5,11 +5,12 @@ from typing import Dict, Any, Optional
 
 from huggingface_hub import snapshot_download
 
-from .pi3x import Pi3X
-from ..pi3.utils.geometry import depth_edge
+from .pi3x.pi3x import Pi3X
+from .pi3.utils.geometry import depth_edge
+from ...base_representation import BaseRepresentation
 
 
-class Pi3XRepresentation:
+class Pi3XRepresentation(BaseRepresentation):
     """
     Pi3X representation model for 3D point cloud reconstruction
     with multimodal conditioning support.
