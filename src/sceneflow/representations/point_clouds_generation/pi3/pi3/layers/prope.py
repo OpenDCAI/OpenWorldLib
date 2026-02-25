@@ -529,8 +529,8 @@ def _prepare_apply_fns_query(
 
     # Precompute cos/sin terms for RoPE. We use tiles/repeats for 'row-major'
     # broadcasting.
-    # 1. 为 Query (Q) 和 Output (O) 创建 2D RoPE
-    if coeffs_x is None: # (假设 coeffs_x 和 coeffs_y 是 Q 的)
+    # Precompute 2D RoPE for Query (Q) and Output (O)
+    if coeffs_x is None:
         coeffs_x_q = _rope_precompute_coeffs(
             torch.tile(torch.arange(patches_x, device=device), (patches_y * cameras_query,)),
             freq_base=100.0,
@@ -540,7 +540,7 @@ def _prepare_apply_fns_query(
     else:
         coeffs_x_q = coeffs_x
 
-    if coeffs_y is None: # (假设 coeffs_x 和 coeffs_y 是 Q 的)
+    if coeffs_y is None:
         coeffs_y_q = _rope_precompute_coeffs(
             torch.tile(
                 torch.repeat_interleave(
@@ -555,9 +555,7 @@ def _prepare_apply_fns_query(
     else:
         coeffs_y_q = coeffs_y
 
-    # 2. 为 Key (K) 和 Value (V) 创建 2D RoPE
-    # (这里我们假设 K/V 的 RoPE 总是需要新计算，或者您需要
-    # 额外传入 coeffs_x_s, coeffs_y_s)
+    # Precompute 2D RoPE for Key (K) and Value (V)
     coeffs_x_s = _rope_precompute_coeffs(
         torch.tile(torch.arange(patches_x, device=device), (patches_y * cameras_src,)),
         freq_base=100.0,
