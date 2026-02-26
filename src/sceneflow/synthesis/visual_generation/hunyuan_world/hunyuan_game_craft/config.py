@@ -11,10 +11,10 @@ def as_tuple(x):
     else:
         raise ValueError(f"Unknown type {type(x)}")
 
-def parse_args(namespace=None):
+def parse_args(args=None, namespace=None):
     parser = argparse.ArgumentParser(description="Hunyuan Multimodal training/inference script")
     parser = add_extra_args(parser)
-    args = parser.parse_args(namespace=namespace)
+    args = parser.parse_args(args=args, namespace=namespace)
     args = sanity_check_args(args)
     return args
 
