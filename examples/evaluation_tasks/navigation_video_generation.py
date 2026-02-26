@@ -8,6 +8,7 @@ import re
 
 def reference_func(
     pipe,
+    pipe_infer,
     input_data_info: Dict[str, Any],
     output_key: str = "generated_video"
 ) -> Dict[str, Any]:
@@ -45,22 +46,11 @@ def reference_func(
                 s.strip() for s in interaction_signal.split(",") if s.strip()
             ]
 
-    num_output_frames = int(input_data_info.get("num_output_frames", 150))
-
-    output_video = pipe(
-        input_image=input_image,
-        num_output_frames=num_output_frames,
-        interaction_signal=interaction_signal,
-    )
-
     output_path = input_data_info.get("output_path", None)
+    fps = int(input_data_info.get("fps", 12))
+    output_video = pipe_infer(pipe, input_image, interaction_signal, output_path, fps)
     if output_path is not None:
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        fps = int(input_data_info.get("fps", 12))
-        export_to_video(output_video, str(output_path), fps=fps)
         return {output_key: str(output_path)}
-
     return {output_key: output_video}
 
 

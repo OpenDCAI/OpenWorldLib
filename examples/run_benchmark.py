@@ -15,13 +15,15 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from data.benchmarks.tasks_map import tasks_map
 from data.benchmarks.benchmark_loader import BenchmarkLoader
-from examples.pipeline_mapping import video_gen_pipe, reasoning_pipe, three_dim_pipe
+from examples.pipeline_load_mapping import video_gen_pipe, reasoning_pipe, three_dim_pipe
+from examples.pipeline_infer_mapping import video_gen_pipe_infer, reasoning_pipe_infer, three_dim_pipe_infer
 from examples.evaluation_tasks.eval_func_mapping import eval_func_mapping
 
 
 # collect evaluation pipelines
 # This loading way is used to verify whether the loaded pipe corresponds to the intended task.
 ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **three_dim_pipe}
+ALL_PIPELINES_INFER = {**video_gen_pipe_infer, **reasoning_pipe_infer, **three_dim_pipe_infer}
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SceneFlow Benchmark Runner")
@@ -100,7 +102,7 @@ def load_existing_results(results_dir: Path) -> List[Dict]:
 
 
 ## reference generation
-def run_reference(pipeline, reference_func, samples, output_dir, output_key="generated_video"):
+def run_reference(pipeline, pipeline_infer, reference_func, samples, output_dir, output_key="generated_video"):
     """run reference_func, and collect the generated results"""
     videos_dir = Path(output_dir) / "videos"
     videos_dir.mkdir(parents=True, exist_ok=True)
@@ -111,7 +113,7 @@ def run_reference(pipeline, reference_func, samples, output_dir, output_key="gen
         sample["output_path"] = str(videos_dir / f"{sample_id}.mp4")
 
         try:
-            output = reference_func(pipeline, sample, output_key=output_key)
+            output = reference_func(pipeline, pipeline_infer, sample, output_key=output_key)
             results.append({"sample_id": sample_id, **output})
         except Exception as e:
             print(f"\n  ERROR [{sample_id}]: {e}")
@@ -242,6 +244,7 @@ def main():
     else:
         pipeline = load_pipeline(args.model_type, args.model_path, args.device)
         print("Pipeline loaded\n")
+    pipeline_infer = ALL_PIPELINES_INFER.get(args.model_type, None)
 
     # ── 4. obtain reference / eval function ──
     if args.task_type not in eval_func_mapping:
@@ -265,7 +268,7 @@ def main():
     else:
         # 正常生成
         print("Running reference generation ...")
-        results = run_reference(pipeline, reference_func, samples, output_dir, output_key)
+        results = run_reference(pipeline, pipeline_infer, reference_func, samples, output_dir, output_key)
         results_file = output_dir / "results.json"
 
         with open(results_file, "w", encoding="utf-8") as f:
@@ -287,7 +290,6 @@ def main():
     if args.run_eval:
         eval_func = funcs["eval_func"]
         run_evaluation(eval_pipeline, eval_func, samples, results, output_dir, data_info)
-
 
 
 if __name__ == "__main__":
