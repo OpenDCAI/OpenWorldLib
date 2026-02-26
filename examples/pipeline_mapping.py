@@ -21,10 +21,18 @@ def load_qwen2p5_omni_pipeline(model_path, device):
             device=device,
             )
 
+def load_wan2p2_pipeline(model_path, device):
+    from sceneflow.pipelines.wan.pipeline_wan_2p2 import Wan2p2Pipeline
+    return Wan2p2Pipeline.from_pretrained(
+            synthesis_model_path=model_path,
+            task="ti2v-5B",
+            )
+
 
 ## utilize lazy loader to load different tasks pipeline
 video_gen_pipe = {
     "matrix-game2": load_matrix_game2_pipeline,
+    "wan2p2": load_wan2p2_pipeline,
     "hunyuan-game-craft": load_hunyuan_game_craft_pipeline,
 }
 
