@@ -1,0 +1,16 @@
+{
+  "name": "floorplan1_fridge_egg_success_run",
+  "scene": "FloorPlan1_physics",
+  "tokens": [
+    "camera_r","camera_r","camera_r","camera_r","camera_r",
+    "interact",
+    "camera_l",
+    "camera_down","camera_down","camera_down","camera_down","camera_down","camera_down","camera_down",
+    "interact",
+    "right","right","right","right","right","right","right","right","right","right","right","right","right","right","right","right",
+    "camera_down","camera_down","camera_down",
+    "interact",
+    "left","left","left","left","left","left","left","left","left","left","left","left","left","left","left",
+    "interact"
+  ]
+}
