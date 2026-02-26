@@ -17,7 +17,7 @@ IMAGE_DIR = 'data/test_vla/robotwin'
 OUTPUT_PATH = 'outputs/lingbot_va_demo.png'
 VIDEO_OUTPUT_PATH = 'outputs/lingbot_va_demo.mp4'
 PROMPT = 'Grab the medium-sized white mug, rotate it, place it on the table, and hook it onto the smooth dark gray rack.'
-NUM_CHUNKS = 10
+NUM_CHUNKS = 2
 DECODE_VIDEO = True
 DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
