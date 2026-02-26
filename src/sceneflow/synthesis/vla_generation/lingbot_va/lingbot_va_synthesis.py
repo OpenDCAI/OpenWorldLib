@@ -10,6 +10,7 @@ import torch
 import torch.nn.functional as F
 from diffusers.pipelines.wan.pipeline_wan import prompt_clean
 from diffusers.video_processor import VideoProcessor
+from tqdm import tqdm
 
 from ...base_synthesis import BaseSynthesis
 from .lingbot_va.modeling_lingbot_va_utils import (
@@ -100,16 +101,107 @@ class LingBotVASynthesis(BaseSynthesis):
         """Not applicable for local LingBot-VA model."""
         pass
 
+    # ── Main generation entry ─────────────────────────────────────────────────
+
     @torch.no_grad()
     def predict(
         self,
-        input_dict: dict,
-        action_mode: bool = False,
-        update_cache: int = 0,
+        operator,
+        init_latent: torch.Tensor,
+        prompt_embeds: torch.Tensor,
+        negative_prompt_embeds: torch.Tensor | None,
+        num_chunks: int = 10,
+        decode_video: bool = False,
         cache_name: str = 'pos',
-    ):
-        """Single-step transformer forward pass."""
-        return self.transformer(input_dict, update_cache=update_cache, cache_name=cache_name, action_mode=action_mode)
+    ) -> dict:
+        """Run the full autoregressive video-action denoising loop.
+
+        Args:
+            operator: LingBotVAOperator instance for input assembly & postprocessing.
+            init_latent: Encoded initial observation latent.
+            prompt_embeds: Text prompt embeddings.
+            negative_prompt_embeds: Negative prompt embeddings (or None).
+            num_chunks: Number of autoregressive chunks to generate.
+            decode_video: Whether to decode latents into pixel-space video.
+            cache_name: KV-cache identifier.
+
+        Returns:
+            dict with keys 'actions', 'latents', and optionally 'video'.
+        """
+        cfg = self.config
+        dtype = cfg.param_dtype
+        frame_chunk_size = cfg.frame_chunk_size
+        device = self.device
+
+        use_cfg = (cfg.guidance_scale > 1) or (cfg.action_guidance_scale > 1)
+
+        latent_height, latent_width = self._get_latent_dims()
+
+        pred_latent_lst = []
+        pred_action_lst = []
+
+        for chunk_id in range(num_chunks):
+            frame_st_id = chunk_id * frame_chunk_size
+
+            # ── Random noise ──────────────────────────────────────────────
+            latents = torch.randn(
+                1, 48, frame_chunk_size, latent_height, latent_width,
+                device=device, dtype=dtype,
+            )
+            actions = torch.randn(
+                1, cfg.action_dim, frame_chunk_size, cfg.action_per_frame, 1,
+                device=device, dtype=dtype,
+            )
+
+            # ── Schedulers ────────────────────────────────────────────────
+            self.scheduler.set_timesteps(cfg.num_inference_steps)
+            self.action_scheduler.set_timesteps(cfg.action_num_inference_steps)
+            timesteps = F.pad(self.scheduler.timesteps, (0, 1), mode='constant', value=0)
+            action_timesteps = F.pad(self.action_scheduler.timesteps, (0, 1), mode='constant', value=0)
+
+            video_step = cfg.video_exec_step
+            if video_step != -1:
+                timesteps = timesteps[:video_step]
+
+            # ── Stage 1: Video denoising ──────────────────────────────
+            latents = self._denoise_video(
+                operator, latents, timesteps, video_step,
+                init_latent, frame_st_id, frame_chunk_size,
+                latent_height, latent_width,
+                prompt_embeds, negative_prompt_embeds,
+                use_cfg, cache_name, dtype, device,
+            )
+
+            # ── Stage 2: Action denoising ─────────────────────────────
+            actions = self._denoise_action(
+                operator, actions, action_timesteps,
+                frame_st_id, frame_chunk_size,
+                prompt_embeds, negative_prompt_embeds,
+                use_cfg, cache_name, dtype, device,
+            )
+
+            # ── Post-process this chunk ───────────────────────────────
+            action_mask = operator.action_mask.to(actions.device)
+            actions[:, ~action_mask] *= 0
+            actions_np = operator.postprocess_action(actions)
+
+            pred_latent_lst.append(latents)
+            pred_action_lst.append(torch.from_numpy(actions_np))
+
+        pred_latent = torch.cat(pred_latent_lst, dim=2)
+        pred_action = torch.cat(pred_action_lst, dim=1).flatten(1).numpy()
+
+        video_np = None
+        if decode_video:
+            video_np = self.decode_latents(pred_latent)
+
+        return {
+            'actions': pred_action,
+            'latents': pred_latent,
+            'video': video_np,
+        }
+
+    # ── Internal: transformer forward helpers ─────────────────────────────────
 
     @staticmethod
     def _data_seq_to_patch(patch_size, data_seq, latent_num_frames, latent_height, latent_width, batch_size=1):
@@ -127,7 +219,7 @@ class LingBotVASynthesis(BaseSynthesis):
         return data_patch
 
     @torch.no_grad()
-    def predict_video_noise(
+    def _forward_video_noise(
         self,
         input_dict: dict,
         frame_chunk_size: int,
@@ -138,14 +230,14 @@ class LingBotVASynthesis(BaseSynthesis):
         batch_size: int = 1,
     ) -> torch.Tensor:
         """Transformer forward for video + reshape output back to spatial layout."""
-        raw_output = self.predict(input_dict, action_mode=False, update_cache=update_cache, cache_name=cache_name)
+        raw_output = self.transformer(input_dict, update_cache=update_cache, cache_name=cache_name, action_mode=False)
         return self._data_seq_to_patch(
             self.config.patch_size, raw_output, frame_chunk_size,
             latent_height, latent_width, batch_size=batch_size,
         )
 
     @torch.no_grad()
-    def predict_action_noise(
+    def _forward_action_noise(
         self,
         input_dict: dict,
         frame_chunk_size: int,
@@ -153,7 +245,7 @@ class LingBotVASynthesis(BaseSynthesis):
         cache_name: str = 'pos',
     ) -> torch.Tensor:
         """Transformer forward for action + reshape output back to [B, C, F, N, 1]."""
-        raw_output = self.predict(input_dict, action_mode=True, update_cache=update_cache, cache_name=cache_name)
+        raw_output = self.transformer(input_dict, update_cache=update_cache, cache_name=cache_name, action_mode=True)
         return rearrange(raw_output, 'b (f n) c -> b c f n 1', f=frame_chunk_size)
 
     def to(self, device: str | torch.device):
@@ -216,8 +308,6 @@ class LingBotVASynthesis(BaseSynthesis):
         self,
         videos: list[torch.Tensor],
         env_type: str = 'none',
-        height: int = 256,
-        width: int = 320,
     ) -> torch.Tensor:
         """Encode multi-view image tensors (already preprocessed by operator) into latents."""
         if env_type == 'robotwin_tshape':
@@ -238,11 +328,8 @@ class LingBotVASynthesis(BaseSynthesis):
         latents_mean = torch.tensor(self.vae.config.latents_mean).to(mu.device)
         latents_std = torch.tensor(self.vae.config.latents_std).to(mu.device)
         mu_norm = self._normalize_latents(mu, latents_mean, 1.0 / latents_std)
-
-        if env_type == 'robotwin_tshape':
-            video_latent = mu_norm
-        else:
-            video_latent = torch.cat(mu_norm.split(1, dim=0), dim=-1)
+        # Align with original: always concat multi-view latents along width
+        video_latent = torch.cat(mu_norm.split(1, dim=0), dim=-1)
         return video_latent
 
     def _normalize_latents(self, latents: torch.Tensor, latents_mean: torch.Tensor, latents_std: torch.Tensor) -> torch.Tensor:
@@ -278,3 +365,146 @@ class LingBotVASynthesis(BaseSynthesis):
         self.streaming_vae.clear_cache()
         if self.streaming_vae_half is not None:
             self.streaming_vae_half.clear_cache()
+
+    # ── Internal: latent dims & denoising loops ───────────────────────────────
+
+    def _get_latent_dims(self) -> tuple[int, int]:
+        """Compute latent spatial dimensions from config."""
+        cfg = self.config
+        if cfg.env_type == 'robotwin_tshape':
+            latent_height = ((cfg.height // 16) * 3) // 2
+            latent_width = cfg.width // 16
+        else:
+            latent_height = cfg.height // 16
+            latent_width = cfg.width // 16 * len(cfg.obs_cam_keys)
+        return latent_height, latent_width
+
+    def _denoise_video(
+        self,
+        operator,
+        latents: torch.Tensor,
+        timesteps: torch.Tensor,
+        video_step: int,
+        init_latent: torch.Tensor | None,
+        frame_st_id: int,
+        frame_chunk_size: int,
+        latent_height: int,
+        latent_width: int,
+        prompt_embeds: torch.Tensor,
+        negative_prompt_embeds: torch.Tensor | None,
+        use_cfg: bool,
+        cache_name: str,
+        dtype: torch.dtype,
+        device: str | torch.device,
+    ) -> torch.Tensor:
+        """Run the video denoising loop for one chunk."""
+        cfg = self.config
+
+        for i, t in enumerate(tqdm(timesteps, desc='Video denoising', leave=False)):
+            last_step = (i == len(timesteps) - 1)
+
+            latent_cond: torch.Tensor | None = None
+            if frame_st_id == 0 and init_latent is not None:
+                latent_cond = init_latent[:, :, 0:1].to(dtype)
+
+            raw_input = operator.prepare_model_input(
+                latents, None, latent_t=t, action_t=t,
+                latent_cond=latent_cond, action_cond=None,
+                frame_st_id=frame_st_id, patch_size=cfg.patch_size, device=device,
+            )
+            video_input = operator.repeat_input_for_cfg(
+                raw_input['latent_res_lst'], prompt_embeds, negative_prompt_embeds,
+                use_cfg=use_cfg, dtype=dtype,
+            )
+
+            # Transformer forward
+            video_noise_pred = self.transformer(
+                video_input, update_cache=1 if last_step else 0,
+                cache_name=cache_name, action_mode=False,
+            )
+
+            if not last_step or video_step != -1:
+                video_noise_pred = self._data_seq_to_patch(
+                    cfg.patch_size, video_noise_pred,
+                    frame_chunk_size, latent_height, latent_width,
+                    batch_size=2 if use_cfg else 1,
+                )
+                if cfg.guidance_scale > 1:
+                    video_noise_pred = video_noise_pred[1:] + cfg.guidance_scale * (video_noise_pred[:1] - video_noise_pred[1:])
+                else:
+                    video_noise_pred = video_noise_pred[:1]
+                latents = self.scheduler.step(video_noise_pred, t, latents, return_dict=False)
+
+            latents[:, :, 0:1] = latent_cond if latent_cond is not None else latents[:, :, 0:1]
+
+        return latents
+
+    def _denoise_action(
+        self,
+        operator,
+        actions: torch.Tensor,
+        action_timesteps: torch.Tensor,
+        frame_st_id: int,
+        frame_chunk_size: int,
+        prompt_embeds: torch.Tensor,
+        negative_prompt_embeds: torch.Tensor | None,
+        use_cfg: bool,
+        cache_name: str,
+        dtype: torch.dtype,
+        device: str | torch.device,
+    ) -> torch.Tensor:
+        """Run the action denoising loop for one chunk."""
+        cfg = self.config
+
+        for i, t in enumerate(tqdm(action_timesteps, desc='Action denoising', leave=False)):
+            last_step = (i == len(action_timesteps) - 1)
+
+            action_cond: torch.Tensor | None = None
+            if frame_st_id == 0:
+                action_cond = torch.zeros(
+                    [1, cfg.action_dim, 1, cfg.action_per_frame, 1],
+                    device=device, dtype=dtype,
+                )
+
+            raw_input = operator.prepare_model_input(
+                None, actions, latent_t=t, action_t=t,
+                latent_cond=None, action_cond=action_cond,
+                frame_st_id=frame_st_id, patch_size=cfg.patch_size, device=device,
+            )
+            action_input = operator.repeat_input_for_cfg(
+                raw_input['action_res_lst'], prompt_embeds, negative_prompt_embeds,
+                use_cfg=use_cfg, dtype=dtype,
+            )
+
+            # Transformer forward
+            action_noise_pred = self.transformer(
+                action_input, update_cache=1 if last_step else 0,
+                cache_name=cache_name, action_mode=True,
+            )
+
+            if not last_step:
+                action_noise_pred = rearrange(action_noise_pred, 'b (f n) c -> b c f n 1', f=frame_chunk_size)
+                if cfg.action_guidance_scale > 1:
+                    action_noise_pred = action_noise_pred[1:] + cfg.action_guidance_scale * (action_noise_pred[:1] - action_noise_pred[1:])
+                else:
+                    action_noise_pred = action_noise_pred[:1]
+                actions = self.action_scheduler.step(action_noise_pred, t, actions, return_dict=False)
+
+            actions[:, :, 0:1] = action_cond if action_cond is not None else actions[:, :, 0:1]
+
+        return actions
+
+    # ── Cache setup for generation ────────────────────────────────────────────
+
+    def setup_cache(self, cache_name: str, use_cfg: bool):
+        """Create KV cache for autoregressive generation."""
+        cfg = self.config
+        latent_height, latent_width = self._get_latent_dims()
+        patch_size = cfg.patch_size
+        latent_token_per_chunk = (cfg.frame_chunk_size * latent_height * latent_width) // (
+            patch_size[0] * patch_size[1] * patch_size[2])
+        action_token_per_chunk = cfg.frame_chunk_size * cfg.action_per_frame
+        self.create_cache(
+            cache_name, cfg.attn_window, latent_token_per_chunk,
+            action_token_per_chunk, batch_size=2 if use_cfg else 1,
+        )

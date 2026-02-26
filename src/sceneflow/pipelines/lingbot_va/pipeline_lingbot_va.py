@@ -2,14 +2,11 @@
 # Adapted from lingbot-va/wan_va/wan_va_server.py for SceneFlow integration.
 from __future__ import annotations
 
-import os
-from dataclasses import dataclass, field
-from typing import Any, Generator, List
+from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 import torch
-import torch.nn.functional as F
-from tqdm import tqdm
 
 from ...operators.lingbot_va_operator import LingBotVAOperator
 from ...synthesis.vla_generation.lingbot_va.lingbot_va_synthesis import LingBotVASynthesis
@@ -46,28 +43,61 @@ class LingBotVAPipeline:
         self.negative_prompt_embeds: torch.Tensor | None = None
         self.use_cfg = False
 
-        # Derived dimensions
-        self._compute_latent_dims()
-
-    def _compute_latent_dims(self):
-        cfg = self.config
-        if cfg.env_type == 'robotwin_tshape':
-            self.latent_height = ((cfg.height // 16) * 3) // 2
-            self.latent_width = cfg.width // 16
-        else:
-            self.latent_height = cfg.height // 16
-            self.latent_width = cfg.width // 16 * len(cfg.obs_cam_keys)
-
     @classmethod
     def from_pretrained(
         cls,
         model_path: str,
-        config: Any = None,
         device: str | torch.device | None = None,
+        param_dtype: torch.dtype = torch.bfloat16,
+        patch_size: tuple[int, int, int] = (1, 2, 2),
+        env_type: str = 'robotwin_tshape',
+        height: int = 256,
+        width: int = 320,
+        action_dim: int = 30,
+        action_per_frame: int = 16,
+        frame_chunk_size: int = 2,
+        attn_window: int = 72,
+        obs_cam_keys: list[str] | None = None,
+        used_action_channel_ids: list[int] | None = None,
+        action_norm_method: str = 'quantiles',
+        norm_stat: dict | None = None,
+        snr_shift: float = 5.0,
+        action_snr_shift: float = 1.0,
         **kwargs: Any,
     ) -> 'LingBotVAPipeline':
-        if config is None:
-            raise ValueError("config must be provided.")
+        if obs_cam_keys is None:
+            obs_cam_keys = [
+                'observation_images_cam_high',
+                'observation_images_cam_left_wrist',
+                'observation_images_cam_right_wrist',
+            ]
+        if used_action_channel_ids is None:
+            used_action_channel_ids = list(range(0, 7)) + list(range(28, 29)) + list(range(7, 14)) + list(range(29, 30))
+        
+        inverse_used_action_channel_ids = [len(used_action_channel_ids)] * action_dim
+        for _i, _j in enumerate(used_action_channel_ids):
+            inverse_used_action_channel_ids[_j] = _i
+
+        from types import SimpleNamespace
+        config = SimpleNamespace(
+            param_dtype=param_dtype,
+            patch_size=patch_size,
+            env_type=env_type,
+            height=height,
+            width=width,
+            action_dim=action_dim,
+            action_per_frame=action_per_frame,
+            frame_chunk_size=frame_chunk_size,
+            attn_window=attn_window,
+            obs_cam_keys=obs_cam_keys,
+            used_action_channel_ids=used_action_channel_ids,
+            inverse_used_action_channel_ids=inverse_used_action_channel_ids,
+            action_norm_method=action_norm_method,
+            norm_stat=norm_stat,
+            snr_shift=snr_shift,
+            action_snr_shift=action_snr_shift,
+        )
+
         device = device or ('cuda' if torch.cuda.is_available() else 'cpu')
         synthesis = LingBotVASynthesis.from_pretrained(model_path, config=config, device=device, **kwargs)
         operator = LingBotVAOperator(config=config)
@@ -101,11 +131,20 @@ class LingBotVAPipeline:
         prompt: str,
         num_chunks: int = 10,
         decode_video: bool = False,
+        guidance_scale: float = 5.0,
+        action_guidance_scale: float = 1.0,
+        num_inference_steps: int = 25,
+        action_num_inference_steps: int = 50,
+        video_exec_step: int = -1,
     ) -> LingBotVAOutput:
-        """Main inference entry: i2va mode — generate multiple chunks from initial images."""
         cfg = self.config
-        dtype = cfg.param_dtype
-        frame_chunk_size = cfg.frame_chunk_size
+
+        # Override config with call arguments
+        cfg.guidance_scale = guidance_scale
+        cfg.action_guidance_scale = action_guidance_scale
+        cfg.num_inference_steps = num_inference_steps
+        cfg.action_num_inference_steps = action_num_inference_steps
+        cfg.video_exec_step = video_exec_step
 
         self.reset(prompt)
         assert self.prompt_embeds is not None, "prompt_embeds must be set. Call reset(prompt) first."
@@ -115,139 +154,29 @@ class LingBotVAPipeline:
         videos = processed['videos']
         init_latent = self.synthesis.encode_images(
             videos, env_type=cfg.env_type,
-            height=cfg.height, width=cfg.width,
         )
-        self.init_latent = init_latent
 
-        pred_latent_lst = []
-        pred_action_lst = []
-
-        for chunk_id in range(num_chunks):
-            frame_st_id = chunk_id * frame_chunk_size
-
-            # ── Random noise ──────────────────────────────────────────────
-            latents = torch.randn(1, 48, frame_chunk_size, self.latent_height, self.latent_width,
-                                   device=self.device, dtype=dtype)
-            actions = torch.randn(1, cfg.action_dim, frame_chunk_size, cfg.action_per_frame, 1,
-                                   device=self.device, dtype=dtype)
-
-            # ── Schedulers ────────────────────────────────────────────────
-            self.synthesis.scheduler.set_timesteps(cfg.num_inference_steps)
-            self.synthesis.action_scheduler.set_timesteps(cfg.action_num_inference_steps)
-            timesteps = F.pad(self.synthesis.scheduler.timesteps, (0, 1), mode='constant', value=0)
-            action_timesteps = F.pad(self.synthesis.action_scheduler.timesteps, (0, 1), mode='constant', value=0)
-
-            video_step = cfg.video_exec_step
-            if video_step != -1:
-                timesteps = timesteps[:video_step]
-
-            with torch.amp.autocast('cuda', dtype=dtype):
-                # ── Stage 1: Video denoising ──────────────────────────────
-                for i, t in enumerate(tqdm(timesteps, desc=f'Chunk {chunk_id} video', leave=False)):
-                    last_step = (i == len(timesteps) - 1)
-
-                    latent_cond: torch.Tensor | None = None
-                    if frame_st_id == 0 and init_latent is not None:
-                        latent_cond = init_latent[:, :, 0:1].to(dtype)
-
-                    raw_input = self.operator.prepare_model_input(
-                        latents, None, latent_t=t, action_t=t,
-                        latent_cond=latent_cond, action_cond=None,
-                        frame_st_id=frame_st_id, patch_size=cfg.patch_size, device=self.device,
-                    )
-                    video_input = self.operator.repeat_input_for_cfg(
-                        raw_input['latent_res_lst'], self.prompt_embeds, self.negative_prompt_embeds,
-                        use_cfg=self.use_cfg, dtype=dtype,
-                    )
-
-                    if last_step and video_step == -1:
-                        # Last step: only write KV cache, no scheduler step needed
-                        self.synthesis.predict(
-                            video_input, action_mode=False,
-                            update_cache=1, cache_name=self.cache_name,
-                        )
-                    else:
-                        video_noise_pred = self.synthesis.predict_video_noise(
-                            video_input, frame_chunk_size,
-                            self.latent_height, self.latent_width,
-                            update_cache=1 if last_step else 0, cache_name=self.cache_name,
-                            batch_size=2 if self.use_cfg else 1,
-                        )
-                        if cfg.guidance_scale > 1:
-                            video_noise_pred = video_noise_pred[1:] + cfg.guidance_scale * (video_noise_pred[:1] - video_noise_pred[1:])
-                        else:
-                            video_noise_pred = video_noise_pred[:1]
-                        latents = self.synthesis.scheduler.step(video_noise_pred, t, latents, return_dict=False)
-
-                    if latent_cond is not None:
-                        latents[:, :, 0:1] = latent_cond
-                    else:
-                        latents[:, :, 0:1] = latents[:, :, 0:1]
-
-                # ── Stage 2: Action denoising ─────────────────────────────
-                for i, t in enumerate(tqdm(action_timesteps, desc=f'Chunk {chunk_id} action', leave=False)):
-                    last_step = (i == len(action_timesteps) - 1)
-
-                    action_cond: torch.Tensor | None = None
-                    if frame_st_id == 0:
-                        action_cond = torch.zeros(
-                            [1, cfg.action_dim, 1, cfg.action_per_frame, 1],
-                            device=self.device, dtype=dtype,
-                        )
-
-                    raw_input = self.operator.prepare_model_input(
-                        None, actions, latent_t=t, action_t=t,
-                        latent_cond=None, action_cond=action_cond,
-                        frame_st_id=frame_st_id, patch_size=cfg.patch_size, device=self.device,
-                    )
-                    action_input = self.operator.repeat_input_for_cfg(
-                        raw_input['action_res_lst'], self.prompt_embeds, self.negative_prompt_embeds,
-                        use_cfg=self.use_cfg, dtype=dtype,
-                    )
-
-                    if last_step:
-                        # Last step: only write KV cache, no scheduler step needed
-                        self.synthesis.predict(
-                            action_input, action_mode=True,
-                            update_cache=1, cache_name=self.cache_name,
-                        )
-                    else:
-                        action_noise_pred = self.synthesis.predict_action_noise(
-                            action_input, frame_chunk_size,
-                            update_cache=0, cache_name=self.cache_name,
-                        )
-                        if cfg.action_guidance_scale > 1:
-                            action_noise_pred = action_noise_pred[1:] + cfg.action_guidance_scale * (action_noise_pred[:1] - action_noise_pred[1:])
-                        else:
-                            action_noise_pred = action_noise_pred[:1]
-                        actions = self.synthesis.action_scheduler.step(action_noise_pred, t, actions, return_dict=False)
-
-                    if action_cond is not None:
-                        actions[:, :, 0:1] = action_cond
-                    else:
-                        actions[:, :, 0:1] = actions[:, :, 0:1]
-
-            # ── Post-process this chunk ───────────────────────────────────
-            action_mask = self.operator.action_mask.to(actions.device)
-            actions[:, ~action_mask] *= 0
-            actions_np = self.operator.postprocess_action(actions)
-
-            pred_latent_lst.append(latents)
-            pred_action_lst.append(torch.from_numpy(actions_np))
-
-        pred_latent = torch.cat(pred_latent_lst, dim=2)
-        pred_action = torch.cat(pred_action_lst, dim=1).flatten(1).numpy()
+        # Delegate full denoising to synthesis
+        result = self.synthesis.predict(
+            operator=self.operator,
+            init_latent=init_latent,
+            prompt_embeds=self.prompt_embeds,
+            negative_prompt_embeds=self.negative_prompt_embeds,
+            num_chunks=num_chunks,
+            decode_video=decode_video,
+            cache_name=self.cache_name,
+        )
 
         # Cleanup
         self.synthesis.clear_cache(self.cache_name)
         self.synthesis.clear_vae_cache()
-
-        video_np = None
-        if decode_video:
-            video_np = self.synthesis.decode_latents(pred_latent)
-
         torch.cuda.empty_cache()
-        return LingBotVAOutput(actions=pred_action, latents=pred_latent, video=video_np)
+
+        return LingBotVAOutput(
+            actions=result['actions'],
+            latents=result['latents'],
+            video=result['video'],
+        )
 
     def stream(self, *args, **kwds):
         """Not applicable for LingBot-VA pipeline."""
@@ -268,15 +197,7 @@ class LingBotVAPipeline:
 
         self.synthesis.clear_cache(self.cache_name)
         self.synthesis.clear_vae_cache()
-
-        patch_size = cfg.patch_size
-        latent_token_per_chunk = (cfg.frame_chunk_size * self.latent_height * self.latent_width) // (
-            patch_size[0] * patch_size[1] * patch_size[2])
-        action_token_per_chunk = cfg.frame_chunk_size * cfg.action_per_frame
-        self.synthesis.create_cache(
-            self.cache_name, cfg.attn_window, latent_token_per_chunk,
-            action_token_per_chunk, batch_size=2 if self.use_cfg else 1,
-        )
+        self.synthesis.setup_cache(self.cache_name, self.use_cfg)
 
         if prompt is not None:
             self.prompt_embeds, self.negative_prompt_embeds = self.synthesis.encode_prompt(
