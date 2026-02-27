@@ -303,11 +303,15 @@ class GemmaAttentionWithExpert(nn.Module):
 
         if use_cache:
             if fill_kv_cache:
+                # Initialize past_key_values as empty dict if None
+                if past_key_values is None:
+                    past_key_values = {}
                 past_key_values[self.layer_idx] = {
                     'key_states': key_states,
                     'value_states': value_states,
                 }
-            else:
+            elif past_key_values is not None and self.layer_idx in past_key_values:
+                # Only concatenate if past_key_values exists for this layer
                 key_states = torch.cat([past_key_values[self.layer_idx]['key_states'], key_states], dim=1)
                 value_states = torch.cat([past_key_values[self.layer_idx]['value_states'], value_states], dim=1)
 
@@ -461,6 +465,7 @@ class GemmaDecoderLayerWithExpert(nn.Module):
         attention_mask: torch.Tensor,
         use_cache: bool,
         past_key_values: Optional[dict] = None,
+        fill_kv_cache: Optional[bool] = None,
     ) -> List[Optional[torch.Tensor]]:
         """Decoder layer with dual-stream attention and optional AdaRMS
         modulation.
@@ -497,32 +502,28 @@ class GemmaDecoderLayerWithExpert(nn.Module):
         attn_outputs = self.self_attn(normed_embeds, position_ids, attention_mask, use_cache, past_key_values, fill_kv_cache)
 
         after_attn_embeds = []
-        for i, (residual, attn_out, attn_gate) in enumerate(zip(residuals, attn_outputs, attn_gates)):
+        for i, (residual, attn_output, attn_gate) in enumerate(zip(residuals, attn_outputs, attn_gates)):
             if residual is not None:
-                if attn_gate is not None:
-                    gated = attn_out * (1.0 + attn_gate)
-                else:
-                    gated = attn_out
-                after_attn_embeds.append(self.gated_residual(residual, gated, None))
+                after_attn_embeds.append(self.gated_residual(residual, attn_output, attn_gate))
             else:
                 after_attn_embeds.append(None)
 
-        mlp_outputs = []
+        outputs = []
         for i, hidden_states in enumerate(after_attn_embeds):
             if hidden_states is not None:
+                residual = hidden_states
                 if self.pi05_enabled and adarms_cond[i] is not None:
                     normed_h, mlp_gate = self.post_attention_layernorms[i](hidden_states, adarms_cond[i])
-                    mlp_output = self.mlps[i](normed_h)
-                    gated_mlp = mlp_output * (1.0 + mlp_gate)
-                    mlp_outputs.append(self.gated_residual(hidden_states, gated_mlp, None))
                 else:
                     normed_h = self.post_attention_layernorms[i](hidden_states)
-                    mlp_output = self.mlps[i](normed_h)
-                    mlp_outputs.append(self.gated_residual(hidden_states, mlp_output, None))
-            else:
-                mlp_outputs.append(None)
+                    mlp_gate = None
 
-        return mlp_outputs
+                mlp_out = self.mlps[i](normed_h)
+                outputs.append(self.gated_residual(residual, mlp_out, mlp_gate))
+            else:
+                outputs.append(None)
+
+        return outputs
 
 
 class PaliGemmaWithExpertModel(nn.Module):
@@ -543,7 +544,7 @@ class PaliGemmaWithExpertModel(nn.Module):
         num_key_value_heads: int = 1,
         head_dim: int = 256,
         intermediate_size: int = 16384,
-        num_hidden_layers: int = 28,
+        num_hidden_layers: int = 18,
         rms_norm_eps: float = 1e-6,
         # Expert config
         expert_hidden_size: int = 1024,
@@ -552,6 +553,7 @@ class PaliGemmaWithExpertModel(nn.Module):
         expert_head_dim: int = 256,
         expert_intermediate_size: int = 4096,
         expert_num_hidden_layers: int = 4,
+        expert_rms_norm_eps: float = 1e-6,
         # RoPE config
         rope_max_wavelength: int = 10_000,
         rope_max_seq_len: int = 8192,
@@ -563,8 +565,8 @@ class PaliGemmaWithExpertModel(nn.Module):
         vision_config = get_transformers_siglip_vision_config()
         self.vision_tower = SiglipVisionTransformer(vision_config)
         self.multi_modal_projector = PaliGemmaMultiModalProjector(
-            vision_hidden_size=vision_hidden_size,
-            projection_dim=hidden_size,
+            vision_hidden_size=vision_config.hidden_size,
+            projection_dim=vision_config.projection_dim,
         )
 
         # Language embedding
@@ -582,7 +584,7 @@ class PaliGemmaWithExpertModel(nn.Module):
                     paligemma_hidden_size=hidden_size,
                     paligemma_num_attention_heads=num_attention_heads,
                     paligemma_num_key_value_heads=num_key_value_heads,
-                    paligemma_head_dim=head_dim,
+                    paligemma_head_dim=hidden_size // num_attention_heads,
                     paligemma_intermediate_size=intermediate_size,
                     expert_hidden_size=expert_hidden_size,
                     expert_num_attention_heads=expert_num_attention_heads,
@@ -596,7 +598,13 @@ class PaliGemmaWithExpertModel(nn.Module):
             ]
         )
 
-        self.norm = GemmaRMSNorm(hidden_size, eps=rms_norm_eps)
+        # Final norms for both streams
+        self.norms = nn.ModuleList(
+            [
+                GemmaRMSNorm(hidden_size, eps=rms_norm_eps),
+                GemmaRMSNorm(expert_hidden_size, eps=expert_rms_norm_eps, use_ada_rms_norm=pi05_enabled),
+            ]
+        )
 
     def embed_image(self, pixel_values: torch.Tensor) -> torch.Tensor:
         """Embed images using the vision tower.
@@ -647,47 +655,35 @@ class PaliGemmaWithExpertModel(nn.Module):
         Returns:
             Tuple of (outputs, past_key_values).
         """
-        hidden_states_list = list(inputs_embeds)
+        inputs_embeds = [input_embed.to(dtype=torch.bfloat16) if input_embed is not None else None for input_embed in inputs_embeds]
 
-        for layer_idx, layer in enumerate(self.layers):
-            # Combine prefix and suffix hidden states for this layer
-            current_inputs = []
-            for hs in hidden_states_list:
-                if hs is not None:
-                    current_inputs.append(hs)
+        with torch.autocast(device_type='cuda', dtype=torch.bfloat16):
+            if use_cache and past_key_values is None:
+                past_key_values = {}
+
+            hidden_states_list = list(inputs_embeds)
+
+            for layer in self.layers:
+                hidden_states_list = layer(
+                    hidden_states_list,
+                    adarms_cond=adarms_cond,
+                    position_ids=position_ids,
+                    attention_mask=attention_mask,
+                    use_cache=use_cache,
+                    past_key_values=past_key_values,
+                    fill_kv_cache=fill_kv_cache,
+                )
+
+            # Apply final norms to both streams
+            outputs_embeds = []
+            for i, hidden_states in enumerate(hidden_states_list):
+                if hidden_states is not None:
+                    if self.pi05_enabled and adarms_cond[i] is not None:
+                        out_emb, _ = self.norms[i](hidden_states, adarms_cond[i])
+                    else:
+                        out_emb = self.norms[i](hidden_states)
+                    outputs_embeds.append(out_emb)
                 else:
-                    current_inputs.append(None)
+                    outputs_embeds.append(None)
 
-            # Get layer-specific adarms condition
-            layer_adarms = []
-            for cond in adarms_cond:
-                if cond is not None:
-                    layer_adarms.append(cond)
-                else:
-                    layer_adarms.append(None)
-
-            outputs = layer(
-                current_inputs,
-                layer_adarms,
-                position_ids,
-                attention_mask,
-                use_cache,
-                past_key_values,
-                fill_kv_cache,
-            )
-
-            hidden_states_list = outputs
-
-        # Apply final norm only to PaliGemma stream
-        final_outputs = []
-        if hidden_states_list[0] is not None:
-            final_outputs.append(self.norm(hidden_states_list[0]))
-        else:
-            final_outputs.append(None)
-
-        if hidden_states_list[1] is not None:
-            final_outputs.append(hidden_states_list[1])
-        else:
-            final_outputs.append(None)
-
-        return final_outputs, past_key_values if past_key_values else {}
+            return outputs_embeds, past_key_values if past_key_values else {}

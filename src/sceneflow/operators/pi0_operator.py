@@ -94,7 +94,12 @@ class AbsoluteActions:
 
 
 class AlohaInputs:
-    """Inputs for the Aloha policy - converts Aloha state format to pi0 format."""
+    """Inputs for the Aloha policy - converts Aloha state format to pi0 format.
+    
+    All methods expect single-sample tensors (no batch dimension):
+      - state: (state_dim,)  1D
+      - actions: (n_steps, action_dim)  2D
+    """
 
     def __init__(self, adapt_to_pi: bool = True) -> None:
         self.joint_flip_mask = torch.tensor([1, -1, -1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1])
@@ -121,28 +126,51 @@ class AlohaInputs:
         value = linear_to_radian(value, arm_length=0.036, horn_radius=0.022)
         return _normalize(value, min_val=0.5476, max_val=1.6296)
 
-    def _decode_aloha(self, state: torch.Tensor) -> torch.Tensor:
+    def _decode_state(self, state: torch.Tensor) -> torch.Tensor:
+        """Decode single-sample state (state_dim,) from Aloha to pi0 format."""
         if self.adapt_to_pi:
-            # Flip the joints.
-            state[:14] = self.joint_flip_mask * state[:14]
-            # Reverse the gripper transformation
-            state[[6, 13]] = self._gripper_to_angular(state[[6, 13]])
+            state_dim = state.shape[-1]
+            if state_dim >= 14:
+                # Dual-arm: flip joints and convert gripper
+                state[:14] = self.joint_flip_mask * state[:14]
+                state[[6, 13]] = self._gripper_to_angular(state[[6, 13]])
+            else:
+                # Single-arm: only first 7 dims
+                state[:7] = self.joint_flip_mask[:7] * state[:7]
+                state[6] = self._gripper_to_angular(state[6:7])[0]
         return state
 
+    def _encode_actions_inv(self, actions: torch.Tensor) -> torch.Tensor:
+        """Inverse-encode actions (n_steps, action_dim) from Aloha to pi0 format."""
+        if self.adapt_to_pi:
+            action_dim = actions.shape[-1]
+            if action_dim >= 14:
+                actions[:, :14] = self.joint_flip_mask * actions[:, :14]
+                actions[:, [6, 13]] = self._gripper_from_angular_inv(actions[:, [6, 13]])
+            else:
+                actions[:, :7] = self.joint_flip_mask[:7] * actions[:, :7]
+                actions[:, 6] = self._gripper_from_angular_inv(actions[:, 6:7])[:, 0]
+        return actions
+
     def __call__(self, data: dict) -> dict:
-        """Decode Aloha-specific input formats into the pi0 training/runtime format."""
-        state = self._decode_aloha(data['observation.state'])
-        data['observation.state'] = state
+        """Decode Aloha-specific input formats into the pi0 training/runtime format.
+        
+        Expects single-sample data:
+          - data['observation.state']: (state_dim,)
+          - data['action']: (n_steps, action_dim) (optional, training only)
+        """
+        data['observation.state'] = self._decode_state(data['observation.state'])
         if 'action' in data:
-            actions = data['action']
-            actions[:, :14] = self.joint_flip_mask * actions[:, :14]
-            actions[:, [6, 13]] = self._gripper_from_angular_inv(actions[:, [6, 13]])
-            data['action'] = actions
+            data['action'] = self._encode_actions_inv(data['action'])
         return data
 
 
 class AlohaOutputs:
-    """Outputs for the Aloha policy - converts pi0 output to Aloha format."""
+    """Outputs for the Aloha policy - converts pi0 output to Aloha format.
+    
+    Expects single-sample tensors:
+      - actions: (n_steps, action_dim)  2D
+    """
 
     def __init__(self, original_action_dim: int, adapt_to_pi: bool = True):
         self.joint_flip_mask = torch.tensor([1, -1, -1, 1, 1, 1, 1, 1, -1, -1, 1, 1, 1, 1])
@@ -156,12 +184,21 @@ class AlohaOutputs:
         value = value + 0.5476
         return _normalize(value, min_val=-0.6213, max_val=1.4910)
 
+    def _encode_actions(self, actions: torch.Tensor) -> torch.Tensor:
+        """Encode actions (n_steps, action_dim) from pi0 to Aloha format."""
+        if self.adapt_to_pi:
+            action_dim = actions.shape[-1]
+            if action_dim >= 14:
+                actions[:, :14] = self.joint_flip_mask * actions[:, :14]
+                actions[:, [6, 13]] = self._gripper_from_angular(actions[:, [6, 13]])
+            else:
+                actions[:, :7] = self.joint_flip_mask[:7] * actions[:, :7]
+                actions[:, 6] = self._gripper_from_angular(actions[:, 6:7])[:, 0]
+        return actions
+
     def __call__(self, data: dict) -> dict:
         actions = data['action'][:, : self.original_action_dim]
-        if self.adapt_to_pi:
-            actions[:, :14] = self.joint_flip_mask * actions[:, :14]
-            actions[:, [6, 13]] = self._gripper_from_angular(actions[:, [6, 13]])
-        return {'action': actions}
+        return {'action': self._encode_actions(actions)}
 
 
 class PadStatesAndActions:
@@ -331,7 +368,7 @@ class PI0Operator(BaseOperator):
         )
 
         # Output transforms
-        self.state_unnormalize_transform = Unnormalize(action_norm_stats, use_quantiles=self.pi05_enabled)
+        self.state_unnormalize_transform = Unnormalize(state_norm_stats, use_quantiles=self.pi05_enabled)
         self.action_unnormalize_transform = Unnormalize(action_norm_stats, use_quantiles=self.pi05_enabled)
         self.absolute_actions_transform = AbsoluteActions()
         self.aloha_outputs_transform = AlohaOutputs(original_action_dim=14)

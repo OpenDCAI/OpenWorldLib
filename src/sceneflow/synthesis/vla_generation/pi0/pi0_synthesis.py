@@ -13,6 +13,26 @@ class PI0Synthesis(BaseSynthesis):
         self.policy = policy.to(device)
         self.policy.eval()
 
+    @property
+    def max_action_dim(self) -> int:
+        """Return the maximum action dimension from the policy."""
+        return self.policy.max_action_dim
+
+    @property
+    def max_state_dim(self) -> int:
+        """Return the maximum state dimension from the policy."""
+        return self.policy.max_state_dim
+
+    @property
+    def n_action_steps(self) -> int:
+        """Return the number of action steps from the policy."""
+        return self.policy.n_action_steps
+
+    @property
+    def pi05_enabled(self) -> bool:
+        """Return whether pi05 mode is enabled."""
+        return self.policy.pi05_enabled
+
     @classmethod
     def from_pretrained(cls, pretrained_model_path: str, device: str | torch.device | None = None, **kwargs) -> "PI0Synthesis":
         device = device or ('cuda' if torch.cuda.is_available() else 'cpu')

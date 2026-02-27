@@ -1,12 +1,79 @@
 import math
+import os
+from pathlib import Path
+from typing import Any
 
 import torch
 import torch.nn.functional as F  # noqa: N812
 from diffusers.configuration_utils import ConfigMixin, register_to_config
 from diffusers.models.modeling_utils import ModelMixin
+from huggingface_hub import hf_hub_download
+from safetensors.torch import load_file
 from torch import Tensor, nn
 
 from .paligemma_with_expert import PaliGemmaWithExpertModel
+
+
+def _is_local_path(pretrained_model_path: str) -> bool:
+    """Check if the path is a local path."""
+    return os.path.isdir(pretrained_model_path) or os.path.isfile(pretrained_model_path)
+
+
+def _get_model_file_safetensors(
+    pretrained_model_path: str,
+    subfolder: str = '',
+) -> str | None:
+    """Get the model.safetensors file path from local directory or hub.
+
+    Args:
+        pretrained_model_path: Path to the model directory or hub model id.
+        subfolder: Subfolder to look for the model file.
+
+    Returns:
+        Path to the model.safetensors file or None if not found.
+    """
+    if subfolder:
+        model_path = Path(pretrained_model_path) / subfolder / 'model.safetensors'
+    else:
+        model_path = Path(pretrained_model_path) / 'model.safetensors'
+
+    if model_path.exists():
+        return str(model_path)
+    return None
+
+
+def _get_config_file(
+    pretrained_model_path: str,
+    subfolder: str = '',
+) -> str | None:
+    """Get the config.json file path from local directory or hub.
+
+    Args:
+        pretrained_model_path: Path to the model directory or hub model id.
+        subfolder: Subfolder to look for the config file.
+
+    Returns:
+        Path to the config.json file or None if not found.
+    """
+    if subfolder:
+        config_path = Path(pretrained_model_path) / subfolder / 'config.json'
+    else:
+        config_path = Path(pretrained_model_path) / 'config.json'
+
+    if config_path.exists():
+        return str(config_path)
+    return None
+
+
+def _load_safetensors_weights(model: nn.Module, safetensors_path: str) -> None:
+    """Load weights from a safetensors file into the model.
+
+    Args:
+        model: The model to load weights into.
+        safetensors_path: Path to the safetensors file.
+    """
+    state_dict = load_file(safetensors_path)
+    model.load_state_dict(state_dict, strict=False)
 
 
 def get_safe_dtype(dtype: torch.dtype, device: str | torch.device) -> torch.dtype:
@@ -462,3 +529,85 @@ class PI0Policy(ModelMixin, ConfigMixin):
         suffix_out = suffix_out.to(dtype=self.action_out_proj.weight.dtype)
         v_t = self.action_out_proj(suffix_out)
         return v_t
+
+    @classmethod
+    def from_pretrained(cls, pretrained_model_path: str, **kwargs: Any) -> 'PI0Policy':
+        """Load a PI0Policy from a pretrained model.
+
+        This method supports loading from:
+        1. Local directory with model.safetensors and config.json
+        2. Local directory with diffusion_pytorch_model.bin (falls back to parent class)
+        3. Hugging Face Hub model id
+
+        Args:
+            pretrained_model_path: Path to the model directory or hub model id.
+            **kwargs: Additional arguments passed to the model constructor.
+
+        Returns:
+            Loaded PI0Policy instance.
+        """
+        # Determine if this is a local path or hub model id
+        is_local = _is_local_path(pretrained_model_path)
+
+        # For local paths, check if model.safetensors exists
+        if is_local:
+            model_file_path = _get_model_file_safetensors(pretrained_model_path)
+            config_path = _get_config_file(pretrained_model_path)
+
+            if model_file_path is None or config_path is None:
+                # Fall back to parent class method which supports both .bin and .safetensors
+                return super().from_pretrained(pretrained_model_path, **kwargs)
+        else:
+            # Hub model - try to download config and model.safetensors
+            try:
+                config_path = hf_hub_download(
+                    repo_id=pretrained_model_path,
+                    filename='config.json',
+                )
+            except Exception:
+                config_path = None
+
+            try:
+                model_file_path = hf_hub_download(
+                    repo_id=pretrained_model_path,
+                    filename='model.safetensors',
+                )
+            except Exception:
+                model_file_path = None
+
+            if config_path is None or model_file_path is None:
+                # Fall back to parent class method which supports both .bin and .safetensors
+                return super().from_pretrained(pretrained_model_path, **kwargs)
+
+        # Load config
+        import json
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+
+        # Filter out keys that are not constructor arguments
+        init_params = {
+            'max_state_dim',
+            'max_action_dim',
+            'proj_width',
+            'n_action_steps',
+            'num_steps',
+            'use_cache',
+            'pi05_enabled',
+        }
+
+        # Build config dict for model initialization
+        model_config = {}
+        for key in init_params:
+            if key in config:
+                model_config[key] = config[key]
+
+        # Override with any kwargs provided
+        model_config.update(kwargs)
+
+        # Create model instance
+        model = cls(**model_config)
+
+        # Load weights from safetensors
+        _load_safetensors_weights(model, model_file_path)
+
+        return model

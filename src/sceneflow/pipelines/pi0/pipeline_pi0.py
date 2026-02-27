@@ -87,14 +87,20 @@ class PI0Pipeline:
         state: torch.Tensor,
         add_batch_dim: bool = True,
     ):
-        """Preprocess inputs (perception + interaction) to build model-ready tensors."""
+        """Preprocess inputs (perception + interaction) to build model-ready tensors.
+        
+        Expects single-sample inputs (no batch dimension):
+          - images: dict of (C, H, W) tensors
+          - task: str
+          - state: (state_dim,) tensor
+        """
         ori_device = state.device if state is not None else self.device
         state = state.to(self.device)
 
-        # Process perception
+        # Process perception (operates on single-sample: state 1D, images 3D)
         images, img_masks, state = self.operator.process_perception(images, state, pad_state=True)
 
-        # Process interaction
+        # Process interaction (operates on single-sample: state 1D)
         lang_tokens, lang_masks = self.operator.process_interaction(task=task, state=state)
 
         if add_batch_dim:
@@ -102,6 +108,7 @@ class PI0Pipeline:
             img_masks = [mask.unsqueeze(0) for mask in img_masks]
             lang_tokens = lang_tokens.unsqueeze(0)
             lang_masks = lang_masks.unsqueeze(0)
+            state = state.unsqueeze(0)
 
         return {
             'images': images,
@@ -139,9 +146,12 @@ class PI0Pipeline:
             state=processed['state'],
         )
 
+        # Remove batch dimension for single-sample post-processing
+        # outputs: (1, n_steps, max_action_dim) -> (n_steps, max_action_dim)
+        # state: (1, state_dim) -> (state_dim,)
         pred_action = self.operator.process_output(
             outputs[0],
-            processed['state'],
+            processed['state'][0],
             self.original_action_dim,
         )
         pred_action = pred_action.to(processed['ori_device'])

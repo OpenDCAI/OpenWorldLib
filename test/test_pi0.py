@@ -17,17 +17,17 @@ from sceneflow.pipelines.pi0.pipeline_pi0 import PI0Pipeline
 # PI0 Model Configuration
 PI0_MODEL_PATH = 'lerobot/pi0_libero_finetuned'
 PI05_MODEL_PATH = 'lerobot/pi05_libero_finetuned'  # Using same model for demo, in practice use different checkpoint
-NORM_STATS_PATH = 'data/test_vla/norm_stats.json'
-CAM_HIGH_PATH = 'data/test_vla/robotwin/observation_images_cam_high.png'
-CAM_LEFT_WRIST_PATH = 'data/test_vla/robotwin/observation_images_cam_left_wrist.png'
-CAM_RIGHT_WRIST_PATH = 'data/test_vla/robotwin/observation_images_cam_right_wrist.png'
+PI0_NORM_STATS_PATH = 'data/test_vla/pi0_norm_stats.json'
+PI05_NORM_STATS_PATH = 'data/test_vla/pi0_5_norm_stats.json'
 META_PATH = 'data/test_vla/meta.json'
+# Using same image paths as test_giga_brain_0.py
+MAIN_VIEW_PATH = 'data/test_vla/main_view.png'
+WRIST_VIEW_PATH = 'data/test_vla/wrist_view.png'
 TOKENIZER_MODEL_PATH = 'google/paligemma-3b-mix-224'
 
 PRESENT_IMG_KEYS = [
     'observation.images.cam_high',
     'observation.images.cam_left_wrist',
-    'observation.images.cam_right_wrist',
 ]
 
 # Output paths
@@ -35,7 +35,7 @@ PI0_OUTPUT_PATH = 'outputs/pi0_demo.png'
 PI05_OUTPUT_PATH = 'outputs/pi05_demo.png'
 
 # 基础配置
-ORIGINAL_ACTION_DIM = 14
+ORIGINAL_ACTION_DIM = 8
 DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 
@@ -65,36 +65,43 @@ def visualize_action(pred_action: np.ndarray, out_path: str, action_names: list[
 
 
 if __name__ == '__main__':
-    with open(NORM_STATS_PATH, 'r') as f:
-        norm_stats_data = json.load(f)['norm_stats']
+    # 禁用 torch.compile 错误抑制（如果需要使用 compile）
+    import torch._dynamo
+    torch._dynamo.config.suppress_errors = True
 
-    # 兼容不同键名
-    state_norm = norm_stats_data.get('observation.state', norm_stats_data.get('state'))
-    action_norm = norm_stats_data.get('action', norm_stats_data.get('actions'))
+    # 使用 test_giga_brain_0.py 的图像数据
+    images = {
+        'observation.images.cam_high': TF.to_tensor(Image.open(MAIN_VIEW_PATH).convert('RGB')),
+        'observation.images.cam_left_wrist': TF.to_tensor(Image.open(WRIST_VIEW_PATH).convert('RGB')),
+    }
+
+    # 使用 meta.json 中的 task 和 state 数据
+    with open(META_PATH, 'r') as f:
+        meta_data = json.load(f)
+    task = meta_data['task']
+    # state 保持 1D (state_dim,)，Pipeline 内部会自动添加 batch 维度
+    state = torch.tensor(meta_data['observation']['state'], dtype=torch.float32)
 
     # ===== PI0 测试 (continuous state input) =====
+    # 加载 PI0 的 norm stats
+    with open(PI0_NORM_STATS_PATH, 'r') as f:
+        pi0_norm_stats_data = json.load(f)['norm_stats']
+
+    # 兼容不同键名
+    pi0_state_norm = pi0_norm_stats_data.get('observation.state', pi0_norm_stats_data.get('state'))
+    pi0_action_norm = pi0_norm_stats_data.get('action', pi0_norm_stats_data.get('actions'))
+
     pipe = PI0Pipeline.from_pretrained(
         model_path=PI0_MODEL_PATH,
         tokenizer_model_path=TOKENIZER_MODEL_PATH,
-        state_norm_stats=state_norm,
-        action_norm_stats=action_norm,
+        state_norm_stats=pi0_state_norm,
+        action_norm_stats=pi0_action_norm,
         original_action_dim=ORIGINAL_ACTION_DIM,
         discrete_state_input=False,
         device=DEVICE,
         present_img_keys=PRESENT_IMG_KEYS,
     )
     pipe.compile()
-
-    images = {
-        'observation.images.cam_high': TF.to_tensor(Image.open(CAM_HIGH_PATH).convert('RGB')),
-        'observation.images.cam_left_wrist': TF.to_tensor(Image.open(CAM_LEFT_WRIST_PATH).convert('RGB')),
-        'observation.images.cam_right_wrist': TF.to_tensor(Image.open(CAM_RIGHT_WRIST_PATH).convert('RGB')),
-    }
-
-    with open(META_PATH, 'r') as f:
-        meta_data = json.load(f)
-    task = meta_data['task']
-    state = torch.tensor(meta_data['observation']['state'], dtype=torch.float32)
 
     pred_action = pipe(images, task, state)
     print(pred_action)
@@ -108,11 +115,19 @@ if __name__ == '__main__':
     del pipe
     torch.cuda.empty_cache()
 
+    # 加载 PI0.5 的 norm stats
+    with open(PI05_NORM_STATS_PATH, 'r') as f:
+        pi05_norm_stats_data = json.load(f)['norm_stats']
+
+    # 兼容不同键名
+    pi05_state_norm = pi05_norm_stats_data.get('observation.state', pi05_norm_stats_data.get('state'))
+    pi05_action_norm = pi05_norm_stats_data.get('action', pi05_norm_stats_data.get('actions'))
+
     pipe05 = PI0Pipeline.from_pretrained(
         model_path=PI05_MODEL_PATH,
         tokenizer_model_path=TOKENIZER_MODEL_PATH,
-        state_norm_stats=state_norm,
-        action_norm_stats=action_norm,
+        state_norm_stats=pi05_state_norm,
+        action_norm_stats=pi05_action_norm,
         original_action_dim=ORIGINAL_ACTION_DIM,
         discrete_state_input=True,
         device=DEVICE,
