@@ -13,7 +13,7 @@ from sceneflow.pipelines.lingbot_va.pipeline_lingbot_va import LingBotVAPipeline
 
 
 MODEL_PATH = 'robbyant/lingbot-va-posttrain-robotwin'
-IMAGE_DIR = 'data/test_vla/robotwin'
+IMAGE_DIR = 'data/test_vla/aloha'
 OUTPUT_PATH = 'outputs/lingbot_va_demo.png'
 VIDEO_OUTPUT_PATH = 'outputs/lingbot_va_demo.mp4'
 PROMPT = 'Grab the medium-sized white mug, rotate it, place it on the table, and hook it onto the smooth dark gray rack.'

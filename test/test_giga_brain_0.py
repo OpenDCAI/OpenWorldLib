@@ -15,9 +15,9 @@ from sceneflow.pipelines.giga_brain_0.pipeline_giga_brain_0 import GigaBrain0Pip
 
 MODEL_PATH = 'open-gigaai/GigaBrain-0-3.5B-Base'
 NORM_STATS_PATH = 'data/test_vla/norm_stats.json'
-MAIN_VIEW_PATH = 'data/test_vla/main_view.png'
-WRIST_VIEW_PATH = 'data/test_vla/wrist_view.png'
-META_PATH = 'data/test_vla/meta.json'
+MAIN_VIEW_PATH = 'data/test_vla/libero/main_view.png'
+WRIST_VIEW_PATH = 'data/test_vla/libero/wrist_view.png'
+META_PATH = 'data/test_vla/libero/meta.json'
 OUTPUT_PATH = 'outputs/giga_brain_0_demo.png'
 
 # 基础配置
