@@ -41,10 +41,11 @@ def reference_func(
     return {output_key: output_video}
 
 
-# eval function need finish
+# eval function
 def eval_func(
     input_data_info: Dict[str, Any],
     eval_pipeline: None,
+    eval_pipeline_infer: None,
 ) -> Dict[str, Any]:
     """
     使用多模态 LLM 评估生成的文本到视频质量。
@@ -96,6 +97,9 @@ def eval_func(
             response_text = response[0] if response else ""
         else:
             response_text = str(response)
+        
+        response_text = eval_pipeline_infer(eval_pipeline, prompt_text,
+                                            video_path=generated_video_path)
         
     except Exception as e:
         return {

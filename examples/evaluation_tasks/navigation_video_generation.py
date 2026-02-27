@@ -54,10 +54,11 @@ def reference_func(
     return {output_key: output_video}
 
 
-# eval function need finish
+# eval function
 def eval_func(
     input_data_info: Dict[str, Any],
     eval_pipeline: None,
+    eval_pipeline_infer: None,
 ) -> Dict[str, Any]:
     """
     使用多模态 LLM 评估生成的导航视频质量。
@@ -105,20 +106,9 @@ def eval_func(
     if not isinstance(prompt_text, str):
         raise ValueError(f"eval_prompt should be a string, got {type(prompt_text)}")
 
-    
     try:
-        response = eval_pipeline(
-            text=prompt_text,
-            images=[ref_image_path],  # 参考图片
-            videos=[generated_video_path],  # 生成的视频
-            max_new_tokens=1024
-        )
-        
-        # response 可能是字符串或列表，统一处理
-        if isinstance(response, list):
-            response_text = response[0] if response else ""
-        else:
-            response_text = str(response)
+        response_text = eval_pipeline_infer(eval_pipeline, prompt_text,
+                                            ref_image_path, generated_video_path)
         
     except Exception as e:
         return {
