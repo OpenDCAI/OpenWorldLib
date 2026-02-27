@@ -38,6 +38,8 @@ class PI0Pipeline:
         discrete_state_input: bool = False,
         device: str | torch.device | None = None,
         present_img_keys: list[str] | None = None,
+        robot_type: str = 'aloha',
+        use_delta_actions: bool = True,
         **policy_kwargs: Any,
     ) -> 'PI0Pipeline':
         """Create a PI0Pipeline from pretrained model.
@@ -51,6 +53,8 @@ class PI0Pipeline:
             discrete_state_input: If True, enables PI0.5 mode with discrete state input.
             device: Device to run inference on.
             present_img_keys: List of image keys to use.
+            robot_type: One of 'aloha', 'libero', 'droid'.
+            use_delta_actions: Whether the model uses delta actions (requires absolute conversion on output).
 
         Returns:
             PI0Pipeline instance.
@@ -60,9 +64,12 @@ class PI0Pipeline:
             state_norm_stats=state_norm_stats,
             action_norm_stats=action_norm_stats,
             tokenizer_model_path=tokenizer_model_path,
+            robot_type=robot_type,
             resize_imgs_with_padding=(224, 224),
             discrete_state_input=discrete_state_input,
             present_img_keys=present_img_keys,
+            original_action_dim=original_action_dim,
+            use_delta_actions=use_delta_actions,
         )
         return cls(synthesis=synthesis, operator=operator, original_action_dim=original_action_dim, device=device)
 

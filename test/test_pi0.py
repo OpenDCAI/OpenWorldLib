@@ -100,6 +100,8 @@ if __name__ == '__main__':
         discrete_state_input=False,
         device=DEVICE,
         present_img_keys=PRESENT_IMG_KEYS,
+        robot_type='libero',
+        use_delta_actions=True,
     )
     pipe.compile()
 
@@ -132,6 +134,8 @@ if __name__ == '__main__':
         discrete_state_input=True,
         device=DEVICE,
         present_img_keys=PRESENT_IMG_KEYS,
+        robot_type='libero',
+        use_delta_actions=False,
     )
     pipe05.compile()
 

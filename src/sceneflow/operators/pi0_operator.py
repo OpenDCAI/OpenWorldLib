@@ -5,6 +5,10 @@ from transformers import AutoTokenizer
 from .base_operator import BaseOperator
 
 
+# ============================================================
+# Normalize / Unnormalize
+# ============================================================
+
 class Normalize:
     """Normalize robot state vectors using mean/std or quantiles."""
 
@@ -39,9 +43,17 @@ class Normalize:
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         x_dim = x.shape[-1]
         if self.use_quantiles:
-            return (x - self.q01[..., :x_dim]) / (self.q99[..., :x_dim] - self.q01[..., :x_dim] + self.EPSILON) * 2.0 - 1.0
+            stats_dim = self.q01.shape[-1]
+            d = min(x_dim, stats_dim)
+            out = x.clone()
+            out[..., :d] = (x[..., :d] - self.q01[..., :d]) / (self.q99[..., :d] - self.q01[..., :d] + self.EPSILON) * 2.0 - 1.0
+            return out
         else:
-            return (x - self.mean[..., :x_dim]) / (self.std[..., :x_dim] + self.EPSILON)
+            stats_dim = self.mean.shape[-1]
+            d = min(x_dim, stats_dim)
+            out = x.clone()
+            out[..., :d] = (x[..., :d] - self.mean[..., :d]) / (self.std[..., :d] + self.EPSILON)
+            return out
 
 
 class Unnormalize:
@@ -68,17 +80,61 @@ class Unnormalize:
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         x_dim = x.shape[-1]
         if self.use_quantiles:
-            return (x + 1.0) / 2.0 * (self.q99[..., :x_dim] - self.q01[..., :x_dim] + self.EPSILON) + self.q01[..., :x_dim]
+            stats_dim = self.q01.shape[-1]
+            d = min(x_dim, stats_dim)
+            out = x.clone()
+            out[..., :d] = (x[..., :d] + 1.0) / 2.0 * (self.q99[..., :d] - self.q01[..., :d] + self.EPSILON) + self.q01[..., :d]
+            return out
         else:
-            return x * (self.std[..., :x_dim] + self.EPSILON) + self.mean[..., :x_dim]
+            stats_dim = self.mean.shape[-1]
+            d = min(x_dim, stats_dim)
+            out = x.clone()
+            out[..., :d] = x[..., :d] * (self.std[..., :d] + self.EPSILON) + self.mean[..., :d]
+            return out
+
+
+# ============================================================
+# Delta / Absolute action transforms (mask-configurable)
+# ============================================================
+
+class DeltaActions:
+    """Converts absolute actions to delta actions relative to the current state.
+
+    Args:
+        mask: Boolean mask indicating which dims to convert. None means no-op.
+              Length can be shorter than action dim; unmasked dims are unchanged.
+    """
+
+    def __init__(self, mask: tuple[bool, ...] | list[bool] | None = None):
+        self.mask = torch.tensor(mask, dtype=torch.bool) if mask is not None else None
+
+    def to(self, device: torch.device | str) -> None:
+        if self.mask is not None:
+            self.mask = self.mask.to(device)
+
+    def __call__(self, data: dict) -> dict:
+        if self.mask is None or 'action' not in data or 'observation.state' not in data:
+            return data
+        state, action = data['observation.state'], data['action']
+        dims = self.mask.shape[-1]
+        action[..., :dims] -= torch.where(self.mask, state[..., :dims], torch.zeros_like(state[..., :dims])).unsqueeze(-2)
+        data['action'] = action
+        return data
 
 
 class AbsoluteActions:
-    """Repacks delta actions into absolute action space."""
+    """Converts delta actions back to absolute actions by adding current state.
 
-    def __init__(self):
-        # If the robot has mobile base, masks of base action are False and it doesn't need to be specified explicitly.
-        self.mask = torch.tensor([True, True, True, True, True, True, False, True, True, True, True, True, True, False])
+    Args:
+        mask: Boolean mask indicating which dims to convert. None means no-op.
+    """
+
+    def __init__(self, mask: tuple[bool, ...] | list[bool] | None = None):
+        if mask is None:
+            # Default: Aloha dual-arm (backward compatible)
+            mask = (True, True, True, True, True, True, False,
+                    True, True, True, True, True, True, False)
+        self.mask = torch.tensor(mask, dtype=torch.bool)
 
     def to(self, device: torch.device | str) -> None:
         self.mask = self.mask.to(device)
@@ -93,9 +149,13 @@ class AbsoluteActions:
         return data
 
 
+# ============================================================
+# Robot-specific input transforms
+# ============================================================
+
 class AlohaInputs:
     """Inputs for the Aloha policy - converts Aloha state format to pi0 format.
-    
+
     All methods expect single-sample tensors (no batch dimension):
       - state: (state_dim,)  1D
       - actions: (n_steps, action_dim)  2D
@@ -165,9 +225,63 @@ class AlohaInputs:
         return data
 
 
+class LiberoInputs:
+    """Inputs for the Libero policy.
+
+    Libero data does not need joint-flip or gripper-angular conversion.
+    This transform only performs image key remapping to the model's canonical names.
+
+    Expects single-sample data:
+      - data['observation.state']: (state_dim,)   — passed through unchanged
+      - data['action']: (n_steps, action_dim)      — passed through unchanged (optional)
+    """
+
+    def __init__(self) -> None:
+        pass
+
+    def to(self, device: torch.device | str) -> None:
+        pass
+
+    def __call__(self, data: dict) -> dict:
+        # Libero state/action pass through without any robot-specific transform.
+        return data
+
+
+class DroidInputs:
+    """Inputs for the DROID policy.
+
+    DROID stores joint positions and gripper position separately.
+    This transform concatenates them into a single state vector.
+
+    Expects single-sample data:
+      - data['observation.state']: (state_dim,)  — already concatenated joint+gripper
+      - data['action']: (n_steps, action_dim)     — passed through unchanged (optional)
+    """
+
+    def __init__(self) -> None:
+        pass
+
+    def to(self, device: torch.device | str) -> None:
+        pass
+
+    def __call__(self, data: dict) -> dict:
+        # If joint_position and gripper_position are provided separately, concatenate them.
+        if 'observation.joint_position' in data and 'observation.gripper_position' in data:
+            joint = data['observation.joint_position']
+            gripper = data['observation.gripper_position']
+            if gripper.ndim == 0:
+                gripper = gripper.unsqueeze(0)
+            data['observation.state'] = torch.cat([joint, gripper], dim=-1)
+        return data
+
+
+# ============================================================
+# Robot-specific output transforms
+# ============================================================
+
 class AlohaOutputs:
     """Outputs for the Aloha policy - converts pi0 output to Aloha format.
-    
+
     Expects single-sample tensors:
       - actions: (n_steps, action_dim)  2D
     """
@@ -201,6 +315,46 @@ class AlohaOutputs:
         return {'action': self._encode_actions(actions)}
 
 
+class LiberoOutputs:
+    """Outputs for the Libero policy.
+
+    Simply truncates actions to the original action dimension (typically 7).
+    No robot-specific conversion needed.
+    """
+
+    def __init__(self, original_action_dim: int = 7):
+        self.original_action_dim = original_action_dim
+
+    def to(self, device: torch.device | str) -> None:
+        pass
+
+    def __call__(self, data: dict) -> dict:
+        actions = data['action'][:, :self.original_action_dim]
+        return {'action': actions}
+
+
+class DroidOutputs:
+    """Outputs for the DROID policy.
+
+    Simply truncates actions to the original action dimension (typically 8).
+    No robot-specific conversion needed.
+    """
+
+    def __init__(self, original_action_dim: int = 8):
+        self.original_action_dim = original_action_dim
+
+    def to(self, device: torch.device | str) -> None:
+        pass
+
+    def __call__(self, data: dict) -> dict:
+        actions = data['action'][:, :self.original_action_dim]
+        return {'action': actions}
+
+
+# ============================================================
+# Shared transforms (unchanged)
+# ============================================================
+
 class PadStatesAndActions:
     """Zero-pads states and actions to the model action dimension."""
 
@@ -209,7 +363,7 @@ class PadStatesAndActions:
 
     def _pad_to_dim(self, x: torch.Tensor, target_dim: int, axis: int = -1) -> torch.Tensor:
         current_dim = x.shape[axis]
-        if current_dim < target_dim:
+        if (current_dim < target_dim):
             shape = list(x.shape)
             shape[-1] = target_dim
             new_vector = torch.zeros(*shape, dtype=x.dtype, device=x.device)
@@ -330,31 +484,82 @@ class PromptTokenizerTransform:
         return lang_tokens, lang_masks
 
 
+# ============================================================
+# Helper: boolean mask builder
+# ============================================================
+
+def make_bool_mask(*dims: int) -> tuple[bool, ...]:
+    """Build a boolean mask from signed dimension counts.
+
+    Positive → True, negative → False.
+    Example: make_bool_mask(6, -1, 6, -1) == (T,T,T,T,T,T, F, T,T,T,T,T,T, F)
+    """
+    result: list[bool] = []
+    for d in dims:
+        if d > 0:
+            result.extend([True] * d)
+        else:
+            result.extend([False] * (-d))
+    return tuple(result)
+
+
+# ============================================================
+# PI0Operator — supports aloha / libero / droid
+# ============================================================
+
 class PI0Operator(BaseOperator):
-    """Operator for PI0 policy inference - handles preprocessing and postprocessing."""
+    """Operator for PI0 policy inference - handles preprocessing and postprocessing.
+
+    Args:
+        robot_type: One of 'aloha', 'libero', 'droid'. Controls which robot-specific
+                    input/output transforms and delta-action masks are used.
+        state_norm_stats: Normalization stats for robot state.
+        action_norm_stats: Normalization stats for actions.
+        tokenizer_model_path: Path or hub id for the tokenizer.
+        resize_imgs_with_padding: Target (width, height) for images.
+        discrete_state_input: If True, enables PI0.5 mode.
+        present_img_keys: List of image dict keys expected from the environment.
+        original_action_dim: Native action dimension before padding.
+        use_delta_actions: Whether the model expects delta actions. If True, an
+                           AbsoluteActions transform is appended to outputs.
+    """
+
+    # Supported robot types
+    SUPPORTED_ROBOTS = ('aloha', 'libero', 'droid')
 
     def __init__(
         self,
         state_norm_stats: dict,
         action_norm_stats: dict,
         tokenizer_model_path: str,
+        robot_type: str = 'aloha',
         resize_imgs_with_padding: tuple[int, int] = (224, 224),
         discrete_state_input: bool = False,
         present_img_keys: list[str] | None = None,
+        original_action_dim: int = 14,
+        use_delta_actions: bool = True,
     ):
-        # Base class initialization
         super().__init__(operation_types=[])
-        
-        # PI0 specific attributes
+
+        if robot_type not in self.SUPPORTED_ROBOTS:
+            raise ValueError(f"robot_type must be one of {self.SUPPORTED_ROBOTS}, got '{robot_type}'")
+
+        # Core attributes
         self.device = 'cpu'
+        self.robot_type = robot_type
         self.state_norm_stats = state_norm_stats
         self.action_norm_stats = action_norm_stats
         self.resize_imgs_with_padding = resize_imgs_with_padding
         self.discrete_state_input = discrete_state_input
-        self.pi05_enabled = discrete_state_input  # pi05 uses discrete state input
+        self.pi05_enabled = discrete_state_input
+        self.original_action_dim = original_action_dim
+        self.use_delta_actions = use_delta_actions
 
-        # Input transforms
-        self.aloha_inputs_transform = AlohaInputs()
+        # ---- Build robot-specific input/output transforms ----
+        self.robot_inputs_transform, self.robot_outputs_transform, self.absolute_actions_transform = \
+            self._build_robot_transforms(robot_type, original_action_dim, use_delta_actions)
+
+        # ---- Shared transforms ----
         self.state_normalize_transform = Normalize(state_norm_stats, use_quantiles=self.pi05_enabled)
         self.pad_states_and_actions_transform = PadStatesAndActions(action_dim=32)
         self.image_transform = ImageTransform(
@@ -364,40 +569,91 @@ class PI0Operator(BaseOperator):
         )
         max_length = 200 if self.pi05_enabled else 48
         self.prompt_tokenizer_transform = PromptTokenizerTransform(
-            tokenizer_model_path=tokenizer_model_path, max_length=max_length, discrete_state_input=discrete_state_input
+            tokenizer_model_path=tokenizer_model_path,
+            max_length=max_length,
+            discrete_state_input=discrete_state_input,
         )
 
         # Output transforms
         self.state_unnormalize_transform = Unnormalize(state_norm_stats, use_quantiles=self.pi05_enabled)
         self.action_unnormalize_transform = Unnormalize(action_norm_stats, use_quantiles=self.pi05_enabled)
-        self.absolute_actions_transform = AbsoluteActions()
-        self.aloha_outputs_transform = AlohaOutputs(original_action_dim=14)
 
+    # ------------------------------------------------------------------
+    # Robot transform factory
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _build_robot_transforms(
+        robot_type: str,
+        original_action_dim: int,
+        use_delta_actions: bool,
+    ) -> tuple:
+        """Return (robot_inputs, robot_outputs, absolute_actions_or_None)."""
+
+        if robot_type == 'aloha':
+            robot_inputs = AlohaInputs(adapt_to_pi=True)
+            robot_outputs = AlohaOutputs(original_action_dim=original_action_dim, adapt_to_pi=True)
+            # Aloha: 6 joint delta + 1 gripper absolute, ×2 arms
+            abs_mask = make_bool_mask(6, -1, 6, -1) if use_delta_actions else None
+            absolute_actions = AbsoluteActions(mask=abs_mask) if abs_mask else None
+
+        elif robot_type == 'libero':
+            robot_inputs = LiberoInputs()
+            robot_outputs = LiberoOutputs(original_action_dim=original_action_dim)
+            # Libero: 6 joint delta + 1 gripper absolute
+            abs_mask = make_bool_mask(6, -1) if use_delta_actions else None
+            absolute_actions = AbsoluteActions(mask=abs_mask) if abs_mask else None
+
+        elif robot_type == 'droid':
+            robot_inputs = DroidInputs()
+            robot_outputs = DroidOutputs(original_action_dim=original_action_dim)
+            # DROID: 7 joint delta + 1 gripper absolute
+            abs_mask = make_bool_mask(7, -1) if use_delta_actions else None
+            absolute_actions = AbsoluteActions(mask=abs_mask) if abs_mask else None
+
+        else:
+            raise ValueError(f"Unknown robot_type: {robot_type}")
+
+        return robot_inputs, robot_outputs, absolute_actions
+
+    # ------------------------------------------------------------------
+    # Device management
+    # ------------------------------------------------------------------
     def to(self, device: str | torch.device):
         self.device = device
-        self.aloha_inputs_transform.to(device)
+        self.robot_inputs_transform.to(device)
+        self.robot_outputs_transform.to(device)
         self.state_normalize_transform.to(device)
         self.state_unnormalize_transform.to(device)
         self.action_unnormalize_transform.to(device)
-        self.absolute_actions_transform.to(device)
-        self.aloha_outputs_transform.to(device)
+        if self.absolute_actions_transform is not None:
+            self.absolute_actions_transform.to(device)
         return self
 
+    # ------------------------------------------------------------------
+    # Input processing
+    # ------------------------------------------------------------------
     def process_perception(self, images: dict[str, torch.Tensor], state: torch.Tensor, pad_state: bool = True):
-        """Process images and state for model input."""
+        """Process images and state for model input.
+
+        Data flow:
+          1. Robot-specific input transform (e.g. Aloha joint flip)
+          2. State normalization
+          3. Image preprocessing
+          4. State padding to model dim
+        """
         images = {k: v.to(self.device) for k, v in images.items()}
         state = state.to(self.device)
 
-        # Apply Aloha input transform
-        state = self.aloha_inputs_transform({'observation.state': state})['observation.state']
+        # 1. Robot-specific input transform
+        state = self.robot_inputs_transform({'observation.state': state})['observation.state']
 
-        # Normalize state
+        # 2. Normalize state
         state = self.state_normalize_transform(state)
 
-        # Process images
+        # 3. Process images
         images, img_masks = self.image_transform(images)
 
-        # Pad state if needed
+        # 4. Pad state
         if pad_state:
             state = self.pad_states_and_actions_transform({'observation.state': state})['observation.state']
 
@@ -408,27 +664,35 @@ class PI0Operator(BaseOperator):
         lang_tokens, lang_masks = self.prompt_tokenizer_transform({'task': task, 'observation.state': state})
         return lang_tokens, lang_masks
 
+    # ------------------------------------------------------------------
+    # Output processing
+    # ------------------------------------------------------------------
     def process_output(self, pred_action: torch.Tensor, state: torch.Tensor, original_action_dim: int, **kwargs):
-        """Process model output to final action."""
-        # Update output transform with correct action dim
-        self.aloha_outputs_transform = AlohaOutputs(original_action_dim=original_action_dim)
+        """Process model output to final action.
 
-        # Unnormalize
+        Data flow:
+          1. Unnormalize state & action
+          2. Delta → absolute action conversion (if applicable)
+          3. Robot-specific output transform (e.g. Aloha joint unflip, dim truncation)
+        """
         output_dict = {'action': pred_action, 'observation.state': state}
+
+        # 1. Unnormalize
         output_dict['observation.state'] = self.state_unnormalize_transform(output_dict['observation.state'])
         output_dict['action'] = self.action_unnormalize_transform(output_dict['action'])
 
-        # Convert to absolute actions
-        output_dict = self.absolute_actions_transform(output_dict)
+        # 2. Delta → absolute
+        if self.absolute_actions_transform is not None:
+            output_dict = self.absolute_actions_transform(output_dict)
 
-        # Apply Aloha output transform
-        pred_action = self.aloha_outputs_transform(output_dict)['action']
+        # 3. Robot-specific output transform
+        pred_action = self.robot_outputs_transform(output_dict)['action']
 
         return pred_action
 
-    # ====== Base class methods implementation ======
-    
-
+    # ------------------------------------------------------------------
+    # Base class methods
+    # ------------------------------------------------------------------
 
     def get_interaction(self, interaction: str | list[str]):
         """Append interaction(s) to the current list after validation."""
@@ -445,14 +709,11 @@ class PI0Operator(BaseOperator):
         if self.interaction_template and interaction not in self.interaction_template:
             raise ValueError(f'{interaction} not in interaction_template: {self.interaction_template}')
         return True
-    
-    
 
-    
     def get_interaction_history(self):
         """Get interaction history."""
         return self.interaction_history
-    
+
     def delete_last_interaction(self):
         """Delete the last interaction from current_interaction."""
         if len(self.current_interaction) > 0:
