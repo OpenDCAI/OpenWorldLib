@@ -2,7 +2,8 @@
 
 <img src="assets/logo.png" alt="sceneflow_logo" width="80%" />
 
-### A Unified Framework for Advanced World Models <!-- omit in toc -->
+#### A Unified Codebase for Advanced World Models <!-- omit in toc -->
+---
 
 <a href="https://github.com/OpenDCAI/SceneFlow"><img alt="Build" src="https://img.shields.io/github/stars/OpenDCAI/SceneFlow"></a>
 
@@ -19,6 +20,7 @@
 - [Structure](#structure)
 - [Planning](#planning)
 - [For Developers](#for-developers)
+- [Acknowledgment](#acknowledgment)
 - [Citation](#citation)
 
 
@@ -130,7 +132,11 @@ SceneFlow
 
 
 ### For Developers
-我们欢迎各位开发者共同参与，帮助完善 **SceneFlow** 这一统一世界模型仓库。推荐采用 **Vibe Coding** 方式进行代码提交，相关提示词可参考 `tools/vibe_code/prompts` 目录下的内容。期待你的贡献！
+我们欢迎各位开发者共同参与，帮助完善 **SceneFlow** 这一统一世界模型仓库。推荐采用 **Vibe Coding** 方式进行快捷的代码提交，相关提示词可参考 `tools/vibe_code/prompts` 目录下的内容。同时也可以向 [docs/planning.md](docs/planning.md) 以及 [docs/awesome_world_models.md](docs/awesome_world_model.md) 补充高质量的world model相关工作。期待你的贡献！
+
+
+### Acknowledgment
+本项目为 [DataFlow](https://github.com/OpenDCAI/DataFlow) 、[DataFlow-MM](https://github.com/OpenDCAI/DataFlow-MM) 在世界模型任务上的拓展。同时我们与 [RayOrch](https://github.com/OpenDCAI/RayOrch) 、[Paper2Any](https://github.com/OpenDCAI/Paper2Any) 等工作积极联动中。
 
 
 ### Citation

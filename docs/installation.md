@@ -1,4 +1,4 @@
-## SceneFlow Installation Details
+## OpenWorldLib Installation Details
 
 In this document, we list the installation requirements and installation scripts for different methods, as shown in the table below.
 

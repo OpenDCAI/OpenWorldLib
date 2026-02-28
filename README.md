@@ -1,4 +1,4 @@
-# SceneFlow
+# OpenWorldLib
 
 ## Noting
 ### Target
@@ -14,7 +14,7 @@
 ```bash
 pip install torch==2.5.1 torchvision torchaudio
 pip install "flash-attn==2.5.9.post1" --no-build-isolation
-cd SceneFlow/
+cd OpenWorldLib/
 pip install -e .
 ```
 
