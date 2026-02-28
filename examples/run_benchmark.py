@@ -1,28 +1,5 @@
 """
 SceneFlow Benchmark Runner
-Usage:
-    # 完整流程：生成 + 评估
-    python -m examples.run_benchmark
-        --task_type navigation_video_gen
-        --benchmark_name sf_nav_vidgen_test
-        --data_path ./data/benchmarks/generation/navigation_video_generation/sf_nav_vidgen_test
-        --model_type matrix-game2
-        --eval_model_type qwen2p5omni
-        --model_path Skywork/Matrix-Game-2.0
-        --output_dir ./benchmark_results
-        --num_samples 2
-        --run_eval
-        --eval_model_path Qwen/Qwen2.5-Omni-7B-Instruct
-    
-    # 仅评估已有结果（跳过生成）
-    python -m examples.run_benchmark
-        --task_type navigation_video_gen
-        --benchmark_name sf_nav_vidgen_test
-        --data_path ./data/benchmarks/generation/navigation_video_generation/sf_nav_vidgen_test
-        --eval_model_type omnivinci
-        --results_dir ./benchmark_results
-        --run_eval
-        --eval_model_path nvidia/omnivinci
 """
 
 import os
@@ -186,20 +163,14 @@ def run_evaluation(eval_pipeline, eval_func, samples, reference_results, output_
         
         original_sample = sample_map.get(sample_id, {})
         
+        # 生成评估提示词文本
+        interaction_signal = original_sample.get("interaction_signal", [])
+        scene_description = original_sample.get("scene_description", "")
+        prompt_text = eval_prompt_func(interaction_signal, scene_description)
+        
         input_data_info = original_sample.copy()
-        
-        # 动态构建生成结果的路径字段名
-        # 例如：generated_video -> generated_video_path
-        #      generated_actions -> generated_actions_path
-        generated_output_path_key = f"{output_key}_path"
-        input_data_info[generated_output_path_key] = ref_result.get(output_key)
-        
-        # 仅当 eval_prompt_func 存在时才生成提示词（用于 MLLM 评估）
-        if eval_prompt_func:
-            interaction_signal = original_sample.get("interaction_signal", [])
-            scene_description = original_sample.get("scene_description", "")
-            prompt_text = eval_prompt_func(interaction_signal, scene_description)
-            input_data_info["eval_prompt"] = prompt_text
+        input_data_info["generated_video_path"] = ref_result.get("generated_video")
+        input_data_info["eval_prompt"] = prompt_text
         
         try:
             eval_result = eval_func(

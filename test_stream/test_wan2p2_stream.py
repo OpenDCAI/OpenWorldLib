@@ -13,15 +13,11 @@ pretrained_model_path: str = "Wan-AI/Wan2.2-TI2V-5B"
 pipeline = Wan2p2Pipeline.from_pretrained(
     synthesis_model_path=pretrained_model_path,
     task="ti2v-5B",
-    size="1280*704",
-    prompt=None,
-    image="",
-    save_file="./wan2p2_interactive_output.mp4",
-    base_seed=42,
     device_id=0,
     rank=0,
 )
 
+save_file = "./wan2p2_interactive_output.mp4"
 
 cfg = WAN_CONFIGS[pipeline.task]
 pipeline.memory_module.manage(action="reset")
@@ -51,7 +47,7 @@ while True:
     print(f"\n[Turn {turn_idx}] Use prompt: {user_prompt}")
 
     if last_frame_img is None:
-        image_path = pipeline.image 
+        image_path = ""  # Empty string for initial generation
         print("  This is the initial generation")
     else:
         image_path = None
@@ -85,10 +81,10 @@ if not all_frames:
 
 print("\nStarting to export the final video based on all frames in memory...")
 
-save_path = pipeline.save_file or "./wan2p2_interactive_output.mp4"
+save_path = save_file
 imageio.mimsave(
     save_path,
     all_frames,
     fps=cfg.sample_fps,
 )
-print(f"Interactive generation ended, saved to: {pipeline.save_file}")
+print(f"Interactive generation ended, saved to: {save_path}")
