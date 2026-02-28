@@ -8,6 +8,7 @@ import re
 
 def reference_func(
     pipe,
+    pipe_infer,
     input_data_info: Dict[str, Any],
     output_key: str = "generated_video"
 ) -> Dict[str, Any]:
@@ -29,52 +30,22 @@ def reference_func(
         {output_key: 生成的视频张量或帧列表} 或
         {output_key: 保存后的视频文件路径}（当 input_data_info 含 output_path 时）
     """
-    generation_text = input_data_info["generation_text"]
-    
-    pipeline_type = type(pipe).__name__
-    if "Wan2p2" in pipeline_type:
-        output_video = pipe(
-            prompt=generation_text,
-            size="1280*704",
-        )
-
-    # 这里保留作为其他pipeline的接口
-    # elif "" in pipeline_type:
-    #     pass
-    
+    generation_text = input_data_info["generation_text"]    
     output_path = input_data_info.get("output_path", None)
-    if output_path is not None:
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        fps = int(input_data_info.get("fps", 12))
-        
-        # 处理不同 pipeline 的输出格式,Wan2p2Pipeline 返回 torch.Tensor (C, T, H, W),需要转换为 PIL Image 列表供 export_to_video 使用
-        if isinstance(output_video, torch.Tensor):
-            from sceneflow.memories.visual_synthesis.wan.wan_2p2_memeory import tensor_frame_to_pil
-            
-            if output_video.ndim == 4:
-                video_frames = []
-                # (C, T, H, W) -> 遍历 T 维度
-                for t in range(output_video.shape[1]):
-                    frame = output_video[:, t, :, :]  # (C, H, W)
-                    pil_img = tensor_frame_to_pil(frame)
-                    video_frames.append(pil_img)
-                export_to_video(video_frames, str(output_path), fps=fps)
-            else:
-                raise ValueError(f"Unexpected video tensor shape: {output_video.shape}")
-        else:
-            # 其他 pipeline 可能返回 PIL Image 列表
-            export_to_video(output_video, str(output_path), fps=fps)
-        
+    fps=int(input_data_info.get("fps", 12))
+    output_video = pipe_infer(pipe, generation_text, output_path=output_path, fps=fps)
+
+    if output_path is not None:  
         return {output_key: str(output_path)}
 
     return {output_key: output_video}
 
 
-# eval function need finish
+# eval function
 def eval_func(
     input_data_info: Dict[str, Any],
     eval_pipeline: None,
+    eval_pipeline_infer: None,
 ) -> Dict[str, Any]:
     """
     使用多模态 LLM 评估生成的文本到视频质量。
@@ -126,6 +97,9 @@ def eval_func(
             response_text = response[0] if response else ""
         else:
             response_text = str(response)
+        
+        response_text = eval_pipeline_infer(eval_pipeline, prompt_text,
+                                            video_path=generated_video_path)
         
     except Exception as e:
         return {

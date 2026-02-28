@@ -8,6 +8,7 @@ import re
 
 def reference_func(
     pipe,
+    pipe_infer,
     input_data_info: Dict[str, Any],
     output_key: str = "generated_video"
 ) -> Dict[str, Any]:
@@ -45,29 +46,19 @@ def reference_func(
                 s.strip() for s in interaction_signal.split(",") if s.strip()
             ]
 
-    num_output_frames = int(input_data_info.get("num_output_frames", 150))
-
-    output_video = pipe(
-        input_image=input_image,
-        num_output_frames=num_output_frames,
-        interaction_signal=interaction_signal,
-    )
-
     output_path = input_data_info.get("output_path", None)
+    fps = int(input_data_info.get("fps", 12))
+    output_video = pipe_infer(pipe, input_image, interaction_signal, output_path, fps)
     if output_path is not None:
-        output_path = Path(output_path)
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        fps = int(input_data_info.get("fps", 12))
-        export_to_video(output_video, str(output_path), fps=fps)
         return {output_key: str(output_path)}
-
     return {output_key: output_video}
 
 
-# eval function need finish
+# eval function
 def eval_func(
     input_data_info: Dict[str, Any],
     eval_pipeline: None,
+    eval_pipeline_infer: None,
 ) -> Dict[str, Any]:
     """
     使用多模态 LLM 评估生成的导航视频质量。
@@ -115,20 +106,9 @@ def eval_func(
     if not isinstance(prompt_text, str):
         raise ValueError(f"eval_prompt should be a string, got {type(prompt_text)}")
 
-    
     try:
-        response = eval_pipeline(
-            text=prompt_text,
-            images=[ref_image_path],  # 参考图片
-            videos=[generated_video_path],  # 生成的视频
-            max_new_tokens=1024
-        )
-        
-        # response 可能是字符串或列表，统一处理
-        if isinstance(response, list):
-            response_text = response[0] if response else ""
-        else:
-            response_text = str(response)
+        response_text = eval_pipeline_infer(eval_pipeline, prompt_text,
+                                            ref_image_path, generated_video_path)
         
     except Exception as e:
         return {
