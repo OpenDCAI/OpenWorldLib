@@ -116,14 +116,14 @@ In this document, we list the installation requirements and installation scripts
     <td colspan="5" align="center"><b> 🤖 Vision Language Action</b></td>
   </tr>
   <tr>
-    <td align="center">&pi;0</td>
+    <td align="center">π0</td>
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td>Pending</td>
   </tr>
   <tr>
-    <td align="center">&pi;0.5</td>
+    <td align="center">π0.5</td>
     <td align="center">3.9</td>
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
@@ -234,7 +234,14 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">3.9</td>
     <td align="center"> </td>
     <td> </td>
-    <td>Pending</td>
+    <td><code>bash scripts/setup/ai2thor_install.sh</code></td>
+  </tr>
+  <tr>
+    <td align="center">Simworld</td>
+    <td align="center">3.9</td>
+    <td align="center"> </td>
+    <td> </td>
+    <td><code>bash scripts/setup/simworld_install.sh</code></td>
   </tr>
   <tr>
     <td colspan="5" align="center"><b>🎵 Audio Generation</b></td>

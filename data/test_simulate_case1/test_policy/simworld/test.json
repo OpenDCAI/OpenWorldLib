@@ -1,0 +1,30 @@
+{
+  "name": "simworld_full_test",
+  "tokens": [
+    "forward", "forward", "forward",
+    "argue", "stop_action",
+    "discuss", "stop_action",
+    "listen", "stop_action",
+    "backward", "backward", "backward",
+    "camera_r", "camera_r", "camera_r", "camera_r", "camera_r",
+    "wave_to_dog", "stop_action",
+    "camera_l", "camera_l",
+    "forward", "forward", "forward",
+    "get_on_scooter",
+    "forward", "left", "left", "backward",
+    "get_off_scooter",
+    "forward", "left", "left",
+    "forward", "forward", "forward", "forward",
+    "enter_vehicle", "exit_vehicle",
+    "camera_l", "camera_l", "camera_l", "camera_l", "camera_l",
+    "pick_up",
+    "backward", "forward",
+    "drop_object",
+    "right", "right",
+    "forward",
+    "camera_l", "camera_l", "camera_l",
+    "pick_up",
+    "right", "right",
+    "drop_object"
+  ]
+}

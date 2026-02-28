@@ -23,7 +23,7 @@ def load_json_policy(path):
     return policy
 
 
-policy = load_json_policy("./data/test_sim_policy_case1/thor/test.json")
+policy = load_json_policy("./data/test_simulate_case1/test_policy/thor/test.json")
 
 # 请从QUALITY_SETTINGS选择quality: {"DONOTUSE": 0, "High": 5, "High WebGL": 8, "Low": 2, "Medium": 3, "MediumCloseFitShadows": 4, "Ultra": 7, "Very High": 6, "Very Low": 1}
 rep_cfg = dict(
@@ -53,8 +53,8 @@ results = pipe(
     fps=10,
     max_steps=60,         # action steps limit
     max_timesteps=100,    # tick/video frames limit (optional) 最大时长（秒） = max_timesteps / fps
-    include_depth=False,
-    include_instance=False,
+    include_depth=True,
+    include_instance=True,
     record_frames=True,
     record_actions=True,
     policy=policy,         # None -> human control

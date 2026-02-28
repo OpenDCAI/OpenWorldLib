@@ -1,0 +1,123 @@
+simworld:
+  seed: 42
+  dt: 0.1
+  ue_manager_path: "/Game/TrafficSystem/UE_Manager.UE_Manager_C"
+
+citygen:
+  input_layout: false
+  input_roads: "<path to your roads.json>"
+  input_bounding_boxes: "bounding_boxes.json"
+  output_dir: "output"
+  world_json: "progen_world.json"
+  ue_asset_path: "ue_assets.json"
+
+  road:
+    segment_length: 200
+    segment_count_limit: 10
+    road_snap_distance: 90
+    ignore_conflicts: false
+    only_highway: false
+    two_segment_init: true
+    time_delay_between_segments: 0.001
+    minimum_intersection_deviation: 30
+
+  building:
+    building_road_distance: 25
+    building_intersection_distance: 0
+    building_building_distance: 0
+    building_side_distance: 27
+
+  element:
+    generation: false
+    generation_thread_number: 16
+    element_building_distance: 8
+    element_element_distance: 10
+    add_building_attempts: 10
+
+    parking_offset: 10
+    furniture_offset: 12
+    tree_offset: 23
+
+    parking_density: 0.05
+    furniture_density: 0.05
+    tree_density: 0.1
+
+  quadtree:
+    max_levels: 10
+    max_objects: 10
+    bounds:
+      x: -2000
+      y: -2000
+      width: 4000
+      height: 4000
+
+  route:
+    generation: false
+    number: 2
+    min_points_per_route: 2
+    max_points_per_route: 5
+
+assets_rp:
+  input_description_map: "description_map.json"
+  input_sample_dataset: "asset_images"
+  output_dir: "output_rp"
+  env_description_retrieval_model: "paraphrase-MiniLM-L6-v2"
+  assets_retrieval_model: "openai/clip-vit-large-patch14-336"
+  progen_world_path: "progen_world.json"
+
+traffic:
+  num_vehicles: 10
+  num_pedestrians: 10
+  map_path: "roads.json"
+  distance_between_objects: 400
+  detection_angle: 40
+  gap_between_waypoints: 800
+  num_lanes: 1
+  lane_offset: 300
+  intersection_offset: 3000
+  sidewalk_offset: 1700
+  crosswalk_offset: 1700
+  steering_point_num: 12
+
+  pedestrian:
+    max_speed: 200
+    min_speed: 100
+    waypoint_distance_threshold: 200
+    model_path: "/Game/TrafficSystem/Pedestrian/Base_Pedestrian.Base_Pedestrian_C"
+
+  vehicle:
+    steering_pid:
+      kp: 0.15
+      ki: 0.005
+      kd: 0.12
+    max_steering: 0.5
+    lane_deviation: 70
+    distance_to_end: 400
+    model_file_path: "vehicle_types.json"
+
+  traffic_signal:
+    light_normal_offset: -1400
+    light_radial_offset: 1400
+    traffic_light_model_path: "/Game/city_props/BP/props/street_light/BP_street_light.BP_street_light_C"
+    pedestrian_light_model_path: "/Game/city_props/BP/props/street_light/BP_street_light_ped.BP_street_light_ped_C"
+    green_light_duration: 10
+    yellow_light_duration: 2
+    pedestrian_green_light_duration: 30
+
+map:
+  input_roads: "roads.json"
+
+user:
+  num_agents: 3
+  speed: 200
+  a2a: True
+  rule_based: True
+  waypoint_distance_threshold: 150
+  model_path: "/Game/TrafficSystem/Pedestrian/Base_User_Agent.Base_User_Agent_C"
+  num_threads: 20
+  llm_model_path: "gpt-4o-mini"
+  llm_url: None
+  llm_provider: "openai"
+
+scooter:
+  model_path: "/Game/ScooterAssets/Blueprints/BP_Scooter_Pawn.BP_Scooter_Pawn_C"

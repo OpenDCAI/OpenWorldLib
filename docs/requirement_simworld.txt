@@ -1,0 +1,5 @@
+pyqtgraph
+faiss-cpu
+sentence-transformers
+unrealcv
+PyQt5

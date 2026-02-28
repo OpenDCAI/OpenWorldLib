@@ -1,0 +1,32 @@
+{
+    "Vehicle1": {
+        "name": "Vehicle1",
+        "length": 480,
+        "width": 200,
+        "reference": "/Game/TrafficSystem/Vehicle/Vehicle1.Vehicle1_C"
+    },
+    "Vehicle2": {
+        "name": "Vehicle2",
+        "length": 500,
+        "width": 200,
+        "reference": "/Game/TrafficSystem/Vehicle/Vehicle2.Vehicle2_C"
+    },
+    "Vehicle3": {
+        "name": "Vehicle3",
+        "length": 480,
+        "width": 200,
+        "reference": "/Game/TrafficSystem/Vehicle/Vehicle3.Vehicle3_C"
+    },
+    "Vehicle4": {
+        "name": "Vehicle4",
+        "length": 480,
+        "width": 200,
+        "reference": "/Game/TrafficSystem/Vehicle/Vehicle4.Vehicle4_C"
+    },
+    "Vehicle5": {
+        "name": "Vehicle5",
+        "length": 500,
+        "width": 200,
+        "reference": "/Game/TrafficSystem/Vehicle/Vehicle5.Vehicle5_C"
+    }
+}

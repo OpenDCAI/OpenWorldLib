@@ -1,0 +1,662 @@
+{
+    "colors": {
+        "BUILDING": "(R=128,G=0,B=128)",
+        "VEGETATION": "(R=0,G=128,B=0)",
+        "SCOOTER": "(R=0,G=0,B=255)",
+        "STREET_FURNITURE": "(R=255,G=255,B=0)",
+        "FURNITURE": "(R=255,G=0,B=0)",
+        "TRASH": "(R=128,G=128,B=128)",
+        "BOX": "(R=255,G=165,B=0)",
+        "TABLE": "(R=255,G=100,B=0)",
+        "ROAD_BLOCKER": "(R=255,G=200,B=0)",
+        "CAN": "(R=255,G=165,B=0)"
+    },
+    "Table_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/Table.Table_C",
+        "color": "TABLE"
+    },
+    "RoadBlocker_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/RoadBlocker.RoadBlocker_C",
+        "color": "ROAD_BLOCKER"
+    },
+    "RoadCone_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/RoadCone.RoadCone_C",
+        "color": "STREET_FURNITURE"
+    },
+    "Couch_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/Couch.Couch_C",
+        "color": "FURNITURE"
+    },
+    "BP_Can_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Can.BP_Can_C",
+        "color": "CAN"
+    },
+    "BP_Can2_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Can2.BP_Can2_C",
+        "color": "CAN"
+    },
+    "BP_Cart_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Cart.BP_Cart_C",
+        "color": "FURNITURE"
+    },
+    "BP_Cart2_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Cart2.BP_Cart2_C",
+        "color": "FURNITURE"
+    },
+    "BP_Couch_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Couch.BP_Couch_C",
+        "color": "FURNITURE"
+    },
+    "BP_Hydrant_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Hydrant.BP_Hydrant_C",
+        "color": "STREET_FURNITURE"
+    },
+    "BP_Rabbish_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Rabbish.BP_Rabbish_C",
+        "color": "TRASH"
+    },
+    "BP_Road_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Road1.BP_Road1_C",
+        "color": "STREET_FURNITURE"
+    },
+    "BP_Road1_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Road1.BP_Road1_C",
+        "color": "STREET_FURNITURE"
+    },
+    "BP_RoadBlocker_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_RoadBlocker.BP_RoadBlocker_C",
+        "color": "ROAD_BLOCKER"
+    },
+    "BP_RoadCone_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_RoadCone.BP_RoadCone_C",
+        "color": "STREET_FURNITURE"
+    },
+    "BP_Scooter_01_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Scooter_01.BP_Scooter_01_C",
+        "color": "SCOOTER"
+    },
+    "BP_Scooter_02_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Scooter_02.BP_Scooter_02_C",
+        "color": "SCOOTER"
+    },
+    "BP_Scooter_03_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Scooter_03.BP_Scooter_03_C",
+        "color": "SCOOTER"
+    },
+    "BP_Scooter_04_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Scooter_04.BP_Scooter_04_C",
+        "color": "SCOOTER"
+    },
+    "BP_Soda1_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Soda1.BP_Soda1_C",
+        "color": "CAN"
+    },
+    "BP_Soda2_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Soda2.BP_Soda2_C",
+        "color": "CAN"
+    },
+    "BP_Soda3_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Soda3.BP_Soda3_C",
+        "color": "CAN"
+    },
+    "BP_Soda4_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Soda4.BP_Soda4_C",
+        "color": "CAN"
+    },
+    "BP_Table_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Table.BP_Table_C",
+        "color": "TABLE"
+    },
+    "BP_Table2_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Table2.BP_Table2_C",
+        "color": "TABLE"
+    },
+    "BP_Table3_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Table3.BP_Table3_C",
+        "color": "TABLE"
+    },
+    "BP_Trash_bin_a_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Trash_bin_a.BP_Trash_bin_a_C",
+        "color": "TRASH"
+    },
+    "BP_Trash_bin_b_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Trash_bin_b.BP_Trash_bin_b_C",
+        "color": "TRASH"
+    },
+    "BP_Trash_can_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Trash_can.BP_Trash_can_C",
+        "color": "TRASH"
+    },
+    "BP_Tree1_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Tree1.BP_Tree1_C",
+        "color": "VEGETATION"
+    },
+    "BP_Tree2_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Tree2.BP_Tree2_C",
+        "color": "VEGETATION"
+    },
+    "BP_Tree3_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Tree3.BP_Tree3_C",
+        "color": "VEGETATION"
+    },
+    "BP_Tree4_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Tree4.BP_Tree4_C",
+        "color": "VEGETATION"
+    },
+    "BP_Tree5_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Tree5.BP_Tree5_C",
+        "color": "VEGETATION"
+    },
+    "BP_Tree6_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Tree6.BP_Tree6_C",
+        "color": "VEGETATION"
+    },
+    "BP_Box3_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Box3.BP_Box3_C",
+        "color": "BOX"
+    },
+    "BP_Box_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Box.BP_Box_C",
+        "color": "BOX"
+    },
+    "BP_Box2_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Box2.BP_Box2_C",
+        "color": "BOX"
+    },
+    "BP_Building_23_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_23.BP_Building_23_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_01_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_01.BP_Building_01_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_02_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_02.BP_Building_02_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_03_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_03.BP_Building_03_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_04_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_04.BP_Building_04_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_05_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_05.BP_Building_05_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_06_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_06.BP_Building_06_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_07_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_07.BP_Building_07_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_08_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_08.BP_Building_08_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_09_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_09.BP_Building_09_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_10_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_10.BP_Building_10_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_11_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_11.BP_Building_11_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_12_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_12.BP_Building_12_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_13_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_13.BP_Building_13_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_14_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_14.BP_Building_14_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_15_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_15.BP_Building_15_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_16_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_16.BP_Building_16_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_17_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_17.BP_Building_17_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_18_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_18.BP_Building_18_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_19_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_19.BP_Building_19_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_20_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_20.BP_Building_20_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_21_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_21.BP_Building_21_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_22_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_22.BP_Building_22_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_24_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_24.BP_Building_24_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_25_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_25.BP_Building_25_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_26_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_26.BP_Building_26_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_27_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_27.BP_Building_27_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_28_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_28.BP_Building_28_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_29_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_29.BP_Building_29_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_30_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_30.BP_Building_30_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_31_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_31.BP_Building_31_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_32_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_32.BP_Building_32_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_33_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_33.BP_Building_33_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_34_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_34.BP_Building_34_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_35_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_35.BP_Building_35_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_36_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_36.BP_Building_36_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_37_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_37.BP_Building_37_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_38_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_38.BP_Building_38_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_39_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_39.BP_Building_39_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_40_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_40.BP_Building_40_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_41_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_41.BP_Building_41_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_42_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_42.BP_Building_42_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_43_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_43.BP_Building_43_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_44_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_44.BP_Building_44_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_45_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_45.BP_Building_45_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_46_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_46.BP_Building_46_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_47_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_47.BP_Building_47_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_48_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_48.BP_Building_48_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_49_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_49.BP_Building_49_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_50_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_50.BP_Building_50_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_51_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_51.BP_Building_51_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_52_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_52.BP_Building_52_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_53_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_53.BP_Building_53_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_54_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_54.BP_Building_54_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_55_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_55.BP_Building_55_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_56_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_56.BP_Building_56_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_58_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_58.BP_Building_58_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_59_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_59.BP_Building_59_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_60_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_60.BP_Building_60_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_61_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_61.BP_Building_61_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_62_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_62.BP_Building_62_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_63_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_63.BP_Building_63_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_64_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_64.BP_Building_64_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_65_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_65.BP_Building_65_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_66_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_66.BP_Building_66_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_67_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_67.BP_Building_67_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_68_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_68.BP_Building_68_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_69_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_69.BP_Building_69_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_70_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_70.BP_Building_70_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_71_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_71.BP_Building_71_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_72_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_72.BP_Building_72_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_73_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_73.BP_Building_73_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_74_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_74.BP_Building_74_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_75_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_75.BP_Building_75_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_76_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_76.BP_Building_76_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_77_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_77.BP_Building_77_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_78_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_78.BP_Building_78_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_79_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_79.BP_Building_79_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_80_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_80.BP_Building_80_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_81_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_81.BP_Building_81_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_82_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_82.BP_Building_82_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_83_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_83.BP_Building_83_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_84_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_84.BP_Building_84_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_85_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_85.BP_Building_85_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_86_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_86.BP_Building_86_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_87_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_87.BP_Building_87_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_88_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_88.BP_Building_88_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_89_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_89.BP_Building_89_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_90_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_90.BP_Building_90_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_91_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_91.BP_Building_91_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_92_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_92.BP_Building_92_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_93_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_93.BP_Building_93_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_94_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_94.BP_Building_94_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_95_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_95.BP_Building_95_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_96_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_96.BP_Building_96_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_97_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_97.BP_Building_97_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_98_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_98.BP_Building_98_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_99_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_99.BP_Building_99_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_100_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_100.BP_Building_100_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_101_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_101.BP_Building_101_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_102_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_102.BP_Building_102_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_103_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_103.BP_Building_103_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_104_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_104.BP_Building_104_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_105_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_105.BP_Building_105_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_106_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_106.BP_Building_106_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_107_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_107.BP_Building_107_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_108_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_108.BP_Building_108_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_109_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_109.BP_Building_109_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_110_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_110.BP_Building_110_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_111_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_111.BP_Building_111_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_112_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_112.BP_Building_112_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_113_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_113.BP_Building_113_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_114_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_114.BP_Building_114_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_115_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_115.BP_Building_115_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_116_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_116.BP_Building_116_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_117_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_117.BP_Building_117_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_118_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_118.BP_Building_118_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_119_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_119.BP_Building_119_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_121_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_121.BP_Building_121_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_122_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_122.BP_Building_122_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_123_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_123.BP_Building_123_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_124_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_124.BP_Building_124_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_125_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_125.BP_Building_125_C",
+        "color": "BUILDING"
+    },
+    "BP_Building_126_C": {
+        "asset_path": "/Game/CityDatabase/blueprints/BP_Building_126.BP_Building_126_C",
+        "color": "BUILDING"
+    }
+}
