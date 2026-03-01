@@ -41,7 +41,7 @@ class HunyuanGameCraftPipeline:
         seed: int = 250160,
         **kwargs,
     ) -> "HunyuanGameCraftPipeline":
-        args = parse_args(args=[])
+        args = parse_args()
         args.cpu_offload = cpu_offload
         args.seed = seed
 

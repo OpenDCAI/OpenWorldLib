@@ -12,10 +12,3 @@
 **/output/
 cache*
 ckpt*
-
-*.log
-*.mp4
-
-notes/
-install.sh
-.trae/

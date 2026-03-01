@@ -1,0 +1,15 @@
+torch==2.6.0
+torchvision
+cupy-cuda12x
+transformers==4.46.2  # wow仓库原始给的是这个版本
+controlnet-aux==0.0.7
+imageio
+imageio[ffmpeg]
+safetensors
+einops
+sentencepiece
+protobuf
+modelscope
+ftfy
+gradio
+wcwidth
