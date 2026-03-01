@@ -1,5 +1,28 @@
 """
 SceneFlow Benchmark Runner
+Usage:
+    # 完整流程：生成 + 评估
+    python -m examples.run_benchmark
+        --task_type navigation_video_gen
+        --benchmark_name sf_nav_vidgen_test
+        --data_path ./data/benchmarks/generation/navigation_video_generation/sf_nav_vidgen_test
+        --model_type matrix-game2
+        --eval_model_type qwen2p5omni
+        --model_path Skywork/Matrix-Game-2.0
+        --output_dir ./benchmark_results
+        --num_samples 2
+        --run_eval
+        --eval_model_path Qwen/Qwen2.5-Omni-7B-Instruct
+    
+    # 仅评估已有结果（跳过生成）
+    python -m examples.run_benchmark
+        --task_type navigation_video_gen
+        --benchmark_name sf_nav_vidgen_test
+        --data_path ./data/benchmarks/generation/navigation_video_generation/sf_nav_vidgen_test
+        --eval_model_type omnivinci
+        --results_dir ./benchmark_results
+        --run_eval
+        --eval_model_path nvidia/omnivinci
 """
 
 import os
@@ -7,7 +30,7 @@ import sys
 import argparse
 import json
 from pathlib import Path
-from typing import List, Dict, Union
+from typing import List, Dict
 from tqdm import tqdm
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -15,16 +38,13 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
 from data.benchmarks.tasks_map import tasks_map
 from data.benchmarks.benchmark_loader import BenchmarkLoader
-from examples.pipeline_load_mapping import video_gen_pipe, reasoning_pipe, three_dim_pipe, vla_pipe
-from examples.pipeline_infer_mapping import video_gen_pipe_infer, reasoning_pipe_infer, three_dim_pipe_infer, vla_pipe_infer
+from examples.pipeline_mapping import video_gen_pipe, reasoning_pipe, vla_pipe
 from examples.evaluation_tasks.eval_func_mapping import eval_func_mapping
 
 
 # collect evaluation pipelines
 # This loading way is used to verify whether the loaded pipe corresponds to the intended task.
-ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **three_dim_pipe, **vla_pipe}
-ALL_PIPELINES_INFER = {**video_gen_pipe_infer, **reasoning_pipe_infer, **three_dim_pipe_infer, **vla_pipe_infer}
-
+ALL_PIPELINES = {**video_gen_pipe, **reasoning_pipe, **vla_pipe}
 
 def parse_args():
     parser = argparse.ArgumentParser(description="SceneFlow Benchmark Runner")
@@ -35,22 +55,15 @@ def parse_args():
     parser.add_argument("--data_path", type=str, required=True,
                         help="local data file path HuggingFace repo id")
     parser.add_argument("--eval_model_path", type=str, default="Qwen/Qwen2.5-Omni-7B-Instruct",
-                        help=(
-                            "evaluation MLLM model path or HuggingFace model id. "
-                            "Can be a plain string or a JSON dict string for multi-path models, "
-                            "e.g. '{\"pretrained_model_path\": \"Qwen/Qwen2.5-Omni-7B-Instruct\"}'"
-                        ))
+                        help="evaluation MLLM model path or HuggingFace model id")
     parser.add_argument("--model_type", type=str,
                         help="pipeline_mapping matrix-game2")
     parser.add_argument("--eval_model_type", type=str, default="qwen2p5omni",
                         help="evaluation MLLM model type, like qwen2p5omni")
     parser.add_argument("--model_path", type=str,
-                        help=(
-                            "model path or HuggingFace model id. "
-                            "Can be a plain string or a JSON dict string for multi-path models, "
-                            "e.g. '{\"synthesis_model_path\": \"tencent/Hunyuan-GameCraft-1.0\", "
-                            "\"other_model_path\": \"some/other-model\"}'"
-                        ))
+                        help="model path or HuggingFace model id")
+    parser.add_argument("--norm_stats_path", type=str, default=None,
+                        help="normalization statistics path (for VLA models like spirit-v1p5)")
     parser.add_argument("--output_dir", type=str, default="./benchmark_results")
     parser.add_argument("--device", type=str, default="cuda")
     parser.add_argument("--num_samples", type=int, default=None,
@@ -59,48 +72,12 @@ def parse_args():
                         help="whether to carry out evaluation")
     parser.add_argument("--results_dir", type=str, default=None,
                         help="path to existing results directory (skip generation if provided)")
-    parser.add_argument("--norm_stats_path", type=str, default=None,
-                        help="normalization stats path (required for VLA models)")
     return parser.parse_args()
 
 
-def parse_model_path(model_path_str: str) -> Union[str, Dict[str, str], None]:
-    """
-    Parse --model_path / --eval_model_path CLI argument.
-
-    - If the value is a valid JSON object string, parse and return as dict.
-      Example: '{"synthesis_model_path": "tencent/Hunyuan-GameCraft-1.0"}'
-    - Otherwise return the original string (single HuggingFace id / local path).
-      Example: "tencent/Hunyuan-GameCraft-1.0"
-    - Returns None if input is None.
-    """
-    if model_path_str is None:
-        return None
-    try:
-        parsed = json.loads(model_path_str)
-        if isinstance(parsed, dict):
-            return parsed
-    except (json.JSONDecodeError, ValueError):
-        pass
-    return model_path_str
-
-
 # Pipeline loading here
-def load_pipeline(
-    model_type: str, 
-    model_path: Union[str, Dict], 
-    device: str = "cuda",
-    norm_stats_path: str = None
-):
-    """Load the pipeline according to the model_type.
-
-    Args:
-        model_type: key registered in ALL_PIPELINES.
-        model_path: either a plain string (single HuggingFace id / local path)
-                    or a dict mapping path-keys to paths for multi-weight models.
-        device: target device.
-        norm_stats_path: normalization stats path (only for VLA models).
-    """
+def load_pipeline(model_type: str, model_path: str, device: str = "cuda", norm_stats_path: str = None):
+    """load the pipeline according to the model_type."""
     if model_type not in ALL_PIPELINES:
         raise ValueError(
             f"Unknown model_type '{model_type}'. "
@@ -109,7 +86,7 @@ def load_pipeline(
 
     PipeClass = ALL_PIPELINES[model_type]
     
-    # Check if this is a VLA model that requires norm_stats_path
+    # VLA pipelines (like spirit-v1p5) need norm_stats_path parameter
     if model_type in vla_pipe:
         return PipeClass(model_path, device, norm_stats_path)
     else:
@@ -124,8 +101,7 @@ def load_existing_results(results_dir: Path) -> List[Dict]:
         results_dir: 结果目录路径
         
     Returns:
-        结果列表，每个元素包含 sample_id 和输出路径（已转换为绝对路径）
-        输出可能是 generated_video 或 generated_actions，取决于任务类型
+        结果列表，每个元素包含 sample_id 和 generated_video 路径（已转换为绝对路径）
     """
     results_file = results_dir / "results.json"
     if not results_file.exists():
@@ -134,45 +110,30 @@ def load_existing_results(results_dir: Path) -> List[Dict]:
     with open(results_file, "r", encoding="utf-8") as f:
         results = json.load(f)
     
-    # 转换输出路径为绝对路径（video 或 action）
+    # 转换视频路径为绝对路径
     for result in results:
-        # 检查是 video 还是 action 输出
-        output_key = None
         if "generated_video" in result:
-            output_key = "generated_video"
-        elif "generated_actions" in result:
-            output_key = "generated_actions"
-        
-        if output_key:
-            output_path = result[output_key]
-            output_path_obj = Path(output_path)
+            video_path = result["generated_video"]
+            video_path_obj = Path(video_path)
             
-            if not output_path_obj.is_absolute():
+            if not video_path_obj.is_absolute():
                 # 检查路径是否已包含 results_dir 名称（避免重复拼接）
-                if output_path_obj.parts and output_path_obj.parts[0] == results_dir.name:
-                    output_path = (results_dir.parent / output_path).resolve()
+                if video_path_obj.parts and video_path_obj.parts[0] == results_dir.name:
+                    video_path = (results_dir.parent / video_path).resolve()
                 else:
-                    output_path = (results_dir / output_path).resolve()
+                    video_path = (results_dir / video_path).resolve()
             else:
-                output_path = output_path_obj.resolve()
+                video_path = video_path_obj.resolve()
             
-            result[output_key] = str(output_path)
+            result["generated_video"] = str(video_path)
     return results
 
 
 ## reference generation
-def run_reference(pipeline, pipeline_infer, reference_func, samples, output_dir, output_key="generated_video"):
-    """run reference_func, and collect the generated results
+def run_reference(pipeline, reference_func, samples, output_dir, output_key="generated_video"):
+    """run reference_func, and collect the generated results"""
     
-    Args:
-        pipeline: loaded pipeline instance
-        pipeline_infer: inference function for the pipeline
-        reference_func: reference function from eval_func_mapping
-        samples: list of test samples
-        output_dir: output directory
-        output_key: key for the generated output ("generated_video" or "generated_actions")
-    """
-    # 根据 output_key 决定输出目录名称
+    # 根据 output_key 动态确定目录名和文件扩展名
     if output_key == "generated_video":
         output_subdir = "videos"
         file_extension = ".mp4"
@@ -180,20 +141,19 @@ def run_reference(pipeline, pipeline_infer, reference_func, samples, output_dir,
         output_subdir = "actions"
         file_extension = ".json"
     else:
-        # 默认使用 output_key 作为子目录名
-        output_subdir = output_key.replace("generated_", "")
-        file_extension = ".mp4"  # 默认扩展名
+        output_subdir = "outputs"
+        file_extension = ""
     
-    output_path_dir = Path(output_dir) / output_subdir
-    output_path_dir.mkdir(parents=True, exist_ok=True)
+    output_files_dir = Path(output_dir) / output_subdir
+    output_files_dir.mkdir(parents=True, exist_ok=True)
 
     results = []
     for idx, sample in enumerate(tqdm(samples, desc="Generating")):
         sample_id = sample.get("id", f"sample_{idx:04d}")
-        sample["output_path"] = str(output_path_dir / f"{sample_id}{file_extension}")
+        sample["output_path"] = str(output_files_dir / f"{sample_id}{file_extension}")
 
         try:
-            output = reference_func(pipeline, pipeline_infer, sample, output_key=output_key)
+            output = reference_func(pipeline, sample, output_key=output_key)
             results.append({"sample_id": sample_id, **output})
         except Exception as e:
             print(f"\n  ERROR [{sample_id}]: {e}")
@@ -203,7 +163,7 @@ def run_reference(pipeline, pipeline_infer, reference_func, samples, output_dir,
 
 
 # Evaluation
-def run_evaluation(eval_pipeline, eval_pipeline_infer, eval_func, samples, reference_results, output_dir, data_info):
+def run_evaluation(eval_pipeline, eval_func, samples, reference_results, output_dir, data_info, output_key):
     print("Running evaluation ...")
     eval_dir = Path(output_dir) / "evaluation"
     eval_dir.mkdir(parents=True, exist_ok=True)
@@ -226,29 +186,25 @@ def run_evaluation(eval_pipeline, eval_pipeline_infer, eval_func, samples, refer
         
         original_sample = sample_map.get(sample_id, {})
         
-        # 生成评估提示词文本（如果有 eval_prompt 函数）
-        # eval_prompt 函数接收整个 sample 字典，内部自己提取需要的字段
-        if eval_prompt_func:
-            prompt_text = eval_prompt_func(original_sample)
-        else:
-            prompt_text = None
-        
         input_data_info = original_sample.copy()
         
-        # 根据输出类型设置相应的路径字段
-        if "generated_video" in ref_result:
-            input_data_info["generated_video_path"] = ref_result.get("generated_video")
-        elif "generated_actions" in ref_result:
-            input_data_info["generated_actions_path"] = ref_result.get("generated_actions")
+        # 动态构建生成结果的路径字段名
+        # 例如：generated_video -> generated_video_path
+        #      generated_actions -> generated_actions_path
+        generated_output_path_key = f"{output_key}_path"
+        input_data_info[generated_output_path_key] = ref_result.get(output_key)
         
-        if prompt_text:
+        # 仅当 eval_prompt_func 存在时才生成提示词（用于 MLLM 评估）
+        if eval_prompt_func:
+            interaction_signal = original_sample.get("interaction_signal", [])
+            scene_description = original_sample.get("scene_description", "")
+            prompt_text = eval_prompt_func(interaction_signal, scene_description)
             input_data_info["eval_prompt"] = prompt_text
         
         try:
             eval_result = eval_func(
                 input_data_info=input_data_info,
-                eval_pipeline=eval_pipeline,
-                eval_pipeline_infer=eval_pipeline_infer,
+                eval_pipeline=eval_pipeline
             )
             eval_results.append(eval_result)
         except Exception as e:
@@ -263,21 +219,20 @@ def run_evaluation(eval_pipeline, eval_pipeline_infer, eval_func, samples, refer
     with open(eval_results_file, "w", encoding="utf-8") as f:
         json.dump(eval_results, f, indent=2, ensure_ascii=False, default=str)
     
-    # 计算统计信息
+    # 计算统计信息 - 支持不同类型的评估结果
     successful_evals = [r for r in eval_results if "error" not in r]
     
-    # 检查评估结果类型
     if successful_evals:
-        # 检查是否为视频生成评估（带 scores）
-        if successful_evals[0].get("scores") is not None:
+        # 检查是分数评估（MLLM）还是成功率评估（VLA）
+        if "scores" in successful_evals[0]:
+            # 分数评估统计（导航视频等）
             avg_scores = {}
             score_keys = ['navigation_fidelity', 'visual_quality', 'temporal_consistency',
-                         'scene_consistency', 'motion_smoothness', 'overall',
-                         'text_video_alignment', 'content_relevance', 'motion_naturalness']
+                         'scene_consistency', 'motion_smoothness', 'overall']
             
             for key in score_keys:
                 values = [r["scores"].get(key) for r in successful_evals 
-                         if r.get("scores", {}).get(key) is not None]
+                         if r["scores"].get(key) is not None]
                 if values:
                     avg_scores[key] = sum(values) / len(values)
             
@@ -287,23 +242,22 @@ def run_evaluation(eval_pipeline, eval_pipeline_infer, eval_func, samples, refer
                 print(f"  Average Scores:")
                 for key, value in avg_scores.items():
                     print(f"    {key}: {value:.2f}")
-        
-        # 检查是否为 VLA 评估（带 success）
+                    
         elif "success" in successful_evals[0]:
+            # 成功率评估统计（VLA）
             total_success = sum(1 for r in successful_evals if r.get("success", False))
             success_rate = total_success / len(successful_evals) * 100
             
             print(f"\nEvaluation Statistics:")
-            print(f"  Successful evaluations: {len(successful_evals)}/{len(eval_results)}")
-            print(f"  Task Success Rate: {success_rate:.2f}% ({total_success}/{len(successful_evals)})")
+            print(f"  Total samples: {len(successful_evals)}")
+            print(f"  Successful: {total_success}")
+            print(f"  Success rate: {success_rate:.2f}%")
             
-            # 计算平均成功步数
-            success_steps = [r.get("success_step") for r in successful_evals 
-                           if r.get("success", False) and r.get("success_step") is not None]
+            # 平均成功步数
+            success_steps = [r['success_step'] for r in successful_evals if r.get('success') and r.get('success_step')]
             if success_steps:
-                avg_success_step = sum(success_steps) / len(success_steps)
-                print(f"  Average Success Step: {avg_success_step:.2f}")
-    
+                avg_steps = sum(success_steps) / len(success_steps)
+                print(f"  Average success step: {avg_steps:.1f}")
     
     print(f"\nEvaluation results saved to {eval_results_file}")
     
@@ -316,15 +270,10 @@ def main():
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # ── Parse model_path arguments (str → str or dict) ──
-    model_path = parse_model_path(args.model_path)
-    eval_model_path = parse_model_path(args.eval_model_path)
-
     print("=== SceneFlow Benchmark Runner ===")
     print(f"  task_type      : {args.task_type}")
     print(f"  benchmark_name : {args.benchmark_name}")
     print(f"  model_type     : {args.model_type}")
-    print(f"  model_path     : {model_path}")
     print(f"  output_dir     : {output_dir}")
     print()
 
@@ -360,18 +309,8 @@ def main():
         pipeline = None
         print("Skipping pipeline loading (using existing results)\n")
     else:
-        # 根据模型类型决定是否传入 norm_stats_path
-        if args.model_type in vla_pipe:
-            pipeline = load_pipeline(
-                args.model_type, 
-                model_path, 
-                args.device, 
-                norm_stats_path=args.norm_stats_path
-            )
-        else:
-            pipeline = load_pipeline(args.model_type, model_path, args.device)
+        pipeline = load_pipeline(args.model_type, args.model_path, args.device, args.norm_stats_path)
         print("Pipeline loaded\n")
-    pipeline_infer = ALL_PIPELINES_INFER.get(args.model_type, None)
 
     # ── 4. obtain reference / eval function ──
     if args.task_type not in eval_func_mapping:
@@ -383,9 +322,9 @@ def main():
     reference_func = funcs["reference_func"]
     output_key = data_info["output_keys"][0]
 
-    # ── 5. reference generation or load existing results ──
+    # ── 5.  reference generation or load existing results ──
     if args.results_dir:
-        # skip the generation, directly load existing results
+        # 跳过生成，加载已有结果
         results_dir = Path(args.results_dir).resolve()
         if not results_dir.exists():
             raise FileNotFoundError(f"Results directory not found: {results_dir}")
@@ -393,8 +332,9 @@ def main():
         results = load_existing_results(results_dir)
         print(f"Loaded {len(results)} results\n")
     else:
+        # 正常生成
         print("Running reference generation ...")
-        results = run_reference(pipeline, pipeline_infer, reference_func, samples, output_dir, output_key)
+        results = run_reference(pipeline, reference_func, samples, output_dir, output_key)
         results_file = output_dir / "results.json"
 
         with open(results_file, "w", encoding="utf-8") as f:
@@ -407,16 +347,15 @@ def main():
     
     # ── 6. load the evaluation pipeline (if needed) ──
     if args.run_eval:
-        eval_pipeline = load_pipeline(args.eval_model_type, eval_model_path, args.device)
-        print("Evaluation pipeline loaded\n")
+        eval_pipeline = None
     else:
         eval_pipeline = None
-    eval_pipeline_infer = ALL_PIPELINES_INFER.get(args.eval_model_type, None)
 
     # ── 7. Evaluation ──
     if args.run_eval:
         eval_func = funcs["eval_func"]
-        run_evaluation(eval_pipeline, eval_pipeline_infer, eval_func, samples, results, output_dir, data_info)
+        run_evaluation(eval_pipeline, eval_func, samples, results, output_dir, data_info, output_key)
+
 
 
 if __name__ == "__main__":
