@@ -33,7 +33,7 @@ import einops
 # Import base components from wan_2p1 to avoid code duplication
 try:
     # Use absolute import to avoid relative import complexity
-    from sceneflow.synthesis.visual_generation.wan.wan_2p1.modules.vae import (
+    from .....base_models.diffusion_model.video.wan_2p1.modules.vae import (
         CausalConv3d,
         RMS_norm,
         Upsample,
