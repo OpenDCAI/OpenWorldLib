@@ -357,9 +357,22 @@ class Ai2ThorPipeline(PipelineABC):
         payloads = export.get("instance_payloads", [])
         if save_instance_payloads and len(payloads) > 0:
             instance_payloads_path = os.path.join(output_dir, "instance_payloads.jsonl")
+
+            class _PayloadEncoder(json.JSONEncoder):
+                def default(self, obj):
+                    if isinstance(obj, np.ndarray):
+                        return obj.tolist()
+                    if hasattr(obj, "masks"):
+                        return np.asarray(obj.masks).tolist()
+                    if hasattr(obj, "__array__"):
+                        return np.asarray(obj).tolist()
+                    if hasattr(obj, "__dict__"):
+                        return obj.__dict__
+                    return super().default(obj)
+
             with open(instance_payloads_path, "w", encoding="utf-8") as f:
                 for p in payloads:
-                    f.write(json.dumps(p, ensure_ascii=False) + "\n")
+                    f.write(json.dumps(p, ensure_ascii=False, cls=_PayloadEncoder) + "\n")
 
         return {
             "output_dir": output_dir,
