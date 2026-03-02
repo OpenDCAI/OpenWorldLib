@@ -31,9 +31,10 @@ def reference_func(
         {output_key: 保存后的视频文件路径}（当 input_data_info 含 output_path 时）
     """
     generation_text = input_data_info["generation_text"]    
+    image_path = input_data_info.get("ref_image", None) if input_data_info.get("ref_image", None) is not None else None
     output_path = input_data_info.get("output_path", None)
     fps=int(input_data_info.get("fps", 12))
-    output_video = pipe_infer(pipe, generation_text, output_path=output_path, fps=fps)
+    output_video = pipe_infer(pipe, generation_text, image_path, output_path=output_path, fps=fps)
 
     if output_path is not None:  
         return {output_key: str(output_path)}
