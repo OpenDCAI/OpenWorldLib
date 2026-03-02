@@ -778,6 +778,8 @@
 
 -**World Models in AI: Like a Child** · [[Paper]](https://arxiv.org/abs/2503.15168) [[Code]](#)
 
+-**Awesome World Model Evolution - Forging the World Model Universe from Unified Multimodal Models** · [[Paper]](https://arxiv.org/pdf/2602.23152) [[Code]](https://github.com/OpenRaiser/awesome-world-model-evolution)
+
 </details>
 
 <details>

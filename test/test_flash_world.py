@@ -23,7 +23,7 @@ CUSTOM_PLY_DIR = "./output/flash_world/custom_ply"
 CUSTOM_SPZ_DIR = "./output/flash_world/custom_spz"
 CUSTOM_VIDEO_DIR = "./output/flash_world/custom_video"
 
-INTERACTIONS = ["camera_rotate_left", "camera_forward"]
+INTERACTIONS = ["camera_l", "forward"]
 
 pipeline = FlashWorldPipeline.from_pretrained(
     representation_path=MODEL_PATH,
@@ -33,15 +33,15 @@ pipeline = FlashWorldPipeline.from_pretrained(
 )
 
 results = pipeline(
-    input_=IMAGE_PATH,
-    text_prompt=TEXT_PROMPT,
+    images=IMAGE_PATH,
+    prompt=TEXT_PROMPT,
     interactions=INTERACTIONS,
     num_frames=NUM_FRAMES,
+    fps=VIDEO_FPS,
     image_height=IMAGE_HEIGHT,
     image_width=IMAGE_WIDTH,
     image_index=IMAGE_INDEX,
     return_video=RETURN_VIDEO,
-    video_fps=VIDEO_FPS,
 )
 
 pipeline.save_results(

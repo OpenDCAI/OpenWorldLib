@@ -7,10 +7,10 @@ from pathlib import Path
 def infer_matrix_game2_pipeline(pipe, input_image, interaction_signal, output_path=None, fps=None):
     num_output_frames = len(interaction_signal) * 12
     output_video = pipe(
-        input_image=input_image,
-        num_output_frames=num_output_frames,
-        interaction_signal=interaction_signal,
-        operation_visualization=False
+        images=input_image,
+        num_frames=num_output_frames,
+        interactions=interaction_signal,
+        visualize_ops=False
     )
     if output_path is not None:
         output_path = Path(output_path)

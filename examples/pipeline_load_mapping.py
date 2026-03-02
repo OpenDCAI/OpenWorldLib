@@ -20,7 +20,7 @@ def _resolve_path(model_path: Union[str, Dict], key: str) -> str:
 def load_matrix_game2_pipeline(model_path: Union[str, Dict], device: str):
     from sceneflow.pipelines.matrix_game.pipeline_matrix_game_2 import MatrixGame2Pipeline
     return MatrixGame2Pipeline.from_pretrained(
-        synthesis_model_path=_resolve_path(model_path, "pretrained_model_path"),
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
         mode="universal",
         device=device,
     )
