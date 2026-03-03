@@ -29,7 +29,7 @@ def load_matrix_game2_pipeline(model_path: Union[str, Dict], device: str):
 def load_hunyuan_game_craft_pipeline(model_path: Union[str, Dict], device: str):
     from sceneflow.pipelines.hunyuan_world.pipeline_hunyuan_game_craft import HunyuanGameCraftPipeline
     return HunyuanGameCraftPipeline.from_pretrained(
-        synthesis_model_path=_resolve_path(model_path, "pretrained_model_path"),
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
         device=device,
     )
 

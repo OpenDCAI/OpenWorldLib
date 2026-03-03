@@ -115,7 +115,7 @@ def main():
 
     pretrained_model_path = "tencent/Hunyuan-GameCraft-1.0"
     pipeline = HunyuanGameCraftPipeline.from_pretrained(
-        synthesis_model_path=pretrained_model_path,
+        model_path=pretrained_model_path,
         device="cuda",
         cpu_offload=False,
         seed=250160,
@@ -178,14 +178,13 @@ def main():
         start_img = input_image if turn_idx == 0 else None
 
         video_seg = pipeline.stream(
-            interaction_signal=signals,
+            interactions=signals,
             interaction_speed=speeds,
-            initial_image=start_img,
-            interaction_text_prompt=interaction_text_prompt,
+            images=start_img,
+            prompt=interaction_text_prompt,
             interaction_positive_prompt=interaction_positive_prompt,
             interaction_negative_prompt=interaction_negative_prompt,
-            output_H=output_H,
-            output_W=output_W,
+            size=(output_H, output_W),
             cfg_scale=cfg_scale,
             infer_steps=infer_steps,
             flow_shift_eval_video=flow_shift_eval_video,

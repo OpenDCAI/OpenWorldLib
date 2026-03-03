@@ -27,9 +27,9 @@ def infer_hunyuan_game_craft_pipeline(pipe, input_image, interaction_signal, out
         if signal in pipe.operators.interaction_template:
             input_interactions.append(signal)
     output_video = pipe(
-        input_image=input_image,
-        num_output_frames=num_output_frames,
-        interaction_signal=input_interactions,
+        images=input_image,
+        num_frames=num_output_frames,
+        interactions=input_interactions,
     )
     if output_path is not None:
         output_path = Path(output_path)

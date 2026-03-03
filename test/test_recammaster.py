@@ -30,7 +30,8 @@ expressions. He occasionally shifts his body slightly, but his primary actions i
 his right hand and changing his facial expressions. The background remains static throughout the video.
 """
 
-pipeline = ReCamMasterPipeline.from_pretrained(pretrained_model_path, recammaster_ckpt_path)
+pipeline = ReCamMasterPipeline.from_pretrained(model_path=recammaster_ckpt_path,
+                                               required_components={"wan_model_path": pretrained_model_path})
 
 output_video = pipeline(interaction, video_path, textual_prompt)
 save_video(output_video, "./recammaster_output.mp4", fps=30, quality=5)

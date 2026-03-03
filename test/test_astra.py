@@ -19,23 +19,23 @@ def test():
     image_path = "./data/test_case1/ref_image.png"
     interaction = {
         "prompt": "A cozy snowy fairy-tale village with thatched cottages covered in thick snow.",
-        "direction": ["forward", "left", "right"] # interaction list: forward, backward, left, right, forward_left, s_curve
+        "direction": ["forward", "camera_l", "camera_r"] # interaction list: forward, backward, left, right, forward_left, s_curve
     }
 
     output_path = "astra_test.mp4"
 
     print("Initializing Astra Pipeline...")
     pipeline = AstraPipeline.from_pretrained(
-        astra_path=astra_path,
-        wan_model_path=wan_model_path,
+        model_path=astra_path,
+        required_components={"wan_model_path": wan_model_path},
         device="cuda",
         moe_num_experts=3 # ensure match with the default setting
     )
 
     print("Running Inference...")
     video_frames = pipeline(
-        input_=image_path,
-        interaction=interaction
+        image_path=image_path,
+        interactions=interaction
     )
 
     export_to_video(video_frames, output_path, fps=20)
