@@ -33,12 +33,15 @@ class MatrixGame2Pipeline:
 
     @classmethod
     def from_pretrained(cls,
-                        synthesis_model_path: Optional[str] = None,
-                        mode = "universal",
-                        weight_dtype = torch.bfloat16,
+                        model_path: Optional[str] = None,
+                        required_components: Optional[dict] = None,
                         device: str = "cuda",
+                        weight_dtype = torch.bfloat16,
+                        mode = "universal",
                         **kwargs) -> "MatrixGame2Pipeline":
-        if synthesis_model_path is None:
+        if model_path is not None:
+            synthesis_model_path = model_path
+        else:
             synthesis_model_path = "Skywork/Matrix-Game-2.0"
         
         print(f"Loading MatrixGame2 synthesis model from {synthesis_model_path}...")
@@ -99,55 +102,59 @@ class MatrixGame2Pipeline:
         return output_dict
 
     def __call__(self,
-                 input_image,
-                 num_output_frames,
-                 resize_H=352,
-                 resize_W=640,
-                 interaction_signal=["forward", "left", "right",
-                                     "forward_left", "forward_right",
-                                     "camera_l", "camera_r"],
-                 operation_visualization=True,
+                 images,
+                 interactions=["forward", "left", "right",
+                               "forward_left", "forward_right",
+                               "camera_l", "camera_r"],
+                 num_frames=None,
+                 size = (352, 640),
+                 visualize_ops=True,
                  **kwds):
+        if isinstance(images, Image.Image):
+            input_image = images
+        else:
+            raise ValueError("Unsupported image type. Expected PIL.Image.")
+        num_output_frames = len(interactions) * 12 if num_frames is None else num_frames
+        resize_H, resize_W = size
+
         output_dict = self.process(
             input_image=input_image,
             num_output_frames=num_output_frames,
             resize_H=resize_H,
             resize_W=resize_W,
-            interaction_signal=interaction_signal
+            interaction_signal=interactions
         )
         output_video = self.synthesis_model.predict(
             cond_concat=output_dict['cond_concat'],
             visual_context=output_dict['visual_context'],
             operator_condition=output_dict['operator_condition'],
             num_output_frames=num_output_frames,
-            operation_visualization=operation_visualization,
+            operation_visualization=visualize_ops,
             **kwds
         )
         return output_video
     
     def stream(self,
-               interaction_signal: List[str],
-               initial_image: Optional[Image.Image] = None,
-               num_output_frames: int = 15,
-               resize_H: int = 352,
-               resize_W: int = 640,
-               operation_visualization: bool = False,
+               images: Optional[Image.Image],
+               interactions: List[str],
+               num_frames: int = 15,
+               size = (352, 640),
+               visualize_ops: bool = False,
                **kwds) -> torch.Tensor:
-        if initial_image is not None:
+        if images is not None:
             print("--- Stream Started ---")
-            self.memory_module.record(initial_image)
+            self.memory_module.record(images)
         
         current_image = self.memory_module.select()
         if current_image is None:
-            raise ValueError("No image in storage. Provide 'initial_image' first.")
+            raise ValueError("No image in storage. Provide 'images' first.")
 
         video_output = self.__call__(
-            input_image=current_image,
-            num_output_frames=num_output_frames,
-            interaction_signal=interaction_signal,
-            resize_H=resize_H,
-            resize_W=resize_W,
-            operation_visualization=operation_visualization,
+            images=current_image,
+            interactions=interactions,
+            num_frames=num_frames,
+            size=size,
+            visualize_ops=visualize_ops,
             **kwds
         )
 

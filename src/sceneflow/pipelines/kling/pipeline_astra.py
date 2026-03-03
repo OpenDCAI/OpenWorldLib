@@ -50,15 +50,19 @@ class AstraPipeline(object):
 
     @classmethod
     def from_pretrained(cls,
-                        astra_path: str,
-                        wan_model_path: str,
+                        model_path: str,
+                        required_components: dict,
                         device: str = "cuda",
                         **kwargs):
         """
         Load pretrained models and initialize the pipeline.
         """
+        if isinstance(required_components, dict) and "wan_model_path" in required_components.keys():
+            wan_model_path = required_components.get("wan_model_path", "Wan-AI/Wan2.1-T2V-1.3B")
+        else:
+            wan_model_path = "Wan-AI/Wan2.1-T2V-1.3B"
         config = AstraConfig(
-            astra_path=astra_path,
+            astra_path=model_path,
             wan_model_path=wan_model_path,
             device=device
         )
@@ -233,8 +237,10 @@ class AstraPipeline(object):
         }
 
     def __call__(self,
-                 input_: str,
-                 interaction: Dict[str, Any]) -> List[Image.Image]:
+                 image_path: str,
+                 interactions: Dict[str, Any],
+                 images: Optional[List[Image.Image]] = None
+                ) -> List[Image.Image]:
         """
         Main entry point. Supports multi-step direction interaction.
 
@@ -244,8 +250,8 @@ class AstraPipeline(object):
         autoregressive step size) remains unchanged.
 
         Args:
-            input_: Path to the condition image.
-            interaction: Dict with keys:
+            image_path: Path to the condition image.
+            interactions: Dict with keys:
                 - 'prompt' (str): Text description of the scene.
                 - 'direction' (str | List[str]): One or more camera directions.
                   Supported: forward, backward, left, right, forward_left,
@@ -257,7 +263,7 @@ class AstraPipeline(object):
         args = self.config
 
         # Process input and interaction signals
-        processed_data = self.process(input_, interaction)
+        processed_data = self.process(image_path, interactions)
 
         initial_latents = processed_data["initial_latents"]
         camera_embedding_full = processed_data["camera_embedding_full"]
