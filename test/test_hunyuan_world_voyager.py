@@ -12,10 +12,10 @@ input_image = Image.open(image_path).convert('RGB')
 test_prompt = "An old-fashioned European village with thatched roofs on the houses."
 
 pipeline = HunyuanWorldVoyagerPipeline.from_pretrained(
-    represent_model_path=moge_model_path,
-    rendering_model_path=hunyuan_world_voyager_model_path,
+    model_path=hunyuan_world_voyager_model_path,
+    required_components = {"represent_model_path": moge_model_path},
     save_representation_video=True
 )
 
-output_video = pipeline(input_image=input_image, interaction_text_prompt=test_prompt)
+output_video = pipeline(images=input_image, prompt=test_prompt)
 imageio.mimsave("hunyuan_world_voyager.mp4", output_video, fps=12)

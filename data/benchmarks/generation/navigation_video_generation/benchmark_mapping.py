@@ -1,8 +1,8 @@
-eval_prompt = lambda interaction_signal, scene_description: f'''You are an expert evaluator for navigation video generation quality. You will be provided with a [Reference Image] and a [Generated Video]. Please assess the generated navigation video based on the following information.
+eval_prompt = lambda sample: f'''You are an expert evaluator for navigation video generation quality. You will be provided with a [Reference Image] and a [Generated Video]. Please assess the generated navigation video based on the following information.
 
 [Navigation Parameters]
-- Interaction signal sequence: {interaction_signal}
-- Scene description: {scene_description}
+- Interaction signal sequence: {sample.get("interaction_signal", [])}
+- Scene description: {sample.get("scene_description", "")}
 
 [Evaluation Criteria]
 Please evaluate the generated video on the following five dimensions (score 1-10 for each) and provide an overall assessment:

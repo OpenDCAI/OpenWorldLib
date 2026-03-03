@@ -1,6 +1,6 @@
-# Awesome World Model [![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/sindresorhus/awesome) [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)]() [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
+## Awesome World Model [![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/sindresorhus/awesome) [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)]() [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
 
-## Recent Updates
+### Recent Updates
 
 *`2025.11.24` - Begin linking to papers and github
 
@@ -10,7 +10,7 @@
 
 ---
 
-## 模态表征 (Representation Modality)
+### 模态表征 (Representation Modality)
 
 <details>
 
@@ -286,7 +286,7 @@
 
 ---
 
-## 理解侧 (Understanding)
+### 理解侧 (Understanding)
 
 <details>
 
@@ -406,7 +406,7 @@
 
 ---
 
-## 任务应用与表现 (Tasks & Applications)
+### 任务应用与表现 (Tasks & Applications)
 
 <details>
 
@@ -762,7 +762,7 @@
 
 ---
 
-## Corresponding Survey
+### Corresponding Survey
 
 <details>
 
@@ -777,6 +777,8 @@
 -**Understanding World or Predicting Future?** · [[Paper]](https://arxiv.org/abs/2411.14499) [[Code]](#)
 
 -**World Models in AI: Like a Child** · [[Paper]](https://arxiv.org/abs/2503.15168) [[Code]](#)
+
+-**Awesome World Model Evolution - Forging the World Model Universe from Unified Multimodal Models** · [[Paper]](https://arxiv.org/pdf/2602.23152) [[Code]](https://github.com/OpenRaiser/awesome-world-model-evolution)
 
 </details>
 
@@ -854,7 +856,7 @@
 
 ---
 
-## World Model Training
+### World Model Training
 
 <details>
 

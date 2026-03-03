@@ -284,16 +284,16 @@ class FlashWorldPipeline:
     
     def __call__(
         self,
-        input_: Union[str, Image.Image, np.ndarray, torch.Tensor, None],
-        text_prompt: str = "",
-        cameras: Union[torch.Tensor, List[Dict[str, Any]]] = None,
+        images: Union[str, Image.Image, np.ndarray, torch.Tensor, None],
+        prompt: str = "",
         interactions: Optional[List[str]] = None,
+        camera_view: Union[torch.Tensor, List[Dict[str, Any]]] = None,
         num_frames: int = 16,
+        fps: int = 15,
         image_height: int = 480,
         image_width: int = 704,
         image_index: int = 0,
         return_video: bool = False,
-        video_fps: int = 15,
         **kwargs
     ) -> Union[List[Image.Image], Dict[str, Any]]:
         """
@@ -329,25 +329,25 @@ class FlashWorldPipeline:
                 image_width=image_width,
                 image_height=image_height
             )
-            cameras = interaction_result['cameras']
-        elif cameras is None:
+            camera_view = interaction_result['cameras']
+        elif camera_view is not None:
             # Create default cameras if not provided
-            cameras = self._create_default_cameras(num_frames, image_width, image_height)
+            camera_view = self._create_default_cameras(num_frames, image_width, image_height)
         
         interaction = {
-            'text_prompt': text_prompt,
-            'cameras': cameras,
+            'prompt': prompt,
+            'cameras': camera_view,
         }
         
         result = self.process(
-            input_=input_,
+            input_=images,
             interaction=interaction,
             num_frames=num_frames,
             image_height=image_height,
             image_width=image_width,
             image_index=image_index,
             return_video=return_video,
-            video_fps=video_fps,
+            video_fps=fps,
         )
         
         # Always return full result dict (don't filter video_frames)

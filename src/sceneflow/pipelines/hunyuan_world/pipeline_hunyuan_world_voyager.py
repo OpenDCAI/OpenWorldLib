@@ -35,33 +35,34 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
     
     @classmethod
     def from_pretrained(cls,
-                        represent_model_path: Optional[str] = None,
-                        rendering_model_path: Optional[str] = None,
+                        model_path: Optional[str] = None,
+                        required_components = {"represent_model_path": "Ruicheng/moge-vitl"},
+                        device: str = "cuda",
                         represent_render_dir: str = './output/hunyuan_world_voyager/represent_render',
                         save_representation_video: bool = False,
-                        device: str = "cuda",
                         **kwargs) -> 'HunyuanWorldVoyagerPipeline':
         """
         Load the complete pipeline from a pretrained model
-        
+
         Args:
             pretrained_model_name_or_path: Path or name of the main model
             represent_model_path: Path to the representation model; uses default path if None
-            rendering_model_path: Path to the rendering model; uses default path if None
+            model_path: Path to the rendering model; uses default path if None
             represent_render_dir: Directory for rendering output
             device: Device (e.g., 'cuda', 'cpu')
             **kwargs: Additional parameters passed to sub-models
-            
+
         Returns:
             HunyuanWorldVoyagerPipeline: Initialized pipeline instance
         """
         # 设置默认路径
-        if represent_model_path is None:
+        if model_path is None:
+            model_path = "tencent/HunyuanWorld-Voyager"
+        if isinstance(required_components, dict) and "represent_model_path" in required_components.keys():
+            represent_model_path = required_components.get("represent_model_path", "Ruicheng/moge-vitl")
+        else:
             represent_model_path = "Ruicheng/moge-vitl"
-        if rendering_model_path is None:
-            rendering_model_path = "tencent/HunyuanWorld-Voyager"
-        
-        # 加载表示模型
+
         print(f"Loading representation model from {represent_model_path}")
         represent_model = HunyuanWorldVoyagerRepresentation.from_pretrained(
             represent_model_path,
@@ -69,23 +70,20 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
             depth_model_name='moge_v1', 
             **kwargs
         )
-        
-        # 加载渲染模型
-        print(f"Loading rendering model from {rendering_model_path}")
+
+        print(f"Loading rendering model from {model_path}")
         rendering_args = parse_args()
-        rendering_args.model_base = rendering_model_path
+        rendering_args.model_base = model_path
         rendering_args.input_path = represent_render_dir
 
         rendering_model = HunyuanWorldVoyagerSynthesis.from_pretrained(
-            rendering_model_path, 
+            model_path, 
             rendering_args,
             # **{k: v for k, v in kwargs.items() if k in ['cache_dir', 'force_download', 'resume_download']}
         )
-        
-        # 初始化operators（这里可以根据需要加载特定的operators）
+
         operators = HunyuanWorldVoyagerOperator()
-        
-        # 创建并返回pipeline实例
+
         pipeline = cls(
             operators=operators,
             represent_model=represent_model,
@@ -98,19 +96,17 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
         return pipeline
 
     def process(self, input_image, interaction_signal="forward"):
-        """处理输入图像和交互信号，输出渲染视频"""
-        # 转换输入图像
+        # transform input image and interaction signal into hunyuan video input
         input_image, image_tensor = self.operators.process_perception(input_image, self.device)
-
         Height, Width = input_image.shape[:2] if hasattr(input_image, 'shape') else (256, 256)
         
-        # 生成相机参数
+        # generate intrinsics and extrinsics for the first frame based on the interaction signal
         self.operators.get_interaction(interaction_signal)
         intrinsics, extrinsics = self.operators.process_interaction(
             num_frames=1, Width=Width, Height=Height, fx=256, fy=256
         )
         
-        # 使用表示模型进行推理
+        # generate representation (points, colors, depth) based on the input image and camera parameters
         input_data = {
             'image': input_image,
             'image_tensor': image_tensor,
@@ -119,7 +115,7 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
         }
         points, colors, depth = self.represent_model.get_representation(input_data)
         
-        # 生成多帧相机参数
+        # generate intrinsics and extrinsics for the whole video based on the interaction signal
         intrinsics, extrinsics = self.operators.process_interaction(
             num_frames=49, Width=Width//2, Height=Height//2, fx=128, fy=128
         )
@@ -141,16 +137,16 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
         return hunyuan_video_input
 
     def __call__(self,
-                 input_image,
-                 interaction_signal="forward",
-                 interaction_text_prompt = "",
+                 images,
+                 interactions="forward",
+                 prompt = "",
                  output_save_path = "./output/hunyuan_world_voyager/final_render",
                  i2v_stability=True,
                  **kwargs):
         """调用接口，支持额外参数"""
-        hunayuan_video_input = self.process(input_image, interaction_signal, **kwargs)
+        hunayuan_video_input = self.process(images, interactions, **kwargs)
         outputs = self.rendering_model.predict(
-            prompt=interaction_text_prompt,
+            prompt=prompt,
             height=self.rendering_args.video_size[0],
             width=self.rendering_args.video_size[1],
             video_length=self.rendering_args.video_length,
@@ -183,10 +179,3 @@ class HunyuanWorldVoyagerPipeline(PipelineABC):
             sample = samples[0].unsqueeze(0)
             output_video = video_output(sample, fps=24)
         return output_video
-
-
-    def save_pretrained(self, save_directory: str):
-        """
-        finish this part after the training pipeline is prepared.
-        """
-        pass

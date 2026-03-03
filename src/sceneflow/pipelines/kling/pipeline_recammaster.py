@@ -17,13 +17,17 @@ class ReCamMasterPipeline:
 
     @classmethod
     def from_pretrained(cls,
-                        pretrained_model_path="Wan-AI/Wan2.1-T2V-1.3B",
-                        recammaster_ckpt_path="KlingTeam/ReCamMaster-Wan2.1",
+                        model_path="KlingTeam/ReCamMaster-Wan2.1",
+                        required_components={"wan_model_path": "Wan-AI/Wan2.1-T2V-1.3B"},
                         device="cuda",
                         weight_dtype = torch.bfloat16,
                         **kwargs):
-        synthesis_model = ReCamMasterSynthesis.from_pretrained(pretrained_model_path=pretrained_model_path,
-                                                         recammaster_ckpt_path=recammaster_ckpt_path,
+        if isinstance(required_components, dict) and "wan_model_path" in required_components.keys():
+            wan_model_path = required_components.get("wan_model_path", "Wan-AI/Wan2.1-T2V-1.3B")
+        else:
+            wan_model_path = "Wan-AI/Wan2.1-T2V-1.3B"
+        synthesis_model = ReCamMasterSynthesis.from_pretrained(pretrained_model_path=wan_model_path,
+                                                         recammaster_ckpt_path=model_path,
                                                          device=device,
                                                          weight_dtype=weight_dtype)
         operator = ReCamMasterOperator()
@@ -43,24 +47,24 @@ class ReCamMasterPipeline:
         return video, cam_trajectory_emb, textual_prompt
 
     def __call__(self,
-                 interaction,
+                 camera_trajectory,
                  video_path,
-                 textual_prompt,
+                 prompt,
+                 num_frames=81,
                  max_num_frames=81,
                  frame_interval=1,
-                 num_frames=81,
-                 height=480,
-                 width=832
+                 size=(480, 832),
                  ):
+        height, width = size
         self.operator.max_num_frames = max_num_frames
         self.operator.frame_interval = frame_interval
         self.operator.num_frames = num_frames
         self.operator.height = height
         self.operator.width = width
 
-        video, cam_trajectory_emb, textual_prompt = self.process(interaction,
+        video, cam_trajectory_emb, textual_prompt = self.process(camera_trajectory,
                                                                  video_path,
-                                                                 textual_prompt)
+                                                                 prompt)
         
         output_video = self.synthesis_model.predict(
                                             textual_prompt,
