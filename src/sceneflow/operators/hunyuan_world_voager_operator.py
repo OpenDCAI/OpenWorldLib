@@ -19,7 +19,7 @@ def camera_list(
     fx=256,
     fy=256
 ):
-    # assert type in ["forward", "backward", "left", "right", "turn_left", "turn_right"], "Invalid camera type"
+    # assert type in ["forward", "backward", "left", "right", "camera_l", "camera_r"]
 
     start_pos = np.array([0, 0, 0])
     end_pos = np.array([0, 0, 0])
@@ -45,9 +45,9 @@ def camera_list(
     # Interpolate camera positions along a straight line
     camera_centers = np.linspace(start_pos, end_pos, num_frames)
     target_start = np.array([0, 0, 100])  # Target point
-    if type == "turn_left":
+    if type == "camera_l":
         target_end = np.array([-100, 0, 0])
-    elif type == "turn_right":
+    elif type == "camera_r":
         target_end = np.array([100, 0, 0])
     else:
         target_end = np.array([0, 0, 100])
@@ -78,7 +78,7 @@ def camera_list(
 class HunyuanWorldVoyagerOperator(BaseOperator):
     def __init__(self, 
                  operation_types=["action_instruction"],
-                 interaction_template = ["forward", "backward", "left", "right", "turn_left", "turn_right"]
+                 interaction_template = ["forward", "backward", "left", "right", "camera_l", "camera_r"]
         ):
         super(HunyuanWorldVoyagerOperator, self).__init__()
         self.interaction_template = interaction_template
@@ -113,3 +113,15 @@ class HunyuanWorldVoyagerOperator(BaseOperator):
                     Height=Height,
                     fx=fx,
                     fy=fy)
+
+    def process_perception(self, input_image, device):
+        if isinstance(input_image, np.ndarray):
+            image_tensor = torch.tensor(input_image / 255, dtype=torch.float32, device=device).permute(2, 0, 1)
+        elif isinstance(input_image, Image.Image):
+            if input_image.mode != 'RGB':
+                input_image = input_image.convert('RGB')
+            input_image = np.array(input_image)
+            image_tensor = torch.tensor(input_image / 255.0, dtype=torch.float32, device=device).permute(2, 0, 1)
+        else:
+            image_tensor = input_image.to(device)
+        return input_image, image_tensor

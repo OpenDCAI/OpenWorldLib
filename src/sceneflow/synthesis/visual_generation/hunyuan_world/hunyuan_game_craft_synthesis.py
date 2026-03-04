@@ -11,7 +11,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from .hunyuan_game_craft.diffusion import load_diffusion_pipeline
 from .hunyuan_game_craft.helpers import get_nd_rotary_pos_embed_new
 from .hunyuan_game_craft.inference import Inference
-from .hunyuan_game_craft.diffusion.schedulers import FlowMatchDiscreteScheduler
+from ....base_models.diffusion_model.video.hunyuan_video.diffusion.schedulers import FlowMatchDiscreteScheduler
 from packaging import version as pver
 import torch.distributed
 
@@ -779,61 +779,81 @@ class HunyuanGameCraftSynthesis(Inference):
         return out_dict
     
 
-    def predict(self, 
-                # condition
-                ref_images,
-                last_latents,
-                ref_latents,
-                action_list,
-                action_speed_list,
-                prompt, 
-                negative_prompt,
-                # generation config
-                size,
-                video_length,
-                guidance_scale,
-                infer_steps,
-                flow_shift,
-                **kwargs):
-        
-        rank = torch.distributed.get_rank()
+    def predict(self,
+            # condition
+            ref_images,
+            last_latents,
+            ref_latents,
+            action_list,
+            action_speed_list,
+            prompt,
+            negative_prompt,
+            # generation config
+            size,
+            video_length,
+            guidance_scale,
+            infer_steps,
+            flow_shift,
+            # NEW
+            first_is_image: bool = True,
+            return_latents: bool = False,
+            **kwargs):
+
+        rank = torch.distributed.get_rank() if torch.distributed.is_available() and torch.distributed.is_initialized() else 0
+
+        if len(action_list) == 0:
+            raise ValueError("action_list is empty")
+
+        out_cat = None  # only used on rank0
 
         for idx, action_id in enumerate(action_list):
-            # Determine if this is the first action
-            is_image = True if idx == 0 else False
-            
-            # Generate video segment with the current action
+            # IMPORTANT:
+            # - only the first action of the *whole streaming session* should use image-mode
+            # - later turns should set first_is_image=False so idx==0 is still video-mode
+            is_image = (first_is_image and idx == 0)
+
             outputs = self.predict_per_action(
                 is_image=is_image,
                 # condition
                 ref_images=ref_images,
-                last_latents=last_latents,  # Previous frame latents for continuity
-                ref_latents=ref_latents,    # Reference latents for style consistency
+                last_latents=last_latents,
+                ref_latents=ref_latents,
                 action_id=action_id,
-                action_speed=action_speed_list[idx],   
-                prompt=prompt,       
-                negative_prompt=negative_prompt,       
-                return_latents=True,   
+                action_speed=action_speed_list[idx],
+                prompt=prompt,
+                negative_prompt=negative_prompt,
+                return_latents=True,
                 # generation config
                 size=size,
                 video_length=video_length,
                 guidance_scale=guidance_scale,
                 infer_steps=infer_steps,
-                flow_shift=flow_shift
+                flow_shift=flow_shift,
+                **kwargs
             )
-            
-            # Update latents for next iteration (maintain temporal consistency)
+
+            # Update latents for next iteration
             ref_latents = outputs["ref_latents"]
             last_latents = outputs["last_latents"]
 
             if rank == 0:
-                sub_samples = outputs['samples'][0]
-                if idx == 0: # Initialize video segments
+                sub_samples = outputs["samples"][0]  # (B,C,T,H,W)
+                if out_cat is None:
                     out_cat = sub_samples
-                else: # Append new segment to existing video
+                else:
                     out_cat = torch.cat([out_cat, sub_samples], dim=2)
-        if rank == 0:
-            outputs = convert_videos_to_grid(out_cat, n_rows=1)
-            return outputs
+
+        # Build video frames only on rank0
+        if rank == 0 and out_cat is not None:
+            video_frames = convert_videos_to_grid(out_cat, n_rows=1)
         else:
-            return None
+            video_frames = None
+
+        if return_latents:
+            return {
+                "video": video_frames,
+                "last_latents": last_latents,
+                "ref_latents": ref_latents
+            }
+        else:
+            return video_frames

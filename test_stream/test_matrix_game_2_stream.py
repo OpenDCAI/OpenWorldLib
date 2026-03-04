@@ -9,7 +9,7 @@ input_image = Image.open(image_path).convert('RGB')
 
 pretrained_model_path = "Skywork/Matrix-Game-2.0"
 pipeline = MatrixGame2Pipeline.from_pretrained(
-    synthesis_model_path=pretrained_model_path,
+    model_path=pretrained_model_path,
     mode="universal",
     device="cuda"
 )
@@ -61,12 +61,11 @@ while True:
     start_img = input_image if turn_idx == 0 else None
 
     video_output = pipeline.stream(
-        interaction_signal=current_signal,
-        initial_image=start_img,  # 仅第一轮非空
-        num_output_frames=num_frames,
-        resize_H=352,
-        resize_W=640,
-        operation_visualization=False
+        images=start_img,  # only the first turn uses the input image, subsequent turns use the last generated frame
+        interactions=current_signal,
+        num_frames=num_frames,
+        size = (352, 640),
+        visualize_ops=False
     )
 
     turn_idx += 1

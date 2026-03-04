@@ -9,8 +9,10 @@ import os
 import PIL.Image
 from typing import Union, Optional, List
 
-from ..modules.posemb_layers import get_nd_rotary_pos_embed
-from ..vae import AutoencoderKLCausal3D
+from ......base_models.diffusion_model.video.hunyuan_video.modules.posemb_layers import (
+    get_nd_rotary_pos_embed
+)
+from ......base_models.diffusion_model.video.hunyuan_video.vae import AutoencoderKLCausal3D
 
 from pathlib import Path
 from einops import rearrange

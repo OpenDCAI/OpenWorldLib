@@ -1,5 +1,7 @@
+from ......base_models.diffusion_model.video.hunyuan_video.diffusion import (
+    FlowMatchDiscreteScheduler,
+)
 from .pipelines import HunyuanVideoPipeline
-from .schedulers import FlowMatchDiscreteScheduler
 from .flow.transport import *
 
 
