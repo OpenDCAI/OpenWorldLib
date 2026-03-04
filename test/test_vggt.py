@@ -1,23 +1,51 @@
+import sys
+sys.path.append("..")
+
 from sceneflow.pipelines.vggt.pipeline_vggt import VGGTPipeline
 
 
-# Configure before running
-DATA_PATH = "./data/test_case1/ref_image.png"
+DATA_PATH = "../data/test_case1/ref_image.png"
 MODEL_PATH = "facebook/VGGT-1B"
-OUTPUT_DIR = "./output/vggt"
-INTERACTION = "single_view_reconstruction"  # Options: "single_view_reconstruction", "multi_view_reconstruction", "camera_pose_estimation", "depth_estimation", "point_cloud_generation", "point_tracking"
+OUTPUT_DIR = "./vggt_output"
+
+# None -> default orbit video
+# or e.g. ["move_left", "move_left", "zoom_in", "rotate_right"]
+INTERACTION = "move_left"
+
+POINT_CONF_THRESHOLD = 0.2
+RESOLUTION = 518
+PREPROCESS_MODE = "crop"
+IMAGE_WIDTH = 704
+IMAGE_HEIGHT = 480
+FPS = 12
+
 
 pipeline = VGGTPipeline.from_pretrained(
     representation_path=MODEL_PATH,
 )
 
-results = pipeline(
-    DATA_PATH,
-    interaction=INTERACTION,
-    return_visualization=True,
+recon_info = pipeline.reconstruct_ply(
+    input_=DATA_PATH,
+    ply_path=OUTPUT_DIR,
+    interaction="point_cloud_generation",
+    point_conf_threshold=POINT_CONF_THRESHOLD,
+    resolution=RESOLUTION,
+    preprocess_mode=PREPROCESS_MODE,
 )
 
-results.save(OUTPUT_DIR)
+print(f"PLY saved to: {recon_info['ply_path']}")
+print("Camera range:", recon_info["camera_range"])
+print("Default camera:", recon_info["default_camera"])
 
-# Note: 生成的可以查看的图片也是depth结果，还是看看能否重建出colorful的结果
-# Note: 流程上最好是先重建，然后支持移动或者camera-view的输入
+output_video_path = pipeline.run_stage2_3dgs_video_from_reconstruction(
+    recon_info=recon_info,
+    interaction=INTERACTION,
+    output_dir=OUTPUT_DIR,
+    image_width=IMAGE_WIDTH,
+    image_height=IMAGE_HEIGHT,
+    fps=FPS,
+    output_name="vggt_3dgs_demo.mp4",
+)
+
+print(f"Rendered VGGT 3DGS video saved to: {output_video_path}")
+
