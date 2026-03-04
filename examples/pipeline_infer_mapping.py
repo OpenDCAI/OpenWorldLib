@@ -77,6 +77,31 @@ def infer_qwen2p5_omni_pipeline(pipe, prompt, image_path=None, video_path=None):
     return response_text
 
 
+def infer_spirit_v1p5_pipeline(pipe, images, raw_state, task, robot_type="Franka", return_all_steps=True):
+    """
+    VLA inference function for Spirit-v1.5 pipeline.
+    
+    Args:
+        pipe: SpiritV1p5Pipeline instance
+        images: dict of camera images, e.g., {"cam_high": PIL.Image, "cam_left_wrist": PIL.Image}
+        raw_state: robot state observation
+        task: task description string
+        robot_type: robot type, default "Franka"
+        return_all_steps: whether to return all action steps
+        
+    Returns:
+        actions: predicted actions (list if return_all_steps=True, else single action)
+    """
+    actions = pipe(
+        images=images,
+        raw_state=raw_state,
+        task=task,
+        robot_type=robot_type,
+        return_all_steps=return_all_steps,
+    )
+    return actions
+
+
 video_gen_pipe_infer = {
     "matrix-game2": infer_matrix_game2_pipeline,
     "wan2p2": infer_wan2p2_pipeline,
@@ -89,4 +114,8 @@ reasoning_pipe_infer = {
 
 three_dim_pipe_infer = {
 
+}
+
+vla_pipe_infer = {
+    "spirit-v1p5": infer_spirit_v1p5_pipeline,
 }
