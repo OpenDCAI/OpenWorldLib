@@ -1,0 +1,1 @@
+from .vla_libero_test.benchmark_mapping import benchmarks as vla_libero_benchmarks

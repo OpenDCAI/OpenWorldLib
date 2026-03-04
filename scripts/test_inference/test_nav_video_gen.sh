@@ -31,7 +31,7 @@ case $METHOD_NAME in
         ;;
     "hunyuan-gamecraft")
         echo "Executing: hunyuan_gamecraft..."
-        torchrun --nproc_per_node=8 test/test_hunyuan_gamecraft.py
+        torchrun --nproc_per_node=1 test/test_hunyuan_gamecraft.py
         ;;
     "hunyuanworld-voyager")
         echo "Executing: hunyuan_world_voyager..."

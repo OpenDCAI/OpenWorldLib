@@ -1,5 +1,6 @@
 import inspect
 import torch
+from PIL import Image
 from typing import Optional, Any, List
 
 from ...operators.hunyuan_game_craft_operator import HunyuanGameCraftOperator
@@ -34,9 +35,9 @@ class HunyuanGameCraftPipeline:
     @classmethod
     def from_pretrained(
         cls,
-        synthesis_model_path: Optional[str] = None,
-        weight_dtype=torch.bfloat16,
+        model_path: Optional[str] = None,
         device: str = "cuda",
+        weight_dtype=torch.bfloat16,
         cpu_offload: bool = False,
         seed: int = 250160,
         **kwargs,
@@ -47,7 +48,9 @@ class HunyuanGameCraftPipeline:
 
         initialize_distributed(args.seed)
 
-        if synthesis_model_path is None:
+        if model_path is not None:
+            synthesis_model_path = model_path
+        else:
             synthesis_model_path = "tencent/Hunyuan-GameCraft-1.0"
 
         synthesis_model = HunyuanGameCraftSynthesis.from_pretrained(
@@ -116,27 +119,27 @@ class HunyuanGameCraftPipeline:
         return output_dict
 
     def __call__(self,
-                # condition
-                input_image,
-                interaction_signal=["forward", "left", "right", "right", "camera_l", "camera_r", "camera_up", "camera_down"],
+                # default condition
+                images,     # PIL image
+                prompt="",
+                interactions=["forward", "left", "right", "right", "camera_l", "camera_r", "camera_up", "camera_down"],
+                size=(704, 1216),
+                num_frames=129,
+                # other generation condition
                 interaction_speed=[0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2],
-                interaction_text_prompt="",
                 interaction_positive_prompt="Realistic, High-quality.",
                 interaction_negative_prompt="overexposed, low quality, deformation, a poor composition, bad hands, bad teeth, bad eyes, bad limbs, distortion, blurring, text, subtitles, static, picture, black border.",
-                # generation config
-                output_H=704,
-                output_W=1216,
-                num_output_frames=129,
                 cfg_scale=2.0,
                 infer_steps=50,
                 flow_shift_eval_video=5.0,
                 **kwds):
-
+        input_image = images
+        output_H, output_W = size
         output_dict = self.process(
             input_image=input_image,
             output_H=output_H,
             output_W=output_W,
-            interaction_signal=interaction_signal
+            interaction_signal=interactions
         )
         output_video = self.synthesis_model.predict(
             # condition
@@ -145,11 +148,11 @@ class HunyuanGameCraftPipeline:
             ref_latents=output_dict["visual_context"]['ref_latents'],
             action_list=output_dict['operator_condition'],
             action_speed_list=interaction_speed,
-            prompt=interaction_text_prompt,
+            prompt=prompt,
             negative_prompt=interaction_negative_prompt,
             # generation config
             size=(output_H, output_W),
-            video_length=num_output_frames,
+            video_length=num_frames,
             guidance_scale=cfg_scale,
             infer_steps=infer_steps,
             flow_shift=flow_shift_eval_video,
@@ -159,18 +162,17 @@ class HunyuanGameCraftPipeline:
 
     def stream(
         self,
-        interaction_signal: List[str],
+        interactions: List[str],
         interaction_speed: List[float],
-        initial_image=None,
-        interaction_text_prompt: str = "",
+        images=None,
+        prompt: str = "",
+        size=(704, 1216),
         interaction_positive_prompt: str = "Realistic, High-quality.",
         interaction_negative_prompt: str = (
             "overexposed, low quality, deformation, a poor composition, bad hands, bad teeth, bad eyes, "
             "bad limbs, distortion, blurring, text, subtitles, static, picture, black border."
         ),
-        output_H: int = 704,
-        output_W: int = 1216,
-        num_output_frames: int = 129,
+        num_frames: int = 129,
         cfg_scale: float = 2.0,
         infer_steps: int = 50,
         flow_shift_eval_video: float = 5.0,
@@ -180,21 +182,22 @@ class HunyuanGameCraftPipeline:
             raise ValueError("memory_module is None")
 
         rank = self._dist_rank()
+        output_H, output_W = size
 
-        if initial_image is not None:
+        if images is not None:
             visual_context = self.operators.process_perception(
-                image=initial_image,
+                image=images,
                 output_H=output_H,
                 output_W=output_W,
                 process_model=self.synthesis_model,
             )
-            self.memory_module.record(initial_image, visual_context=visual_context, record_frames=False)
+            self.memory_module.record(images, visual_context=visual_context, record_frames=False)
 
         ctx = self.memory_module.select_context()
         if ctx is None:
-            raise ValueError("No context in memory. Provide 'initial_image' in the first stream() call.")
+            raise ValueError("No context in memory. Provide 'images' in the first stream() call.")
 
-        self.operators.get_interaction(interaction_signal)
+        self.operators.get_interaction(interactions)
         operator_condition = self.operators.process_interaction()
         self.operators.delete_last_interaction()
 
@@ -205,7 +208,7 @@ class HunyuanGameCraftPipeline:
 
         first_is_image = (getattr(self.memory_module, "n_generated_segments", 0) == 0)
 
-        prompt = interaction_text_prompt or ""
+        prompt = prompt or ""
         positive_prompt = interaction_positive_prompt or ""
         if not self._has_predict_arg("positive_prompt"):
             if positive_prompt.strip():
@@ -221,7 +224,7 @@ class HunyuanGameCraftPipeline:
             negative_prompt=interaction_negative_prompt,
             positive_prompt=positive_prompt if self._has_predict_arg("positive_prompt") else None,
             size=(output_H, output_W),
-            video_length=num_output_frames,
+            video_length=num_frames,
             guidance_scale=cfg_scale,
             infer_steps=infer_steps,
             flow_shift=flow_shift_eval_video,

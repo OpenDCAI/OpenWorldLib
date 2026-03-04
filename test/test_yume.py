@@ -14,18 +14,20 @@ caption = (
     "Actual distance moved:4 at 100 meters per second. "
     "Angular change rate (turn speed):0. View rotation speed:0."
 )
+##### NOTE: interactions 输入应该使用的是一个list
+interactions = ["forward"]  # "camera_l", "camera_r", here need support multiple interactions, e.g., ["forward", "camera_l", "forward", "camera_r"]
 seed = 43
 size = None  # use model defaults
 sampling_method = "ode"  # "ode" or "sde"
 
 
 pipeline = YumePipeline.from_pretrained(
-    synthesis_model_path=pretrained_model_path,
+    model_path=pretrained_model_path,
 )
 
 output_video = pipeline(
     prompt=prompt,
-    caption=caption,
+    interactions=caption,
     image_path=image_path,
     video_path=video_path,
     size=size,

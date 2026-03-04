@@ -14,7 +14,7 @@ from typing import Optional
 class AstraOperator(object): 
     def __init__(self, device="cuda"):
         self.device = device
-        self.interaction_template = ["left", "right", "forward", "backward", "forward_left", "forward_right", "s_curve", "left_right"]
+        self.interaction_template = ["camera_l", "camera_r", "forward", "backward", "forward_left", "forward_right", "s_curve", "left_right"]
         self.current_interaction = []
         
         # 预处理转换 (来自 InlineVideoEncoder)
@@ -188,13 +188,16 @@ class AstraOperator(object):
                 if direction=="forward":
                     if i >= CONDITION_FRAMES and i < CONDITION_FRAMES+STAGE_1+STAGE_2:
                         pose[2, 3] = -0.03
-                elif direction=="left":
+                elif direction == "backward":
+                    if i >= CONDITION_FRAMES and i < CONDITION_FRAMES + STAGE_1 + STAGE_2:
+                        pose[2, 3] = +0.03
+                elif direction=="camera_l":
                     if i >= CONDITION_FRAMES and i < CONDITION_FRAMES+STAGE_1+STAGE_2:
                         yaw_per_frame = 0.03
                         pose[0, 0] = np.cos(yaw_per_frame); pose[0, 2] = np.sin(yaw_per_frame)
                         pose[2, 0] = -np.sin(yaw_per_frame); pose[2, 2] = np.cos(yaw_per_frame)
                         pose[2, 3] = -0.00
-                elif direction=="right":
+                elif direction=="camera_r":
                     if i >= CONDITION_FRAMES and i < CONDITION_FRAMES+STAGE_1+STAGE_2:
                         yaw_per_frame = -0.03
                         pose[0, 0] = np.cos(yaw_per_frame); pose[0, 2] = np.sin(yaw_per_frame)

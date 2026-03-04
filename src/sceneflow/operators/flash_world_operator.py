@@ -17,8 +17,8 @@ class FlashWorldOperator(BaseOperator):
         operation_types=["textual_instruction", "action_instruction", "visual_instruction"],
         interaction_template=[
             "text_prompt",
-            "camera_forward", "camera_backward", "camera_left", "camera_right",
-            "camera_up", "camera_down", "camera_rotate_left", "camera_rotate_right",
+            "forward", "backward", "left", "right",
+            "camera_up", "camera_down", "camera_l", "camera_r",
             "camera_zoom_in", "camera_zoom_out"
         ]
     ):
@@ -29,8 +29,8 @@ class FlashWorldOperator(BaseOperator):
             operation_types: List of operation types
             interaction_template: List of valid interaction types
                 - "text_prompt": Text description for scene generation
-                - "camera_forward/backward/left/right/up/down": Camera movement
-                - "camera_rotate_left/right": Camera rotation
+                - "forward/backward/left/right/up/down": Camera movement
+                - "camera_l/r": Camera rotation (left/right)
                 - "camera_zoom_in/out": Camera zoom
         """
         super(FlashWorldOperator, self).__init__(operation_types=operation_types)
@@ -155,21 +155,21 @@ class FlashWorldOperator(BaseOperator):
             
             # Process each camera action
             for action in camera_actions:
-                if action == "camera_forward":
+                if action == "forward":
                     position[2] -= 0.1 * (i / num_frames)
-                elif action == "camera_backward":
+                elif action == "backward":
                     position[2] += 0.1 * (i / num_frames)
-                elif action == "camera_left":
+                elif action == "left":
                     position[0] -= 0.1 * (i / num_frames)
-                elif action == "camera_right":
+                elif action == "right":
                     position[0] += 0.1 * (i / num_frames)
                 elif action == "camera_up":
                     position[1] += 0.1 * (i / num_frames)
                 elif action == "camera_down":
                     position[1] -= 0.1 * (i / num_frames)
-                elif action == "camera_rotate_left":
+                elif action == "camera_l":
                     angle -= np.pi / 4 * (i / num_frames)
-                elif action == "camera_rotate_right":
+                elif action == "camera_r":
                     angle += np.pi / 4 * (i / num_frames)
                 # zoom_in/out affects intrinsics, handled separately
             

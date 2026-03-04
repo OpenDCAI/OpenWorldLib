@@ -20,7 +20,7 @@ def _resolve_path(model_path: Union[str, Dict], key: str) -> str:
 def load_matrix_game2_pipeline(model_path: Union[str, Dict], device: str):
     from sceneflow.pipelines.matrix_game.pipeline_matrix_game_2 import MatrixGame2Pipeline
     return MatrixGame2Pipeline.from_pretrained(
-        synthesis_model_path=_resolve_path(model_path, "pretrained_model_path"),
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
         mode="universal",
         device=device,
     )
@@ -29,7 +29,7 @@ def load_matrix_game2_pipeline(model_path: Union[str, Dict], device: str):
 def load_hunyuan_game_craft_pipeline(model_path: Union[str, Dict], device: str):
     from sceneflow.pipelines.hunyuan_world.pipeline_hunyuan_game_craft import HunyuanGameCraftPipeline
     return HunyuanGameCraftPipeline.from_pretrained(
-        synthesis_model_path=_resolve_path(model_path, "pretrained_model_path"),
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
         device=device,
     )
 
@@ -51,6 +51,16 @@ def load_wan2p2_pipeline(model_path: Union[str, Dict], device: str):
     )
 
 
+def load_spirit_v1p5_pipeline(model_path: Union[str, Dict], device: str, norm_stats_path: str = None):
+    from sceneflow.pipelines.spirit_ai.pipeline_spirit_v1p5 import SpiritV1p5Pipeline
+    return SpiritV1p5Pipeline.from_pretrained(
+        pretrained_model_path=_resolve_path(model_path, "pretrained_model_path"),
+        norm_stats_path=norm_stats_path,
+        device=device,
+        use_bf16=True,
+    )
+
+
 ## utilize lazy loader to load different tasks pipeline
 video_gen_pipe = {
     "matrix-game2": load_matrix_game2_pipeline,
@@ -64,4 +74,8 @@ reasoning_pipe = {
 
 three_dim_pipe = {
 
+}
+
+vla_pipe = {
+    "spirit-v1p5": load_spirit_v1p5_pipeline,
 }

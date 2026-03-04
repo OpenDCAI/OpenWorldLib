@@ -51,14 +51,16 @@ class YumePipeline:
     @classmethod
     def from_pretrained(
         cls,
-        synthesis_model_path: str,
+        model_path: str,
+        device: Optional[Union[int, str, torch.device]] = None,
         *,
         model_variant: Optional[str] = None,
-        device: Optional[Union[int, str, torch.device]] = None,
         **kwargs,
     ) -> "YumePipeline":
-        if synthesis_model_path is None:
+        if model_path is None:
             synthesis_model_path = "stdstu123/Yume-5B-720P"
+        else:
+            synthesis_model_path = model_path
 
         print(f"Loading Yume synthesis model from {synthesis_model_path}...")
         synthesis_model = YumeSynthesis.from_pretrained(
@@ -149,9 +151,9 @@ class YumePipeline:
 
     @staticmethod
     def _build_prompt_schedule(
-        *,
         prompt: str,
         caption: Optional[Union[str, Sequence[str]]],
+        *,
         prompt_schedule: Optional[Sequence[str]],
     ) -> Optional[List[str]]:
         if prompt_schedule is not None:
@@ -204,17 +206,17 @@ class YumePipeline:
 
     def __call__(
         self,
-        *,
         prompt: Optional[str] = None,
-        caption: Optional[Union[str, Sequence[str]]] = None,
+        interactions: Optional[Union[str, Sequence[str]]] = None,
         image_path: Optional[str] = None,
-        image: Optional[Image.Image] = None,
+        images: Optional[Image.Image] = None,
+        size: Optional[SizeLike] = None,
+        seed: Optional[int] = None,
+        *,
         video_path: Optional[str] = None,
         seed_video: Optional[torch.Tensor] = None,
         prompt_schedule: Optional[Sequence[str]] = None,
         rollout_steps: Optional[int] = None,
-        size: Optional[SizeLike] = None,
-        seed: Optional[int] = None,
         num_euler_timesteps: Optional[int] = None,
         sigma_shift: Optional[float] = None,
         latent_frame_zero: Optional[int] = None,
@@ -236,17 +238,18 @@ class YumePipeline:
 
         generation_mode = self._infer_generation_mode(
             image_path=image_path,
-            image=image,
+            image=images,
             video_path=video_path,
             seed_video=seed_video,
         )
 
         resolved_prompt_schedule = self._build_prompt_schedule(
             prompt=prompt,
-            caption=caption,
+            caption=interactions,
             prompt_schedule=prompt_schedule,
         )
 
+        ## get_interaction 应该是使用 interactions 作为输入
         if seed_video is not None:
             self.operator.get_interaction(prompt)
             interaction = self.operator.process_interaction()
@@ -267,7 +270,7 @@ class YumePipeline:
             processed = self.process(
                 prompt=prompt,
                 image_path=image_path,
-                image=image,
+                image=images,
                 generation_mode=generation_mode,
             )
 
@@ -308,11 +311,11 @@ class YumePipeline:
 
     def stream(
         self,
-        *,
         prompt: Optional[str] = None,
-        caption: Optional[Union[str, Sequence[str]]] = None,
+        interactions: Optional[Union[str, Sequence[str]]] = None,
         image_path: Optional[str] = None,
         image: Optional[Image.Image] = None,
+        *,
         video_path: Optional[str] = None,
         prompt_schedule: Optional[Sequence[str]] = None,
         rollout_steps: Optional[int] = None,
@@ -320,7 +323,7 @@ class YumePipeline:
     ) -> torch.Tensor:
         video = self.__call__(
             prompt=prompt,
-            caption=caption,
+            interactions=interactions,
             image_path=image_path,
             image=image,
             video_path=video_path,

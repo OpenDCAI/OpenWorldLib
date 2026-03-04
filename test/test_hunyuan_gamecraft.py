@@ -8,20 +8,19 @@ input_image = Image.open(image_path).convert('RGB')
 
 pretrained_model_path = "tencent/Hunyuan-GameCraft-1.0"
 pipeline = HunyuanGameCraftPipeline.from_pretrained(
-    synthesis_model_path=pretrained_model_path,
+    model_path=pretrained_model_path,
     device="cuda",
     cpu_offload=False,
     seed=250160
 )
 output_video = pipeline(
-    input_image=input_image,
-    interaction_signal=["backward", "camera_l"], # ["forward", "left", "right", "backward", "camera_l", "camera_r", "camera_up", "camera_down"]
+    images=input_image,
+    prompt="A charming medieval village with cobblestone streets, thatched-roof houses.",
+    interactions=["backward", "camera_l"], # ["forward", "left", "right", "backward", "camera_l", "camera_r", "camera_up", "camera_down"]
     interaction_speed=[0.2, 0.3], # value in [0, 3]
-    interaction_text_prompt="A charming medieval village with cobblestone streets, thatched-roof houses.",
     interaction_positive_prompt="Realistic, High-quality.",
     interaction_negative_prompt="overexposed, low quality, deformation, a poor composition, bad hands, bad teeth, bad eyes, bad limbs, distortion, blurring, text, subtitles, static, picture, black border.",
-    output_H=704,
-    output_W=1216,
+    size=(704, 1216),
 )
 
 if torch.distributed.get_rank() == 0:

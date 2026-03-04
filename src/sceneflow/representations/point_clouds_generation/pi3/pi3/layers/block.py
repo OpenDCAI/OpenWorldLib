@@ -16,9 +16,9 @@ import torch
 from torch import nn, Tensor
 
 from .attention import Attention, MemEffAttention, CrossAttentionRope, MemEffCrossAttentionRope, FlashAttentionRope
-from sceneflow.base_models.perception_core.general_perception.dinov2.layers.drop_path import DropPath
-from sceneflow.base_models.perception_core.general_perception.dinov2.layers.layer_scale import LayerScale
-from sceneflow.base_models.perception_core.general_perception.dinov2.layers.mlp import Mlp
+from ......base_models.perception_core.general_perception.dinov2.layers.drop_path import DropPath
+from ......base_models.perception_core.general_perception.dinov2.layers.layer_scale import LayerScale
+from ......base_models.perception_core.general_perception.dinov2.layers.mlp import Mlp
 
 
 XFORMERS_ENABLED = os.environ.get("XFORMERS_DISABLED") is None
