@@ -39,9 +39,10 @@ def infer_hunyuan_game_craft_pipeline(pipe, input_image, interaction_signal, out
     return output_video
 
 
-def infer_wan2p2_pipeline(pipe, prompt, input_image=None, size="1280*704", output_path=None, fps=None):
+def infer_wan2p2_pipeline(pipe, prompt, image_path=None, size="1280*704", output_path=None, fps=None):
     output_video = pipe(
         prompt=prompt,
+        image_path=image_path,
         size=size,
     )
     if output_path is not None:
