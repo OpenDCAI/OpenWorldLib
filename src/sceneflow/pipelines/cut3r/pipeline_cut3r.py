@@ -4,10 +4,17 @@ import numpy as np
 from PIL import Image
 import cv2
 import torch
+from diffusers.utils import export_to_video
 
 from ...operators.cut3r_operator import CUT3ROperator
 from ...representations.point_clouds_generation.cut3r.cut3r_representation import (
     CUT3RRepresentation,
+)
+from ...base_models.three_dimensions.point_clouds.gaussian_splatting.scene.dataset_readers import (
+    storePly,
+)
+from ...representations.point_clouds_generation.flash_world.flash_world.render import (
+    gaussian_render,
 )
 
 
@@ -318,6 +325,544 @@ class CUT3RPipeline:
         )
         
         return result
+
+    def reconstruct_ply(
+        self,
+        input_: Union[str, Image.Image, np.ndarray, List[str], List[Image.Image], List[np.ndarray]],
+        ply_path: Optional[str] = None,
+        size: Optional[int] = None,
+        vis_threshold: float = 1.0,
+    ) -> Dict[str, Any]:
+        """
+        Stage 1: Run CUT3R to reconstruct a point cloud and export it as a PLY file,
+        together with a simple camera parameter range for downstream 3DGS rendering.
+
+        Args:
+            input_: Input image(s), same formats as ``process``.
+            ply_path: Optional output path for the reconstructed PLY. If it is a
+                directory, ``pointcloud.ply`` will be created inside it. If None,
+                ``./cut3r_output/pointcloud.ply`` is used.
+            size: Optional input image size. If None, falls back to the representation
+                model's default.
+            vis_threshold: Confidence threshold used when generating the point cloud.
+
+        Returns:
+            Dictionary with:
+                - 'ply_path': str, path to the saved PLY file
+                - 'camera_range': dict with basic camera parameter ranges
+                - 'default_camera': dict describing a default viewpoint
+        """
+        if self.representation_model is None:
+            raise RuntimeError("Representation model not loaded. Use from_pretrained() first.")
+
+        images_data = self.operator.process_perception(input_)
+        if not isinstance(images_data, list):
+            images_data = [images_data]
+
+        if size is None:
+            if self.representation_model is not None:
+                size = getattr(self.representation_model, 'size', 224)
+            else:
+                size = 224
+
+        data = {
+            'images': images_data,
+            'output_type': 'all',
+            'size': size,
+            'vis_threshold': vis_threshold,
+        }
+
+        results = self.representation_model.get_representation(data)
+
+        point_clouds = results.get('point_cloud', None)
+        colors = results.get('colors', None)
+        if not point_clouds or not colors:
+            raise RuntimeError("CUT3R representation did not return point clouds and colors.")
+
+        pcs_flat = []
+        colors_flat = []
+        for pc, color in zip(point_clouds, colors):
+            pc_arr = pc.reshape(-1, 3)
+            color_arr = color.reshape(-1, 3)
+            if pc_arr.shape[0] != color_arr.shape[0]:
+                n = min(pc_arr.shape[0], color_arr.shape[0])
+                pc_arr = pc_arr[:n]
+                color_arr = color_arr[:n]
+            pcs_flat.append(pc_arr)
+            colors_flat.append(color_arr)
+
+        all_points = np.concatenate(pcs_flat, axis=0)
+        all_colors = np.concatenate(colors_flat, axis=0)
+
+        if all_points.size == 0:
+            raise RuntimeError("Empty point cloud reconstructed from CUT3R.")
+
+        if ply_path is None:
+            output_dir = "./cut3r_output"
+            os.makedirs(output_dir, exist_ok=True)
+            ply_path = os.path.join(output_dir, "pointcloud.ply")
+        else:
+            if not ply_path.endswith(".ply"):
+                os.makedirs(ply_path, exist_ok=True)
+                ply_path = os.path.join(ply_path, "pointcloud.ply")
+            else:
+                os.makedirs(os.path.dirname(ply_path) or ".", exist_ok=True)
+
+        rgb_uint8 = (np.clip(all_colors, 0.0, 1.0) * 255).astype(np.uint8)
+        storePly(ply_path, all_points.astype(np.float32), rgb_uint8)
+
+        center = all_points.mean(axis=0)
+        dists = np.linalg.norm(all_points - center[None, :], axis=1)
+        radius = float(dists.max() + 1e-6)
+
+        radius_min = max(radius * 0.5, 1e-3)
+        radius_max = radius * 3.0
+
+        camera_range = {
+            "center": center.tolist(),
+            "radius_min": radius_min,
+            "radius_max": radius_max,
+            "yaw_min": -180.0,
+            "yaw_max": 180.0,
+            "pitch_min": -75.0,
+            "pitch_max": 75.0,
+        }
+
+        default_camera = {
+            "center": center.tolist(),
+            "radius": radius * 1.5,
+            "yaw": 0.0,
+            "pitch": 0.0,
+        }
+
+        return {
+            "ply_path": ply_path,
+            "camera_range": camera_range,
+            "default_camera": default_camera,
+        }
+    
+    @staticmethod
+    def _preprocess_point_cloud_for_render(
+        points: np.ndarray,
+        colors: np.ndarray,
+        scene_center: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Light-weight cleanup to make rendering closer to CUT3R visualization:
+        1) remove invalid rows
+        2) trim far outliers
+        3) voxel downsample to reduce overdraw blur
+        """
+        valid_mask = np.isfinite(points).all(axis=1) & np.isfinite(colors).all(axis=1)
+        points = points[valid_mask]
+        colors = colors[valid_mask]
+        if len(points) == 0:
+            return points, colors
+
+        # Trim extreme outliers by distance-to-center (keeps dense core).
+        d = np.linalg.norm(points - scene_center[None, :], axis=1)
+        d_thr = np.quantile(d, 0.995)
+        keep = d <= d_thr
+        points = points[keep]
+        colors = colors[keep]
+        if len(points) == 0:
+            return points, colors
+
+        scene_radius = float(np.linalg.norm(points - scene_center[None, :], axis=1).max() + 1e-8)
+        voxel_size = max(scene_radius / 512.0, 1e-4)
+
+        # Voxel downsample (first-point per voxel, deterministic).
+        voxel_coords = np.floor(points / voxel_size).astype(np.int64)
+        _, unique_idx = np.unique(voxel_coords, axis=0, return_index=True)
+        unique_idx = np.sort(unique_idx)
+        points = points[unique_idx]
+        colors = colors[unique_idx]
+
+        return points, colors
+    
+    @staticmethod
+    def _estimate_gaussian_scale(points: np.ndarray, scene_center: np.ndarray) -> float:
+        """
+        Estimate a conservative Gaussian scale from local spacing.
+        Large scales are the main reason for "foggy/blurry" outputs.
+        """
+        if len(points) < 4:
+            scene_radius = float(np.linalg.norm(points - scene_center[None, :], axis=1).max() + 1e-8)
+            return max(scene_radius / 2000.0, 1e-4)
+
+        sample_n = min(len(points), 2048)
+        rng = np.random.default_rng(42)
+        idx = rng.choice(len(points), size=sample_n, replace=False)
+        sample = torch.from_numpy(points[idx]).float()
+        # Pairwise distances on a small sample for robust nearest-neighbor spacing.
+        dist = torch.cdist(sample, sample, p=2)
+        dist.fill_diagonal_(1e9)
+        nn = dist.min(dim=1).values
+        nn_med = float(nn.median().item())
+
+        scene_radius = float(np.linalg.norm(points - scene_center[None, :], axis=1).max() + 1e-8)
+        min_scale = max(scene_radius / 5000.0, 1e-4)
+        max_scale = max(scene_radius / 300.0, min_scale)
+        return float(np.clip(nn_med * 0.6, min_scale, max_scale))
+
+    def render_with_3dgs(
+        self,
+        ply_path: str,
+        camera_config: Dict[str, Any],
+        image_width: int = 640,
+        image_height: int = 352,
+        device: Optional[str] = None,
+        near_plane: float = 0.01,
+        far_plane: float = 1000.0,
+    ) -> Image.Image:
+        """
+        Stage 2: Render a view from the reconstructed PLY using a 3D Gaussian
+        Splatting renderer.
+
+        Args:
+            ply_path: Path to the reconstructed point cloud PLY.
+            camera_config: Dictionary describing the camera, with keys:
+                - 'center': list of 3 floats, scene center
+                - 'radius': float, camera distance to center
+                - 'yaw': float, yaw angle in degrees (around Y axis)
+                - 'pitch': float, pitch angle in degrees (around X axis)
+            image_width: Output image width.
+            image_height: Output image height.
+            device: Torch device to use. Defaults to 'cuda' if available, else 'cpu'.
+            near_plane: Near plane distance for rendering.
+            far_plane: Far plane distance for rendering.
+
+        Returns:
+            A PIL.Image with the rendered view.
+        """
+        from ...base_models.three_dimensions.point_clouds.gaussian_splatting.scene.dataset_readers import (
+            fetchPly,
+        )
+
+        device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+
+        pcd = fetchPly(ply_path)
+        points = np.asarray(pcd.points, dtype=np.float32)
+        colors = np.asarray(pcd.colors, dtype=np.float32)
+
+        if points.size == 0:
+            raise RuntimeError(f"No points loaded from PLY: {ply_path}")
+
+        center = np.asarray(camera_config.get("center", points.mean(axis=0)), dtype=np.float32)
+        points, colors = self._preprocess_point_cloud_for_render(points, colors, center)
+        if points.size == 0:
+            raise RuntimeError("Point cloud is empty after preprocessing for rendering.")
+
+        radius = float(camera_config.get("radius", 1.5 * np.linalg.norm(points - center[None, :], axis=1).max()))
+        yaw_deg = float(camera_config.get("yaw", 0.0))
+        pitch_deg = float(camera_config.get("pitch", 0.0))
+
+        yaw = np.deg2rad(yaw_deg)
+        pitch = np.deg2rad(pitch_deg)
+
+        cam_x = center[0] + radius * np.cos(pitch) * np.sin(yaw)
+        cam_y = center[1] + radius * np.sin(pitch)
+        cam_z = center[2] + radius * np.cos(pitch) * np.cos(yaw)
+        cam_pos = np.array([cam_x, cam_y, cam_z], dtype=np.float32)
+
+        forward = center - cam_pos
+        forward = forward / (np.linalg.norm(forward) + 1e-8)
+        up = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+
+        right = np.cross(forward, up)
+        right = right / (np.linalg.norm(right) + 1e-8)
+        up = np.cross(right, forward)
+        up = up / (np.linalg.norm(up) + 1e-8)
+
+        c2w = np.eye(4, dtype=np.float32)
+        c2w[0, :3] = right
+        c2w[1, :3] = up
+        c2w[2, :3] = forward
+        c2w[:3, 3] = cam_pos
+
+        fx = 0.5 * image_width / np.tan(np.deg2rad(60.0) / 2.0)
+        fy = 0.5 * image_height / np.tan(np.deg2rad(45.0) / 2.0)
+        cx = image_width / 2.0
+        cy = image_height / 2.0
+
+        sh_degree = 0
+
+        xyz = torch.from_numpy(points).to(device=device, dtype=torch.float32)
+        scale_value = self._estimate_gaussian_scale(points, center)
+        scale = torch.full((xyz.shape[0], 3), scale_value, device=device, dtype=torch.float32)
+
+        rotation = torch.zeros((xyz.shape[0], 4), device=device, dtype=torch.float32)
+        rotation[:, 0] = 1.0
+
+        # Align closer to CUT3R's gsplat usage (high opacity, small gaussian scale).
+        opacity = torch.full((xyz.shape[0], 1), 0.95, device=device, dtype=torch.float32)
+
+        color_tensor = torch.from_numpy(np.clip(colors, 0.0, 1.0)).to(device=device, dtype=torch.float32)
+        features = color_tensor
+
+        gaussian_params = torch.cat(
+            [xyz, opacity, scale, rotation, features],
+            dim=-1,
+        ).unsqueeze(0)
+
+        test_c2ws = torch.from_numpy(c2w).unsqueeze(0).unsqueeze(0).to(device=device, dtype=torch.float32)
+        intr = torch.tensor([[fx, fy, cx, cy]], dtype=torch.float32, device=device).unsqueeze(0)
+
+        rgb, _ = gaussian_render(
+            gaussian_params,
+            test_c2ws,
+            intr,
+            image_width,
+            image_height,
+            near_plane=near_plane,
+            far_plane=far_plane,
+            use_checkpoint=False,
+            sh_degree=sh_degree,
+            bg_mode='white',
+        )
+
+        # gaussian_render returns rgb in shape (B, V, 3, H, W)
+        # Use the first batch and first view to form an RGB frame (H, W, 3).
+        rgb_img = rgb[0, 0]
+        rgb_img = rgb_img.clamp(-1.0, 1.0).add(1.0).div(2.0)
+        rgb_np = (
+            rgb_img.mul(255.0)
+            .permute(1, 2, 0)
+            .detach()
+            .cpu()
+            .numpy()
+            .astype(np.uint8)
+        )
+
+        return Image.fromarray(rgb_np)
+    
+    def render_orbit_video_with_3dgs(
+        self,
+        ply_path: str,
+        base_camera_config: Dict[str, Any],
+        num_frames: int = 16,
+        yaw_step: float = 5.0,
+        image_width: int = 640,
+        image_height: int = 352,
+        fps: int = 12,
+        output_path: Optional[str] = None,
+    ) -> List[Image.Image]:
+        """
+        Convenience helper: render a short orbit video around the scene using 3DGS.
+
+        Args:
+            ply_path: Path to the reconstructed point cloud PLY.
+            base_camera_config: Base camera configuration dict with keys:
+                - 'center': list of 3 floats, scene center
+                - 'radius': float, camera distance to center
+                - 'yaw': float, starting yaw angle in degrees
+                - 'pitch': float, pitch angle in degrees
+            num_frames: Number of frames to render.
+            yaw_step: Delta yaw (in degrees) added per frame.
+            image_width: Output frame width.
+            image_height: Output frame height.
+            fps: Frames per second for the exported video.
+            output_path: If provided, export an MP4 video to this path.
+
+        Returns:
+            List of PIL.Image frames.
+        """
+        frames: List[Image.Image] = []
+
+        center = base_camera_config.get("center")
+        radius = float(base_camera_config.get("radius", 4.0))
+        base_yaw = float(base_camera_config.get("yaw", 0.0))
+        pitch = float(base_camera_config.get("pitch", 0.0))
+
+        for i in range(num_frames):
+            camera_config = {
+                "center": center,
+                "radius": radius,
+                "yaw": base_yaw + i * yaw_step,
+                "pitch": pitch,
+            }
+            img = self.render_with_3dgs(
+                ply_path=ply_path,
+                camera_config=camera_config,
+                image_width=image_width,
+                image_height=image_height,
+            )
+            frames.append(img)
+
+        if output_path is not None:
+            os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+            export_to_video([np.array(f) for f in frames], output_path, fps=fps)
+
+        return frames
+
+    @staticmethod
+    def _apply_interaction_to_camera(
+        camera_cfg: Dict[str, Any],
+        interaction: str,
+        camera_range: Dict[str, Any],
+        yaw_step: float = 10.0,
+        pitch_step: float = 7.5,
+        zoom_factor: float = 0.9,
+    ) -> Dict[str, Any]:
+        """
+        Update a simple (radius, yaw, pitch) camera configuration according to a
+        high-level interaction signal, clamped by camera_range.
+        """
+        yaw = float(camera_cfg.get("yaw", 0.0))
+        pitch = float(camera_cfg.get("pitch", 0.0))
+        radius = float(camera_cfg.get("radius", 4.0))
+
+        if interaction in ["move_left", "rotate_left"]:
+            yaw -= yaw_step
+        elif interaction in ["move_right", "rotate_right"]:
+            yaw += yaw_step
+        elif interaction == "move_up":
+            pitch += pitch_step
+        elif interaction == "move_down":
+            pitch -= pitch_step
+        elif interaction == "zoom_in":
+            radius *= zoom_factor
+        elif interaction == "zoom_out":
+            radius /= zoom_factor
+
+        yaw = max(camera_range["yaw_min"], min(camera_range["yaw_max"], yaw))
+        pitch = max(camera_range["pitch_min"], min(camera_range["pitch_max"], pitch))
+        radius = max(camera_range["radius_min"], min(camera_range["radius_max"], radius))
+
+        camera_cfg["yaw"] = yaw
+        camera_cfg["pitch"] = pitch
+        camera_cfg["radius"] = radius
+
+        return camera_cfg
+
+    def render_interaction_video_with_3dgs(
+        self,
+        ply_path: str,
+        camera_range: Dict[str, Any],
+        base_camera_config: Dict[str, Any],
+        interaction_sequence: List[str],
+        image_width: int = 640,
+        image_height: int = 352,
+        fps: int = 12,
+        output_path: Optional[str] = None,
+    ) -> List[Image.Image]:
+        """
+        Render a 3DGS video by applying a sequence of high-level interaction
+        signals (e.g. ['move_left', 'zoom_in']) to the camera.
+
+        This is the natural two-stage workflow:
+        1) Reconstruct PLY and camera_range with ``reconstruct_ply``.
+        2) Call this method with the resulting ``camera_range`` and a base
+           camera configuration.
+        """
+        frames: List[Image.Image] = []
+
+        camera_cfg: Dict[str, Any] = {
+            "center": base_camera_config.get("center", camera_range["center"]),
+            "radius": float(base_camera_config.get("radius", 4.0)),
+            "yaw": float(base_camera_config.get("yaw", 0.0)),
+            "pitch": float(base_camera_config.get("pitch", 0.0)),
+        }
+
+        for sig in interaction_sequence:
+            camera_cfg = self._apply_interaction_to_camera(
+                camera_cfg,
+                sig,
+                camera_range,
+            )
+            img = self.render_with_3dgs(
+                ply_path=ply_path,
+                camera_config=camera_cfg,
+                image_width=image_width,
+                image_height=image_height,
+            )
+            frames.append(img)
+
+        if output_path is not None and len(frames) > 0:
+            os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+            export_to_video([np.array(f) for f in frames], output_path, fps=fps)
+
+        return frames
+
+    def run_two_stage_3dgs_video(
+        self,
+        data_path: Union[str, Image.Image, np.ndarray, List[str], List[Image.Image], List[np.ndarray]],
+        interaction: Optional[Union[str, List[str]]] = None,
+        size: Optional[int] = None,
+        vis_threshold: float = 1.5,
+        output_dir: str = "./cut3r_output",
+        camera_radius: float = 4.0,
+        camera_yaw: float = 0.0,
+        camera_pitch: float = 0.0,
+        image_width: int = 704,
+        image_height: int = 480,
+        output_name: str = "cut3r_3dgs_demo.mp4",
+    ) -> str:
+        """
+        High-level helper for the complete two-stage workflow:
+
+        1) Reconstruct point cloud and camera range from input data.
+        2) Use either a default orbit or an interaction sequence to render
+           a 3DGS video.
+
+        Args:
+            data_path: Input image(s) or path(s), same formats as ``process``.
+            interaction: None for default orbit, or a list of interaction
+                strings such as ['move_left', 'zoom_in'].
+            size: Optional CUT3R input size.
+            vis_threshold: Confidence threshold for point cloud filtering.
+            output_dir: Directory to store PLY and video.
+            camera_radius: Initial camera radius.
+            camera_yaw: Initial camera yaw angle (degrees).
+            camera_pitch: Initial camera pitch angle (degrees).
+            image_width: Rendered frame width.
+            image_height: Rendered frame height.
+            output_name: Name of the output MP4 file.
+
+        Returns:
+            Absolute or relative path to the rendered MP4 video.
+        """
+        os.makedirs(output_dir, exist_ok=True)
+
+        recon_info = self.reconstruct_ply(
+            data_path,
+            ply_path=output_dir,
+            size=size,
+            vis_threshold=vis_threshold,
+        )
+
+        ply_path = recon_info["ply_path"]
+        camera_range = recon_info["camera_range"]
+
+        base_camera_config: Dict[str, Any] = {
+            "center": camera_range["center"],
+            "radius": camera_radius,
+            "yaw": camera_yaw,
+            "pitch": camera_pitch,
+        }
+
+        output_video_path = os.path.join(output_dir, output_name)
+
+        if isinstance(interaction, list) and len(interaction) > 0:
+            self.render_interaction_video_with_3dgs(
+                ply_path=ply_path,
+                camera_range=camera_range,
+                base_camera_config=base_camera_config,
+                interaction_sequence=interaction,
+                image_width=image_width,
+                image_height=image_height,
+                output_path=output_video_path,
+            )
+        else:
+            self.render_orbit_video_with_3dgs(
+                ply_path=ply_path,
+                base_camera_config=base_camera_config,
+                image_width=image_width,
+                image_height=image_height,
+                output_path=output_video_path,
+            )
+
+        return output_video_path
     
     def __call__(
         self,

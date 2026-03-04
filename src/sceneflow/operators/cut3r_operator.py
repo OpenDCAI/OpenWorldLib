@@ -118,11 +118,21 @@ class CUT3ROperator(BaseOperator):
                 if image_rgb[..., 0].mean() > image_rgb[..., 2].mean():
                     image_rgb = image_rgb[..., ::-1]
         else:
-            # Assume it's a file path
-            raw_image = cv2.imread(input_signal)
-            if raw_image is None:
-                raise ValueError(f"Could not read image from {input_signal}")
-            image_rgb = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0
+            # String path: support single image, directory, or txt list.
+            if isinstance(input_signal, (str, Path)):
+                input_path = str(input_signal)
+                if os.path.isdir(input_path) or (os.path.isfile(input_path) and input_path.lower().endswith(".txt")):
+                    file_list = self.collect_paths(input_path)
+                    if len(file_list) == 0:
+                        raise ValueError(f"No valid image files found in {input_path}")
+                    return [self.process_perception(p) for p in file_list]
+
+                raw_image = cv2.imread(input_path)
+                if raw_image is None:
+                    raise ValueError(f"Could not read image from {input_signal}")
+                image_rgb = cv2.cvtColor(raw_image, cv2.COLOR_BGR2RGB) / 255.0
+            else:
+                raise ValueError(f"Unsupported input type for process_perception: {type(input_signal)}")
         
         return image_rgb
     
@@ -232,4 +242,5 @@ class CUT3ROperator(BaseOperator):
             self.current_interaction = self.current_interaction[:-1]
         else:
             raise ValueError("No interaction to delete.")
+
 

@@ -151,6 +151,9 @@ except ImportError:
 
         def apply_rope1d(self, tokens, pos1d, cos, sin):
             assert pos1d.ndim == 2
+            # Safety: sanitize potential NaN/Inf indices before embedding lookup.
+            pos1d = torch.nan_to_num(pos1d, nan=0.0, posinf=0.0, neginf=0.0)
+            pos1d = pos1d.clamp(min=0, max=cos.shape[0] - 1).long()
             cos = torch.nn.functional.embedding(pos1d, cos)[:, None, :, :]
             sin = torch.nn.functional.embedding(pos1d, sin)[:, None, :, :]
             return (tokens * cos) + (self.rotate_half(tokens) * sin)
@@ -168,12 +171,30 @@ except ImportError:
             ), "number of dimensions should be a multiple of two"
             D = tokens.size(3) // 2
             assert positions.ndim == 3 and positions.shape[-1] == 2  # Batch, Seq, 2
+            
+            # Get max position value, handling negative values (like -1 for special tokens)
+            # Only consider non-negative positions for table size calculation
+            positions_flat = positions.view(-1)
+            valid_positions = positions_flat[positions_flat >= 0]
+            if len(valid_positions) > 0:
+                max_pos = int(valid_positions.max().item()) + 1
+            else:
+                # If all positions are negative, use a default size
+                max_pos = 1
+            
             cos, sin = self.get_cos_sin(
-                D, int(positions.max()) + 1, tokens.device, tokens.dtype
+                D, max_pos, tokens.device, tokens.dtype
             )
             # split features into two along the feature dimension, and apply rope1d on each half
             y, x = tokens.chunk(2, dim=-1)
-            y = self.apply_rope1d(y, positions[:, :, 0], cos, sin)
-            x = self.apply_rope1d(x, positions[:, :, 1], cos, sin)
+            # Clamp positions to valid range for indexing (negative positions become 0)
+            y_pos = torch.nan_to_num(
+                positions[:, :, 0], nan=0.0, posinf=0.0, neginf=0.0
+            ).clamp(min=0, max=max_pos - 1).long()
+            x_pos = torch.nan_to_num(
+                positions[:, :, 1], nan=0.0, posinf=0.0, neginf=0.0
+            ).clamp(min=0, max=max_pos - 1).long()
+            y = self.apply_rope1d(y, y_pos, cos, sin)
+            x = self.apply_rope1d(x, x_pos, cos, sin)
             tokens = torch.cat((y, x), dim=-1)
             return tokens
