@@ -161,31 +161,41 @@ class TrajectoryGenerator:
     def __init__(self):
         self.trans_speed = 0.1 
         self.rot_speed = np.radians(0.2)
+        self.zoom_speed = 0.01
 
-        # Define base actions corresponding to [tx, ty, tz, rx, ry, rz]
-        # rx, ry, rz are Euler angle increments
         self.COMMAND_MAPPING = {
             # Translation
-            "forward":   np.array([ 0,  0,  1,  0,  0,  0]) * self.trans_speed,
-            "backward":  np.array([ 0,  0, -1,  0,  0,  0]) * self.trans_speed,
-            "left":      np.array([-1,  0,  0,  0,  0,  0]) * self.trans_speed,
-            "right":     np.array([ 1,  0,  0,  0,  0,  0]) * self.trans_speed,
-            "up":        np.array([ 0, -1,  0,  0,  0,  0]) * self.trans_speed,
-            "down":      np.array([ 0,  1,  0,  0,  0,  0]) * self.trans_speed,
+            "forward":         np.array([ 0,  0,  1,  0,  0,  0,  0]) * self.trans_speed,
+            "backward":        np.array([ 0,  0, -1,  0,  0,  0,  0]) * self.trans_speed,
+            "left":            np.array([-1,  0,  0,  0,  0,  0,  0]) * self.trans_speed,
+            "right":           np.array([ 1,  0,  0,  0,  0,  0,  0]) * self.trans_speed,
             
-            # Rotation (Camera Pan/Tilt)
-            # Rotate around Y axis (Pan)
-            "camera_l":  np.array([ 0,  0,  0,  0, -1,  0]) * self.rot_speed, 
-            "camera_r":  np.array([ 0,  0,  0,  0,  1,  0]) * self.rot_speed,
-            # Rotate around X axis (Tilt)
-            "camera_up": np.array([ 0,  0,  0, -1,  0,  0]) * self.rot_speed,
-            "camera_down":np.array([0,  0,  0,  1,  0,  0]) * self.rot_speed,
+            # Diagonal Translation
+            "forward_left":    np.array([-1,  0,  1,  0,  0,  0,  0]) * self.trans_speed,
+            "forward_right":   np.array([ 1,  0,  1,  0,  0,  0,  0]) * self.trans_speed,
+            "backward_left":   np.array([-1,  0, -1,  0,  0,  0,  0]) * self.trans_speed,
+            "backward_right":  np.array([ 1,  0, -1,  0,  0,  0,  0]) * self.trans_speed,
+
+            # Camera Pan/Tilt
+            "camera_up":        np.array([ 0,  0,  0, -1,  0,  0,  0]) * self.rot_speed,
+            "camera_down":      np.array([ 0,  0,  0,  1,  0,  0,  0]) * self.rot_speed,
+            "camera_l":         np.array([ 0,  0,  0,  0, -1,  0,  0]) * self.rot_speed,
+            "camera_r":         np.array([ 0,  0,  0,  0,  1,  0,  0]) * self.rot_speed,
+            
+            # Diagonal Rotation
+            "camera_ul":        np.array([ 0,  0,  0, -1, -1,  0,  0]) * self.rot_speed,
+            "camera_ur":        np.array([ 0,  0,  0, -1,  1,  0,  0]) * self.rot_speed,
+            "camera_dl":        np.array([ 0,  0,  0,  1, -1,  0,  0]) * self.rot_speed,
+            "camera_dr":        np.array([ 0,  0,  0,  1,  1,  0,  0]) * self.rot_speed,
+            
+            # Zooming
+            "camera_zoom_in":   np.array([ 0,  0,  0,  0,  0,  0,  1]) * self.zoom_speed,
+            "camera_zoom_out":  np.array([ 0,  0,  0,  0,  0,  0, -1]) * self.zoom_speed,
         }
 
     def generate(self, action_list: list, num_frames: int, height: int, width: int):
         """Generate c2ws and Ks matrices"""
-        # Calculate total per-frame delta vector (sum all commands)
-        delta_vec = np.zeros(6) # [tx, ty, tz, rx, ry, rz]
+        delta_vec = np.zeros(7) # [tx, ty, tz, rx, ry, rz, zoom]
         valid_cmds = 0
         for action in action_list:
             if action in self.COMMAND_MAPPING:
@@ -194,45 +204,40 @@ class TrajectoryGenerator:
             else:
                 print(f"[Warning] Unknown action command: {action}")
         
-        # Keep static if no valid commands
         if valid_cmds == 0:
             pass 
 
-        # Integrate to generate trajectory (Accumulate poses)
         c2ws = []
-        # Initial pose: identity matrix
+        Ks = [] 
         current_pose = np.eye(4)
         
-        # Separate translation and rotation increments
         d_trans = delta_vec[:3]
-        d_rot_euler = delta_vec[3:]
+        d_rot_euler = delta_vec[3:6]
+        d_zoom = delta_vec[6]
 
-        for _ in range(num_frames):
+        base_fx = max(width, height)
+        base_fy = base_fx
+        cx = width / 2.0
+        cy = height / 2.0
+
+        for i in range(num_frames):
             c2ws.append(current_pose.copy())
             
-            # Update pose P_new = P_old * Delta
-            # Build Delta matrix
+            current_zoom_factor = 1.0 + (d_zoom * i)
+            current_zoom_factor = max(0.1, current_zoom_factor) 
+
+            K = np.array([base_fx * current_zoom_factor, base_fy * current_zoom_factor, cx, cy], dtype=np.float32)
+            Ks.append(K)
+            
             delta_mat = np.eye(4)
-            # Process rotation
             if np.linalg.norm(d_rot_euler) > 1e-8:
                 r = Rotation.from_euler('xyz', d_rot_euler, degrees=False)
                 delta_mat[:3, :3] = r.as_matrix()
-            # Process translation
             delta_mat[:3, 3] = d_trans
-            
-            # Accumulate (move relative to current camera coordinate system)
             current_pose = current_pose @ delta_mat
 
         c2ws = np.array(c2ws, dtype=np.float32)
-
-        # Generate default intrinsics
-        fx = max(width, height)
-        fy = fx
-        cx = width / 2.0
-        cy = height / 2.0
-        
-        K = np.array([fx, fy, cx, cy], dtype=np.float32)
-        Ks = np.tile(K, (num_frames, 1)) # [num_frames, 4]
+        Ks = np.array(Ks, dtype=np.float32) # [num_frames, 4]
 
         return c2ws, Ks
 

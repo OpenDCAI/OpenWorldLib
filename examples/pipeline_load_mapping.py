@@ -34,6 +34,23 @@ def load_hunyuan_game_craft_pipeline(model_path: Union[str, Dict], device: str):
     )
 
 
+def load_lingbot_world_pipeline(model_path: Union[str, Dict], device: str):
+    import os
+    from sceneflow.pipelines.lingbot_world.pipeline_lingbot_world import LingBotPipeline
+    rank = int(os.getenv("RANK", 0))
+    return LingBotPipeline.from_pretrained(
+        synthesis_model_path=_resolve_path(model_path, "pretrained_model_path"),
+        task="i2v-A14B",
+        device=device,  
+        rank=rank,
+        t5_fsdp=False,
+        dit_fsdp=False,
+        ulysses_size=1,
+        t5_cpu=True,
+        offload_model=True
+    )
+
+
 def load_qwen2p5_omni_pipeline(model_path: Union[str, Dict], device: str):
     from sceneflow.pipelines.qwen.pipeline_qwen2p5_omni import Qwen2p5OmniPipeline
     return Qwen2p5OmniPipeline.from_pretrained(
@@ -66,6 +83,7 @@ video_gen_pipe = {
     "matrix-game2": load_matrix_game2_pipeline,
     "wan2p2": load_wan2p2_pipeline,
     "hunyuan-game-craft": load_hunyuan_game_craft_pipeline,
+    "lingbot-world": load_lingbot_world_pipeline,
 }
 
 reasoning_pipe = {

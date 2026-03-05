@@ -39,6 +39,28 @@ def infer_hunyuan_game_craft_pipeline(pipe, input_image, interaction_signal, out
     return output_video
 
 
+def infer_lingbot_world_pipeline(pipe, input_image, interaction_signal, output_path=None, fps=None):
+    num_output_frames = len(interaction_signal) * 36 + 1
+    lingbot_interaction = {
+        "prompt": "",
+        "action_list": interaction_signal
+    }
+    output_video = pipe(
+        input_image=input_image,
+        num_output_frames=num_output_frames,
+        interaction_signal=lingbot_interaction,
+        resize_H=480,
+        resize_W=832,
+        seed=42
+    )
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fps = fps if fps is not None else 16
+        export_to_video(output_video, str(output_path), fps=fps)
+    return output_video
+
+
 def infer_wan2p2_pipeline(pipe, prompt, image_path=None, size="1280*704", output_path=None, fps=None):
     output_video = pipe(
         prompt=prompt,
@@ -107,6 +129,7 @@ video_gen_pipe_infer = {
     "matrix-game2": infer_matrix_game2_pipeline,
     "wan2p2": infer_wan2p2_pipeline,
     "hunyuan-game-craft": infer_hunyuan_game_craft_pipeline,
+    "lingbot-world": infer_lingbot_world_pipeline,
 }
 
 reasoning_pipe_infer = {
