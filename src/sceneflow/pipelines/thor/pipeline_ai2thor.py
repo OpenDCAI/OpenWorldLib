@@ -44,6 +44,33 @@ class Ai2ThorPipeline(PipelineABC):
             memory_module = Ai2ThorMemory(**({} if mem_cfg is None else dict(mem_cfg)))
         return cls(operators=operators, representation=representation, memory_module=memory_module)
 
+    @staticmethod
+    def _to_serializable(obj: Any) -> Any:
+        if obj is None or isinstance(obj, (bool, int, float, str)):
+            return obj
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, np.integer):
+            return int(obj)
+        if isinstance(obj, np.floating):
+            return float(obj)
+        if isinstance(obj, dict):
+            return {k: Ai2ThorPipeline._to_serializable(v) for k, v in obj.items()}
+        if isinstance(obj, (list, tuple)):
+            return [Ai2ThorPipeline._to_serializable(v) for v in obj]
+        # LazyInstanceSegmentationMasks 等懒加载对象，趁 controller 还活着立即物化
+        if hasattr(obj, "items"):
+            try:
+                return {k: Ai2ThorPipeline._to_serializable(v) for k, v in obj.items()}
+            except Exception:
+                pass
+        if hasattr(obj, "__iter__"):
+            try:
+                return [Ai2ThorPipeline._to_serializable(v) for v in obj]
+            except Exception:
+                pass
+        return None  # 实在无法序列化的 fallback
+    
     def process(
         self,
         obs: Dict[str, Any],
@@ -186,10 +213,10 @@ class Ai2ThorPipeline(PipelineABC):
                         mem.record(inst, metadata={"type": "image", "subtype": "instance", "tick": int(tick_idx)})
 
                 if include_instance and record_instance_payload:
-                    payload = {
+                    payload = self._to_serializable({
                         "instance_masks": obs.get("instance_masks", None),
                         "instance_detections2D": obs.get("instance_detections2D", None),
-                    }
+                    })
                     mem.record(payload, metadata={"type": "other", "subtype": "instance_payload", "tick": int(tick_idx)})
 
                 output_dict = self.process(
@@ -225,6 +252,7 @@ class Ai2ThorPipeline(PipelineABC):
 
                             if slim_focus and isinstance(focus_obj, dict):
                                 focus_obj = {
+                                    # 原有字段
                                     "objectId": focus_obj.get("objectId"),
                                     "objectType": focus_obj.get("objectType", ""),
                                     "pickupable": focus_obj.get("pickupable", False),
@@ -235,6 +263,19 @@ class Ai2ThorPipeline(PipelineABC):
                                     "receptacle": focus_obj.get("receptacle", False),
                                     "visible": focus_obj.get("visible", False),
                                     "distance": focus_obj.get("distance", None),
+                                    # 新增：物品状态字段
+                                    "cookable": focus_obj.get("cookable", False),
+                                    "isCooked": focus_obj.get("isCooked", False),
+                                    "canFillWithLiquid": focus_obj.get("canFillWithLiquid", False),
+                                    "isFilledWithLiquid": focus_obj.get("isFilledWithLiquid", False),
+                                    "dirtyable": focus_obj.get("dirtyable", False),
+                                    "isDirty": focus_obj.get("isDirty", False),
+                                    "sliceable": focus_obj.get("sliceable", False),
+                                    "isSliced": focus_obj.get("isSliced", False),
+                                    "breakable": focus_obj.get("breakable", False),
+                                    "isBroken": focus_obj.get("isBroken", False),
+                                    "canBeUsedUp": focus_obj.get("canBeUsedUp", False),
+                                    "isUsedUp": focus_obj.get("isUsedUp", False),
                                 }
 
                             mem.record(a, metadata={
@@ -359,7 +400,7 @@ class Ai2ThorPipeline(PipelineABC):
             instance_payloads_path = os.path.join(output_dir, "instance_payloads.jsonl")
             with open(instance_payloads_path, "w", encoding="utf-8") as f:
                 for p in payloads:
-                    f.write(json.dumps(p, ensure_ascii=False) + "\n")
+                    f.write(json.dumps(self._to_serializable(p), ensure_ascii=False) + "\n")
 
         return {
             "output_dir": output_dir,
