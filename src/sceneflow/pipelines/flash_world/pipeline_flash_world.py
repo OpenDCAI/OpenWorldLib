@@ -41,6 +41,7 @@ class FlashWorldPipeline:
     def from_pretrained(
         cls,
         representation_path: str,
+        required_components: Optional[Dict[str, str]] = None,
         **kwargs
     ) -> 'FlashWorldPipeline':
         """
@@ -48,11 +49,21 @@ class FlashWorldPipeline:
         
         Args:
             representation_path: HuggingFace repo ID for representation model
+            required_components: Optional required component paths. Supports:
+                - 'wan_model_path': Wan model repo ID/path for internal modules
             **kwargs: Additional arguments passed to representation.from_pretrained()
             
         Returns:
             FlashWorldPipeline instance
         """
+        if isinstance(required_components, dict) and "wan_model_path" in required_components.keys():
+            kwargs["wan_model_path"] = required_components.get(
+                "wan_model_path",
+                "Wan-AI/Wan2.2-TI2V-5B-Diffusers",
+            )
+        elif "wan_model_path" not in kwargs and "model_id" not in kwargs:
+            kwargs["wan_model_path"] = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
+
         representation_model = FlashWorldRepresentation.from_pretrained(
             pretrained_model_path=representation_path,
             **kwargs
