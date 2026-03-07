@@ -52,8 +52,8 @@ class Wan2p2Operator(BaseOperator):
     def process_interaction(
         self,
         *,
-        task: str,
-        image: Optional[Image.Image] = None,
+        mode: str,
+        images: Optional[Image.Image] = None,
         # prompt 扩写相关参数（只在 ti2v 任务下生效）
         use_prompt_extend: bool = False,
         prompt_extend_method: str = "local_qwen",
@@ -72,19 +72,19 @@ class Wan2p2Operator(BaseOperator):
         self.interaction_history.append(prompt)
 
         # 仅在 ti2v 任务下，且打开 use_prompt_extend 时做扩写
-        if "ti2v" in task and use_prompt_extend:
+        if "ti2v" in mode and use_prompt_extend:
             logging.info("Extending prompt ...")
             if prompt_extend_method == "dashscope":
                 prompt_expander = DashScopePromptExpander(
                     model_name=prompt_extend_model,
-                    task=task,
-                    is_vl=image is not None,
+                    mode=mode,
+                    is_vl=images is not None,
                 )
             elif prompt_extend_method == "local_qwen":
                 prompt_expander = QwenPromptExpander(
                     model_name=prompt_extend_model,
-                    task=task,
-                    is_vl=image is not None,
+                    mode=mode,
+                    is_vl=images is not None,
                     device=0,
                 )
             else:
@@ -94,7 +94,7 @@ class Wan2p2Operator(BaseOperator):
 
             prompt_output = prompt_expander(
                 prompt,
-                image=image,
+                image=images,
                 tar_lang=prompt_extend_target_lang,
                 seed=base_seed,
             )

@@ -18,7 +18,6 @@ EXAMPLE_PROMPT = {
 }
 
 
-
 class Wan2p2Pipeline:
 
     def __init__(
@@ -27,22 +26,16 @@ class Wan2p2Pipeline:
         operator: Wan2p2Operator,
         synthesis_model: Wan2p2Synthesis,
         memory_module: Optional[Wan2p2Memory] = None,
-        task: str = "ti2v-5B",
-        ulysses_size: int = 1,
-        t5_fsdp: bool = False,
-        t5_cpu: bool = False,
-        dit_fsdp: bool = False,
+        mode: str = "ti2v-5B",
         prompt: Optional[str] = None,
         use_prompt_extend: bool = False,
         prompt_extend_method: str = "local_qwen",
         prompt_extend_model: Optional[str] = None,
         prompt_extend_target_lang: str = "zh",
-        image: Optional[str] = None,
         sample_solver: str = "unipc",
         sample_steps: Optional[int] = None,
         sample_shift: Optional[float] = None,
         sample_guide_scale: Optional[float] = None,
-        convert_model_dtype: bool = False,
         base_seed: int = -1,
     ) -> None:
         self.operator = operator
@@ -50,21 +43,15 @@ class Wan2p2Pipeline:
         self.memory_module = memory_module if memory_module else Wan2p2Memory()
         
         # Store parameters
-        self.task = task
-        self.ulysses_size = ulysses_size
-        self.t5_fsdp = t5_fsdp
-        self.t5_cpu = t5_cpu
-        self.dit_fsdp = dit_fsdp
+        self.mode = mode
         self.prompt = prompt
         self.use_prompt_extend = use_prompt_extend
         self.prompt_extend_method = prompt_extend_method
         self.prompt_extend_model = prompt_extend_model
         self.prompt_extend_target_lang = prompt_extend_target_lang
-        self.image = image
-        self.convert_model_dtype = convert_model_dtype
         
         # Set default sampling parameters from config
-        cfg = WAN_CONFIGS[task]
+        cfg = WAN_CONFIGS[mode]
         self.sample_solver = sample_solver
         self.sample_steps = sample_steps if sample_steps is not None else cfg.sample_steps
         self.sample_shift = sample_shift if sample_shift is not None else cfg.sample_shift
@@ -75,14 +62,14 @@ class Wan2p2Pipeline:
     @classmethod
     def from_pretrained(
         cls,
-        synthesis_model_path: str,
-        task: str = "ti2v-5B",
+        model_path: str,
+        mode: str = "ti2v-5B",
         ulysses_size: int = 1,
         t5_fsdp: bool = False,
         t5_cpu: bool = False,
         dit_fsdp: bool = False,
         convert_model_dtype: bool = False,
-        device_id: int = 0,
+        device: int = 0,
         rank: int = 0,
         **kwargs
     ) -> "Wan2p2Pipeline":
@@ -90,27 +77,21 @@ class Wan2p2Pipeline:
         Load a pretrained Wan2p2Pipeline.
         
         Args:
-            synthesis_model_path: Path to the pretrained model
-            task: Task type (e.g., "ti2v-5B")
-            device_id: GPU device ID
+            model_path: Path to the pretrained model
+            mode: Task type (e.g., "ti2v-5B")
+            device: GPU device ID
             rank: Distributed training rank
-            ... (other model loading parameters)
-        
-        Note:
-            Generation parameters like `prompt`, `image`, `size`, `frame_num`,
-            `offload_model`, sampling parameters, and prompt extension parameters
-            should be passed to `__call__()` method instead of here.
         """
         # Validate task
-        assert task in WAN_CONFIGS, f"Unsupport task: {task}"
-        assert task in EXAMPLE_PROMPT, f"Unsupport task: {task}"
+        assert mode in WAN_CONFIGS, f"Unsupport mode: {mode}"
+        assert mode in EXAMPLE_PROMPT, f"Unsupport mode: {mode}"
 
         operator = Wan2p2Operator()
         memory_module = Wan2p2Memory()
         synthesis_model = Wan2p2Synthesis.from_pretrained(
-            task=task,
-            ckpt_dir=synthesis_model_path,
-            device_id=device_id,
+            mode=mode,
+            ckpt_dir=model_path,
+            device=device,
             rank=rank,
             t5_fsdp=t5_fsdp,
             dit_fsdp=dit_fsdp,
@@ -123,12 +104,7 @@ class Wan2p2Pipeline:
             operator=operator,
             synthesis_model=synthesis_model,
             memory_module=memory_module,
-            task=task,
-            ulysses_size=ulysses_size,
-            t5_fsdp=t5_fsdp,
-            t5_cpu=t5_cpu,
-            dit_fsdp=dit_fsdp,
-            convert_model_dtype=convert_model_dtype,
+            mode=mode,
         )
 
 
@@ -136,8 +112,7 @@ class Wan2p2Pipeline:
         self,
         *,
         prompt: str,
-        image_path: Optional[str] = None,
-        image: Optional[Image.Image] = None,
+        images: Optional[Image.Image] = None,
         use_prompt_extend: Optional[bool] = None,
         prompt_extend_method: Optional[str] = None,
         prompt_extend_model: Optional[str] = None,
@@ -145,12 +120,9 @@ class Wan2p2Pipeline:
         base_seed: Optional[int] = None,
     ) -> Dict[str, Any]:
 
-        # 优先使用内存中的 image，其次才是 image_path
-        # 如果 image_path 是空字符串，视为 None（ti2v 任务允许没有参考图像）
-        if image is not None:
-            input_for_perception = image
-        elif image_path and image_path.strip():
-            input_for_perception = image_path
+        # 优先使用内存中的 images
+        if images is not None:
+            input_for_perception = images
         else:
             input_for_perception = None
         
@@ -159,8 +131,8 @@ class Wan2p2Pipeline:
 
         self.operator.get_interaction(prompt)
         interaction = self.operator.process_interaction(
-            task=self.task,
-            image=img,
+            mode=self.mode,
+            images=img,
             use_prompt_extend=use_prompt_extend if use_prompt_extend is not None else self.use_prompt_extend,
             prompt_extend_method=prompt_extend_method if prompt_extend_method is not None else self.prompt_extend_method,
             prompt_extend_model=prompt_extend_model if prompt_extend_model is not None else self.prompt_extend_model,
@@ -171,11 +143,8 @@ class Wan2p2Pipeline:
         return {
             "prompt": interaction["processed_prompt"],
             "image": img,
-            "paths": {
-                "image_path": image_path,
-            },
             "meta": {
-                "task": self.task,
+                "mode": self.mode,
             },
         }
 
@@ -183,8 +152,7 @@ class Wan2p2Pipeline:
         self,
         *,
         prompt: str,
-        image_path: Optional[str] = None,
-        image: Optional[Image.Image] = None,
+        images: Optional[Image.Image] = None,
         size: Optional[str] = None,
         frame_num: Optional[int] = None,
         sample_solver: Optional[str] = None,
@@ -203,9 +171,8 @@ class Wan2p2Pipeline:
         
         Args:
             prompt: Text prompt for video generation (required)
-            image_path: Path to input image (optional)
-            image: PIL Image object (optional, takes precedence over image_path)
-            size: Output video size (optional, defaults to config value, e.g., "1280*720")
+            images: PIL Image object (optional)
+            size: Output video size (optional, defaults to config value, e.g., "1280*704")
             frame_num: Number of frames (optional, defaults to config value)
             sample_solver: Override sampling solver (optional, defaults to "unipc")
             sample_steps: Override sampling steps (optional, defaults to config value)
@@ -221,17 +188,15 @@ class Wan2p2Pipeline:
         Returns:
             Generated video tensor
         """
-        cfg = WAN_CONFIGS[self.task]
+        cfg = WAN_CONFIGS[self.mode]
         
-        # Set default size from config if not provided
         if size is None:
-            # Use a reasonable default, typically "1280*720"
-            size = "1280*720"
+            size = "1280*704"
         
         # Validate size
-        if 's2v' not in self.task:
-            assert size in SUPPORTED_SIZES[self.task], \
-                f"Unsupport size {size} for task {self.task}, supported sizes are: {', '.join(SUPPORTED_SIZES[self.task])}"
+        if 's2v' not in self.mode:
+            assert size in SUPPORTED_SIZES[self.mode], \
+                f"Unsupport size {size} for mode {self.mode}, supported sizes are: {', '.join(SUPPORTED_SIZES[self.mode])}"
         
         # Set default frame_num from config if not provided
         if frame_num is None:
@@ -246,8 +211,7 @@ class Wan2p2Pipeline:
 
         processed = self.process(
             prompt=prompt,
-            image_path=image_path,
-            image=image,
+            images=images,
             use_prompt_extend=use_prompt_extend,
             prompt_extend_method=prompt_extend_method,
             prompt_extend_model=prompt_extend_model,
@@ -257,7 +221,7 @@ class Wan2p2Pipeline:
 
         # Create a dict with all the synthesis parameters
         synthesis_params = {
-            "task": self.task,
+            "mode": self.mode,
             "size": size,
             "frame_num": frame_num,
             "sample_solver": video_sample_solver,
@@ -280,8 +244,7 @@ class Wan2p2Pipeline:
         self,
         *,
         prompt: Optional[str] = None,
-        image_path: Optional[str] = None,
-        image: Optional[Image.Image] = None,
+        images: Optional[Image.Image] = None,
         use_prompt_extend: Optional[bool] = None,
         prompt_extend_method: Optional[str] = None,
         prompt_extend_model: Optional[str] = None,
@@ -300,8 +263,7 @@ class Wan2p2Pipeline:
         
         video = self.__call__(
             prompt=prompt,
-            image_path=image_path,
-            image=image,
+            images=images,
             use_prompt_extend=use_prompt_extend,
             prompt_extend_method=prompt_extend_method,
             prompt_extend_model=prompt_extend_model,
