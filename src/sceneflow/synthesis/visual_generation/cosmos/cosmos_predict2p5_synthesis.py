@@ -34,13 +34,13 @@ class CosmosPredict2p5Synthesis(BaseSynthesis):
 
     def __init__(
         self,
-        task: str = "img2world",
+        mode: str = "img2world",
         text_encoder: Any = None,
         transformer: Any = None,
         vae: Any = None,
         scheduler: Any = None,
     ):
-        self.task = task 
+        self.mode = mode 
 
         # Initialize components
         self.text_encoder = text_encoder
@@ -60,7 +60,7 @@ class CosmosPredict2p5Synthesis(BaseSynthesis):
     @classmethod
     def from_pretrained(
         cls,
-        task: str,
+        mode: str,
         transformer_model_path: str,
         text_encoder_model_path: str,
         vae_model_path: str,
@@ -69,11 +69,11 @@ class CosmosPredict2p5Synthesis(BaseSynthesis):
         weight_dtype: Optional[torch.dtype] = torch.float32,
     ) -> "Cosmos2p5PredictSynthesis":
         """
-        Cosmos-Predict2.5 supports two task type: ['img2world', 'video2world'], currently we only support img2world.
+        Cosmos-Predict2.5 supports two modes: ['img2world', 'video2world'], currently we only support img2world.
         """
-        # Check task
-        if task not in COSMOS_2P5_TASKS:
-            raise ValueError(f"Unsupported task: {task}")
+        # Check mode
+        if mode not in COSMOS_2P5_TASKS:
+            raise ValueError(f"Unsupported mode: {mode}")
 
         # Download models from Hugging Face if local paths are not provided
         transformer_path_obj = Path(transformer_model_path)
@@ -142,7 +142,7 @@ class CosmosPredict2p5Synthesis(BaseSynthesis):
             transformer=transformer,
             vae=vae,
             scheduler=scheduler,
-            task=task
+            mode=mode
         )
         instance._execution_device = device
         return instance

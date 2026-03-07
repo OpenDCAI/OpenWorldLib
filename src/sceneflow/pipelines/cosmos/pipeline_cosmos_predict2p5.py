@@ -28,28 +28,27 @@ class CosmosPredict2p5Pipeline:
     @classmethod
     def from_pretrained(
         cls, 
-        transformer_name_or_path: Optional[str] = None,
-        text_encoder_name_or_path: Optional[str] = None,
-        vae_name_or_path: Optional[str] = None,
+        model_path: Optional[str] = None,
+        required_components: Optional[Dict] = None,
         token: Optional[str] = None,
-        task: str = 'img2world',
+        mode: str = 'img2world',
         device: str = "cuda",
         weight_dtype: Optional[torch.dtype] = torch.bfloat16,
         **kwargs,
     ) -> "CosmosPredict2p5Pipeline":
-        print(transformer_name_or_path)
-        if transformer_name_or_path is None:
-            transformer_name_or_path = "nvidia/Cosmos-Predict2.5"
-        if text_encoder_name_or_path is None:
-            text_encoder_name_or_path = "nvidia/Cosmos-Reason1-7B"
-        if vae_name_or_path is None:
-            vae_name_or_path = "Wan-AI/Wan2.1-T2V-1.3B"
+        if model_path is None:
+            model_path = "nvidia/Cosmos-Predict2.5"
+        if required_components is None:
+            required_components = {
+                "text_encoder_model_path": "nvidia/Cosmos-Reason1-7B",
+                "vae_model_path": "Wan-AI/Wan2.1-T2V-1.3B",
+            }
 
         synthesis_model = CosmosPredict2p5Synthesis.from_pretrained(
-            task=task,
-            transformer_model_path=transformer_name_or_path,
-            text_encoder_model_path=text_encoder_name_or_path,
-            vae_model_path=vae_name_or_path,
+            mode=mode,
+            transformer_model_path=model_path,
+            text_encoder_model_path=required_components["text_encoder_model_path"],
+            vae_model_path=required_components["vae_model_path"],
             token=token,
             device=torch.device(device),
             weight_dtype=weight_dtype,
@@ -84,12 +83,12 @@ class CosmosPredict2p5Pipeline:
     def process(
         self,
         prompt: str,
-        image: Optional[Image.Image] = None,
+        images: Optional[Image.Image] = None,
         image_path: Optional[str] = None,
         height: int = 704,
         width: int = 1280,
     ) -> Dict[str, Any]:
-        input_for_perception = image if image is not None else image_path
+        input_for_perception = images if images is not None else image_path
         perception = self.operator.process_perception(
             input_path=input_for_perception,
             height=height,
@@ -116,7 +115,7 @@ class CosmosPredict2p5Pipeline:
         self,
         prompt: str,
         negative_prompt: Optional[str] = None,
-        image: Optional[Image.Image] = None,
+        images: Any = None,
         image_path: Optional[str] = None,
         guidance_scale: float = 7.0,
         num_inference_steps: int = 35,
@@ -141,7 +140,7 @@ class CosmosPredict2p5Pipeline:
 
         processed_input = self.process(
             prompt=prompt,
-            image=image,
+            images=images,
             image_path=image_path,
             height=height,
             width=width,
@@ -171,7 +170,7 @@ class CosmosPredict2p5Pipeline:
         self,
         prompt: str,
         negative_prompt: Optional[str] = None,
-        image: Optional[Image.Image] = None,
+        images: Any = None,
         image_path: Optional[str] = None,
         guidance_scale: float = 7.0,
         num_inference_steps: int = 35,
@@ -192,7 +191,7 @@ class CosmosPredict2p5Pipeline:
         video = self.__call__(
             prompt=prompt,
             negative_prompt=negative_prompt,
-            image=image,
+            images=images,
             image_path=image_path,
             guidance_scale=guidance_scale,
             num_inference_steps=num_inference_steps,

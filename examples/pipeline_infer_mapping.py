@@ -103,10 +103,10 @@ def infer_spirit_v1p5_pipeline(pipe, images, raw_state, task, robot_type="Franka
     return actions
 
 
-def infer_cosmos_predict2p5_pipeline(pipe, prompt, image_path=None, output_path=None, fps=None):
+def infer_cosmos_predict2p5_pipeline(pipe, prompt, input_image, output_path=None, fps=None):
     output_video = pipe(
         prompt=prompt,
-        image_path=image_path,
+        images=input_image,
         output_type='np',
         num_inference_steps=35,
     )

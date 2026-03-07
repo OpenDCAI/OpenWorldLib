@@ -61,14 +61,16 @@ def load_spirit_v1p5_pipeline(model_path: Union[str, Dict], device: str, norm_st
     )
 
 
-def load_cosmos_predict2p5_pipeline(model_path: Union[str, Dict], device: str, token: str = None):
+def load_cosmos_predict2p5_pipeline(model_path: Union[str, Dict], device: str, token: str = None, mode='img2world'):
     from sceneflow.pipelines.cosmos.pipeline_cosmos_predict2p5 import CosmosPredict2p5Pipeline
     return CosmosPredict2p5Pipeline.from_pretrained(
-        transformer_name_or_path=_resolve_path(model_path, "transformer_name_or_path"),
-        text_encoder_name_or_path=_resolve_path(model_path, "text_encoder_name_or_path"),
-        vae_name_or_path=_resolve_path(model_path, "vae_name_or_path"),
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        required_components = {
+            "text_encoder_model_path": _resolve_path(model_path, "text_encoder_model_path"),
+            "vae_model_path": _resolve_path(model_path, "vae_model_path"),
+        },
         token=token,
-        task="img2world",
+        mode=mode,
         device=device,
     )
 
