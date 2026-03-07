@@ -8,19 +8,27 @@ from sceneflow.pipelines.wan.pipeline_wan_2p2 import Wan2p2Pipeline
 from sceneflow.base_models.diffusion_model.video.wan_2p2.configs import WAN_CONFIGS
 
 
-pretrained_model_path: str = "Wan-AI/Wan2.2-TI2V-5B"
+pretrained_model_path: str = "/home/dataset-local/usr/lh/hdl/sceneflow/Wan2.2/Wan2.2-TI2V-5B"
 
 pipeline = Wan2p2Pipeline.from_pretrained(
     model_path=pretrained_model_path,
-    task="ti2v-5B",
+    mode="ti2v-5B",
     device=0,
     rank=0,
 )
 
 save_file = "./wan2p2_interactive_output.mp4"
 
-cfg = WAN_CONFIGS[pipeline.task]
+cfg = WAN_CONFIGS[pipeline.mode]
 pipeline.memory_module.manage(action="reset")
+
+# 可选：如果需要初始图片，可以在这里设置
+# 如果不设置或设置为 None，第一次调用将进行纯文本生成（t2v）
+initial_image_path: Optional[str] = "/home/dataset-local/usr/lh/hdl/sceneflow/Wan2.2/Wan2.2-TI2V-5B/examples/i2v_input.JPG" # 设置为图片路径，如 "path to image"
+if initial_image_path:
+    last_frame_img = Image.open(initial_image_path).convert('RGB')
+else:
+    last_frame_img: Optional[Image.Image] = None
 
 default_prompt = (
     "Summer beach vacation style, a white cat wearing sunglasses "
@@ -41,21 +49,17 @@ print("\n--- Wan2p2 Interactive Generation Started ---")
 print("Each round will generate a video, and the last frame of the video will be used as the starting image for the next round.")
 print("Input 'q' / 'quit' / 'n' to end and export the final video.\n")
 
-last_frame_img: Optional[Image.Image] = None
 
 while True:
     print(f"\n[Turn {turn_idx}] Use prompt: {user_prompt}")
 
     if last_frame_img is None:
-        image_path = ""  # Empty string for initial generation
         print("  This is the initial generation")
     else:
-        image_path = None
         print("  This round continues from the last frame of the previous round (memory image)")
 
     video = pipeline.stream(
         prompt=user_prompt,
-        image_path=image_path,
         images=last_frame_img,
     )
 

@@ -172,7 +172,7 @@ class Wan2p2Pipeline:
         Args:
             prompt: Text prompt for video generation (required)
             images: PIL Image object (optional)
-            size: Output video size (optional, defaults to config value, e.g., "1280*720")
+            size: Output video size (optional, defaults to config value, e.g., "1280*704")
             frame_num: Number of frames (optional, defaults to config value)
             sample_solver: Override sampling solver (optional, defaults to "unipc")
             sample_steps: Override sampling steps (optional, defaults to config value)
@@ -190,10 +190,8 @@ class Wan2p2Pipeline:
         """
         cfg = WAN_CONFIGS[self.mode]
         
-        # Set default size from config if not provided
         if size is None:
-            # Use a reasonable default, typically "1280*720"
-            size = "1280*720"
+            size = "1280*704"
         
         # Validate size
         if 's2v' not in self.mode:
