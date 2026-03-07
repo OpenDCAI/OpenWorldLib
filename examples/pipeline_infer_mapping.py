@@ -41,17 +41,10 @@ def infer_hunyuan_game_craft_pipeline(pipe, input_image, interaction_signal, out
 
 def infer_lingbot_world_pipeline(pipe, input_image, interaction_signal, output_path=None, fps=None):
     num_output_frames = len(interaction_signal) * 36 + 1
-    lingbot_interaction = {
-        "prompt": "",
-        "action_list": interaction_signal
-    }
-    output_video = pipe(
-        input_image=input_image,
-        num_output_frames=num_output_frames,
-        interaction_signal=lingbot_interaction,
-        resize_H=480,
-        resize_W=832,
-        seed=42
+    output_video = pipeline(
+    images=input_image,
+    num_frames=num_output_frames,
+    interactions=interaction_signal
     )
     if output_path is not None:
         output_path = Path(output_path)

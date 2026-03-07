@@ -58,8 +58,8 @@ def main():
         print(f"Loading pipeline from {PRETRAINED_MODEL_PATH}...")
         
     pipeline = LingBotPipeline.from_pretrained(
-        synthesis_model_path=PRETRAINED_MODEL_PATH,
-        task="i2v-A14B",
+        model_path=PRETRAINED_MODEL_PATH,
+        mode="i2v-A14B",
         device=f"cuda:{local_rank}",
         rank=rank,
         t5_fsdp=(world_size > 1),
@@ -143,11 +143,10 @@ def main():
         }
 
         video_chunk = pipeline.stream(
-            interaction_signal=interaction_signal,
-            initial_image=start_img,
-            num_output_frames=FRAMES_PER_TURN,
-            resize_H=RESIZE_H,
-            resize_W=RESIZE_W,
+            prompt=current_prompt,
+            interactions=valid_actions,
+            images=start_img,
+            num_frames=FRAMES_PER_TURN,
             seed=42 + turn_idx
         )
 

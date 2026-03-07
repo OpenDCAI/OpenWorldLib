@@ -39,8 +39,8 @@ def load_lingbot_world_pipeline(model_path: Union[str, Dict], device: str):
     from sceneflow.pipelines.lingbot_world.pipeline_lingbot_world import LingBotPipeline
     rank = int(os.getenv("RANK", 0))
     return LingBotPipeline.from_pretrained(
-        synthesis_model_path=_resolve_path(model_path, "pretrained_model_path"),
-        task="i2v-A14B",
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        mode="i2v-A14B",
         device=device,  
         rank=rank,
         t5_fsdp=False,

@@ -1,5 +1,4 @@
 import os
-import sys
 import torch
 import torch.distributed as dist
 from PIL import Image
@@ -27,8 +26,8 @@ else:
 
 
 pipeline = LingBotPipeline.from_pretrained(
-    synthesis_model_path=pretrained_model_path,
-    task="i2v-A14B",
+    model_path=pretrained_model_path,
+    mode="i2v-A14B",
     device=f"cuda:{local_rank}",
     rank=rank,
     t5_fsdp=(world_size > 1),
@@ -40,14 +39,10 @@ pipeline = LingBotPipeline.from_pretrained(
 
 action_commands = ["backward", "camera_l"] 
 output_video = pipeline(
-    input_image=input_image,
-    num_output_frames=81,
-    interaction_signal={
-        "prompt": prompt,
-        "action_list": action_commands,
-    },
-    resize_H=480,
-    resize_W=832,
+    images=input_image,
+    num_frames=81,
+    prompt=prompt,
+    interactions=action_commands,
     seed=42
 )
 

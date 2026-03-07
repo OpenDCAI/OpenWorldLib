@@ -21,16 +21,16 @@ class LingBotPipeline:
 
     @classmethod
     def from_pretrained(cls,
-                        synthesis_model_path: str,
-                        task: str = "i2v-A14B",
+                        model_path: str,
+                        mode: str = "i2v-A14B",
                         device: str = "cuda",
                         **kwargs) -> "LingBotPipeline":
         
-        print(f"Loading LingBot World Model from {synthesis_model_path}...")
+        print(f"Loading LingBot World Model from {model_path}...")
         
         synthesis_model = LingBotSynthesis.from_pretrained(
-            pretrained_model_path=synthesis_model_path,
-            task=task,
+            pretrained_model_path=model_path,
+            task=mode,
             device=device,
             **kwargs
         )
@@ -47,26 +47,33 @@ class LingBotPipeline:
         return pipeline
     
     def process(self,
-                input_image: Image.Image,
-                interaction_signal: Union[Dict, List],
-                resize_H=480,
-                resize_W=832,
-                num_output_frames=81): 
+                images: Any = None,
+                prompt: Optional[str] = None,
+                interactions: Optional[list[str]] = None,
+                resize_H: int = 480,
+                resize_W: int = 832,
+                num_frames: Optional[int] = 81): 
         
-        # 1. Perception
+        if isinstance(images, str):
+            images = Image.open(images).convert("RGB")
+
+        interaction_signal = {
+            "prompt": prompt if prompt is not None else "",
+            "action_list": interactions if interactions is not None else [],
+        }
+        
         perception_dict = self.operators.process_perception(
-            input_image, 
+            images, 
             resize_H=resize_H, 
             resize_W=resize_W,
             device=self.device
         )
         
-        # 2. Interaction
         self.operators.get_interaction(interaction_signal)
         interaction_dict = self.operators.process_interaction(
             resize_H=resize_H,
             resize_W=resize_W,
-            num_frames=num_output_frames,
+            num_frames=num_frames,
             device=self.device
         )
         
@@ -80,27 +87,29 @@ class LingBotPipeline:
         return output_dict
 
     def __call__(self,
-                 input_image: Image.Image,
-                 num_output_frames: int = 81,
-                 interaction_signal: Dict = {},
-                 resize_H=480,
-                 resize_W=832,
-                 seed: int = -1, 
-                 **kwds):
+                  images: Any = None,
+                  num_frames: Optional[int] = 81,
+                  prompt: Optional[str] = None,
+                  interactions: Optional[list[str]] = None,
+                  resize_H: int = 480,
+                  resize_W: int = 832,
+                  seed: int = 42, 
+                  **kwds):
         
         processed_inputs = self.process(
-            input_image=input_image,
-            interaction_signal=interaction_signal,
+            images=images,
+            prompt=prompt,
+            interactions=interactions,
             resize_H=resize_H,
             resize_W=resize_W,
-            num_output_frames=num_output_frames 
+            num_frames=num_frames 
         )
         
         output_video = self.synthesis_model.predict(
             image_tensor=processed_inputs["image_tensor"],
             prompt=processed_inputs["prompt"],
             camera_data=processed_inputs["camera_data"],
-            num_output_frames=num_output_frames,
+            num_output_frames=num_frames,
             height=resize_H,
             width=resize_W,
             seed=seed,
@@ -110,30 +119,32 @@ class LingBotPipeline:
         return output_video
     
     def stream(self,
-               interaction_signal: Dict,
-               initial_image: Optional[Image.Image] = None,
-               num_output_frames: int = 81,
-               resize_H: int = 480,
-               resize_W: int = 832,
-               seed: int = -1,
-               **kwds) -> np.ndarray:
+                prompt: Optional[str] = None,
+                interactions: Optional[list[str]] = None,
+                images: Any = None,
+                num_frames: Optional[int] = 81,
+                resize_H: int = 480,
+                resize_W: int = 832,
+                seed: int = 42,
+                **kwds) -> np.ndarray:
         
-        # 1. Initialize Memory if initial_image provided (First Turn)
-        if initial_image is not None:
+        # 1. Initialize Memory if images provided (First Turn)
+        if images is not None:
             print("--- Stream Started ---")
             self.memory_module.manage(action="reset") # Clear old memory
-            self.memory_module.record(initial_image, type="image")
+            self.memory_module.record(images, type="image")
         
         # 2. Retrieve Context (Input for this turn)
         current_img = self.memory_module.select()
         if current_img is None:
-            raise ValueError("No image in storage. Provide 'initial_image' first.")
+            raise ValueError("No image in storage. Provide 'images' first.")
 
         # 3. Generate Video
         video_output = self.__call__(
-            input_image=current_img,
-            num_output_frames=num_output_frames,
-            interaction_signal=interaction_signal,
+            images=current_img,
+            num_frames=num_frames,
+            prompt=prompt,
+            interactions=interactions,
             resize_H=resize_H,
             resize_W=resize_W,
             seed=seed,
