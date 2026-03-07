@@ -34,13 +34,13 @@ class CosmosPredict2p5Synthesis(BaseSynthesis):
 
     def __init__(
         self,
-        task: str = "img2world",
+        mode: str = "img2world",
         text_encoder: Any = None,
         transformer: Any = None,
         vae: Any = None,
         scheduler: Any = None,
     ):
-        self.task = task 
+        self.mode = mode 
 
         # Initialize components
         self.text_encoder = text_encoder
@@ -60,20 +60,20 @@ class CosmosPredict2p5Synthesis(BaseSynthesis):
     @classmethod
     def from_pretrained(
         cls,
-        task: str,
+        mode: str,
         transformer_model_path: str,
         text_encoder_model_path: str,
         vae_model_path: str,
         token: Optional[str] = None,
         device: Optional[torch.device] = None,
-        dtype: Optional[torch.dtype] = torch.float32,
+        weight_dtype: Optional[torch.dtype] = torch.float32,
     ) -> "Cosmos2p5PredictSynthesis":
         """
-        Cosmos-Predict2.5 supports two task type: ['img2world', 'video2world'], currently we only support img2world.
+        Cosmos-Predict2.5 supports two modes: ['img2world', 'video2world'], currently we only support img2world.
         """
-        # Check task
-        if task not in COSMOS_2P5_TASKS:
-            raise ValueError(f"Unsupported task: {task}")
+        # Check mode
+        if mode not in COSMOS_2P5_TASKS:
+            raise ValueError(f"Unsupported mode: {mode}")
 
         # Download models from Hugging Face if local paths are not provided
         transformer_path_obj = Path(transformer_model_path)
@@ -129,20 +129,20 @@ class CosmosPredict2p5Synthesis(BaseSynthesis):
         transformer = Cosmos25Transformer3DModel(**config_args)
         load_official_weights(transformer, str(transformer_ckpt))
         text_encoder = Reason1TextEncoder(str(text_encoder_path))
-        vae = WanVAE(vae_pth=str(vae_ckpt), dtype=dtype, device=device)  # Vae device & dtype specify in initalization
+        vae = WanVAE(vae_pth=str(vae_ckpt), dtype=weight_dtype, device=device)  # Vae device & dtype specify in initalization
         scheduler = FlowUniPCMultistepScheduler(num_train_timesteps=1000, shift=1, use_dynamic_shifting=False)
         
         # Move to device & change dtype
         device = device or torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        transformer = transformer.to(device, dtype)
-        text_encoder = text_encoder.to(device, dtype)
+        transformer = transformer.to(device, weight_dtype)
+        text_encoder = text_encoder.to(device, weight_dtype)
         
         instance = cls(
             text_encoder=text_encoder,
             transformer=transformer,
             vae=vae,
             scheduler=scheduler,
-            task=task
+            mode=mode
         )
         instance._execution_device = device
         return instance

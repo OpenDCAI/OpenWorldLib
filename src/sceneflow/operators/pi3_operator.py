@@ -1,4 +1,5 @@
 import os
+import math
 import cv2
 import numpy as np
 import torch
@@ -6,6 +7,36 @@ from typing import List, Optional, Union, Dict, Any
 from pathlib import Path
 
 from .base_operator import BaseOperator
+
+
+NAVIGATION_TEMPLATE = [
+    "forward", "backward", "left", "right",
+    "forward_left", "forward_right", "backward_left", "backward_right",
+    "camera_up", "camera_down", "camera_l", "camera_r",
+    "camera_ul", "camera_ur", "camera_dl", "camera_dr",
+    "camera_zoom_in", "camera_zoom_out",
+]
+
+NAVIGATION_DELTAS = {
+    "forward":        [0.0,  0.0, -0.5, 0.0,  0.0],
+    "backward":       [0.0,  0.0,  0.5, 0.0,  0.0],
+    "left":           [-0.5, 0.0,  0.0, 0.0,  0.0],
+    "right":          [0.5,  0.0,  0.0, 0.0,  0.0],
+    "forward_left":   [-0.35, 0.0, -0.35, 0.0, 0.0],
+    "forward_right":  [0.35,  0.0, -0.35, 0.0, 0.0],
+    "backward_left":  [-0.35, 0.0,  0.35, 0.0, 0.0],
+    "backward_right": [0.35,  0.0,  0.35, 0.0, 0.0],
+    "camera_up":      [0.0,  0.0,  0.0, -0.15, 0.0],
+    "camera_down":    [0.0,  0.0,  0.0,  0.15, 0.0],
+    "camera_l":       [0.0,  0.0,  0.0,  0.0, -0.15],
+    "camera_r":       [0.0,  0.0,  0.0,  0.0,  0.15],
+    "camera_ul":      [0.0,  0.0,  0.0, -0.1, -0.1],
+    "camera_ur":      [0.0,  0.0,  0.0, -0.1,  0.1],
+    "camera_dl":      [0.0,  0.0,  0.0,  0.1, -0.1],
+    "camera_dr":      [0.0,  0.0,  0.0,  0.1,  0.1],
+    "camera_zoom_in": [0.0,  0.0, -0.3,  0.0,  0.0],
+    "camera_zoom_out":[0.0,  0.0,  0.3,  0.0,  0.0],
+}
 
 
 class Pi3Operator(BaseOperator):
@@ -16,15 +47,10 @@ class Pi3Operator(BaseOperator):
     def __init__(
         self,
         operation_types=["visual_instruction", "action_instruction"],
-        interaction_template=[
-            "3d_reconstruction",
-            "point_cloud_generation",
-            "depth_estimation",
-            "camera_pose_estimation",
-            "multi_view_reconstruction",
-            "conditional_reconstruction",
-        ]
+        interaction_template=None,
     ):
+        if interaction_template is None:
+            interaction_template = list(NAVIGATION_TEMPLATE)
         super(Pi3Operator, self).__init__(operation_types=operation_types)
         self.interaction_template = interaction_template
         self.interaction_template_init()
@@ -52,13 +78,10 @@ class Pi3Operator(BaseOperator):
 
     @staticmethod
     def _is_video(path: str) -> bool:
-        """Check if the given path is a video file."""
         VIDEO_EXTS = {'.mp4', '.avi', '.mov', '.mkv', '.webm', '.flv'}
         return os.path.splitext(path)[1].lower() in VIDEO_EXTS
 
     def _load_video_frames(self, video_path: str, interval: int = 10) -> List[np.ndarray]:
-        # Load frames from a video file at the given sampling interval.
-
         cap = cv2.VideoCapture(video_path)
         if not cap.isOpened():
             raise ValueError(f"Could not open video: {video_path}")
@@ -79,11 +102,6 @@ class Pi3Operator(BaseOperator):
         return frames
 
     def _load_single_image(self, image_path: str) -> np.ndarray:
-        """Load a single image file as uint8 RGB array.
-
-        Returns:
-            uint8 numpy array with shape (H, W, 3).
-        """
         raw_image = cv2.imread(image_path)
         if raw_image is None:
             raise ValueError(f"Could not read image from {image_path}")
@@ -93,8 +111,6 @@ class Pi3Operator(BaseOperator):
     def _compute_target_size(
         W_orig: int, H_orig: int, patch_size: int = 14, pixel_limit: int = 255000,
     ) -> tuple:
-        """Compute target (W, H) aligned to patch_size multiples under pixel_limit."""
-        import math
         scale = math.sqrt(pixel_limit / (W_orig * H_orig)) if W_orig * H_orig > 0 else 1
         W_target, H_target = W_orig * scale, H_orig * scale
         k, m = round(W_target / patch_size), round(H_target / patch_size)
@@ -106,10 +122,6 @@ class Pi3Operator(BaseOperator):
         return max(1, k) * patch_size, max(1, m) * patch_size
 
     def images_to_tensor(self, images: List[np.ndarray], device: str = "cuda") -> torch.Tensor:
-        """
-        Convert a list of numpy images to a batched tensor for Pi3.
-        Applies resize (LANCZOS, patch-aligned) and ToTensor conversion.
-        """
         if len(images) == 0:
             raise ValueError("No images provided")
 
@@ -142,10 +154,6 @@ class Pi3Operator(BaseOperator):
         interval: int = -1,
         **kwargs,
     ) -> List[np.ndarray]:
-        """
-        Process visual signal (image/images/video) for Pi3 inference.
-        Returns: List of numpy arrays (H, W, 3), uint8 or float [0,1].
-        """
         if isinstance(input_signal, (str, Path)):
             input_signal = str(input_signal)
             if self._is_video(input_signal):
@@ -194,7 +202,6 @@ class Pi3Operator(BaseOperator):
             raise ValueError(f"Unsupported input type: {type(input_signal)}")
 
     def check_interaction(self, interaction):
-        """Check if interaction is in the interaction template."""
         if interaction not in self.interaction_template:
             raise ValueError(
                 f"Interaction '{interaction}' not in interaction_template. "
@@ -203,44 +210,30 @@ class Pi3Operator(BaseOperator):
         return True
 
     def get_interaction(self, interaction):
-        """Add interaction to current_interaction list after validation."""
-        self.check_interaction(interaction)
-        self.current_interaction.append(interaction)
+        if isinstance(interaction, list):
+            for i in interaction:
+                self.check_interaction(i)
+                self.current_interaction.append(i)
+        else:
+            self.check_interaction(interaction)
+            self.current_interaction.append(interaction)
 
-    def process_interaction(self, num_frames: Optional[int] = None) -> Dict[str, Any]:
-        """Process current interactions and return feature flags for representation."""
+    def process_interaction(self, num_frames: Optional[int] = None) -> List[float]:
+        """Process navigation interactions and return accumulated camera delta [dx,dy,dz,theta_x,theta_z]."""
         if len(self.current_interaction) == 0:
             raise ValueError("No interaction to process. Use get_interaction() first.")
 
-        latest_interaction = self.current_interaction[-1]
-        self.interaction_history.append(latest_interaction)
+        delta = [0.0, 0.0, 0.0, 0.0, 0.0]
+        for interaction in self.current_interaction:
+            self.interaction_history.append(interaction)
+            d = NAVIGATION_DELTAS.get(interaction, [0.0, 0.0, 0.0, 0.0, 0.0])
+            for i in range(5):
+                delta[i] += d[i]
 
-        result = {
-            "predict_points": True,
-            "predict_cameras": True,
-            "predict_depth": True,
-            "predict_conf": True,
-            "use_conditions": False,
-        }
-
-        if latest_interaction in ("3d_reconstruction", "point_cloud_generation", "multi_view_reconstruction"):
-            pass
-        elif latest_interaction == "depth_estimation":
-            result["predict_points"] = False
-            result["predict_cameras"] = False
-        elif latest_interaction == "camera_pose_estimation":
-            result["predict_points"] = False
-            result["predict_depth"] = False
-        elif latest_interaction == "conditional_reconstruction":
-            result["use_conditions"] = True
-
-        if num_frames is not None:
-            result["num_frames"] = num_frames
-
-        return result
+        self.current_interaction = []
+        return delta
 
     def delete_last_interaction(self):
-        """Delete the last interaction from current_interaction list."""
         if len(self.current_interaction) > 0:
             self.current_interaction = self.current_interaction[:-1]
         else:

@@ -16,23 +16,23 @@ from ....base_models.diffusion_model.video.wan_2p2.configs import (
 class Wan2p2Synthesis:
     """
     Wan 推理层：只负责
-    - 根据 task 创建对应的 Wan* 管线
+    - 根据 mode 创建对应的 Wan* 管线
     - 根据 processed_inputs + args 调用 .generate(...)
     """
 
     def __init__(
         self,
         *,
-        task: str,
+        mode: str,
         cfg: Any,
         model: Any,
-        device_id: int,
+        device: int,
         rank: int = 0,
     ) -> None:
-        self.task = task
+        self.mode = mode
         self.cfg = cfg
         self.model = model
-        self.device_id = device_id
+        self.device = device
         self.rank = rank
 
 
@@ -40,9 +40,9 @@ class Wan2p2Synthesis:
     def from_pretrained(
         cls,
         *,
-        task: str,
+        mode: str,
         ckpt_dir: str,
-        device_id: int = 0,
+        device: int = 0,
         rank: int = 0,
         t5_fsdp: bool = False,
         dit_fsdp: bool = False,
@@ -54,14 +54,14 @@ class Wan2p2Synthesis:
         目前只关注 ti2v 任务，这里仅支持构建 WanTI2V。
         其他 task 如需支持，可以在后续按需补充。
         """
-        if task not in WAN_CONFIGS:
-            raise ValueError(f"Unsupported task: {task}")
+        if mode not in WAN_CONFIGS:
+            raise ValueError(f"Unsupported mode: {mode}")
 
-        if "ti2v" not in task:
+        if "ti2v" not in mode:
             raise ValueError(
-                f"Wan2p2Synthesis.from_pretrained only support ti2v task, got task={task!r}"
+                f"Wan2p2Synthesis.from_pretrained only support ti2v mode, got mode={mode!r}"
             )
-        cfg = WAN_CONFIGS[task]
+        cfg = WAN_CONFIGS[mode]
 
 
         if os.path.isdir(ckpt_dir):
@@ -79,7 +79,7 @@ class Wan2p2Synthesis:
         common_kwargs = dict(
             config=cfg,
             checkpoint_dir=model_root,
-            device_id=device_id,
+            device_id=device,
             rank=rank,
             t5_fsdp=t5_fsdp,
             dit_fsdp=dit_fsdp,
@@ -91,10 +91,10 @@ class Wan2p2Synthesis:
         model = wan_2p2.WanTI2V(**common_kwargs)
 
         return cls(
-            task=task,
+            mode=mode,
             cfg=cfg,
             model=model,
-            device_id=device_id,
+            device=device,
             rank=rank,
         )
 
@@ -104,7 +104,6 @@ class Wan2p2Synthesis:
         self,
         *,
         processed_inputs: Dict[str, Any],
-        task: Optional[str] = None,
         size: str = "1280*720",
         frame_num: Optional[int] = None,
         sample_shift: Optional[float] = None,
@@ -119,9 +118,9 @@ class Wan2p2Synthesis:
         prompt: str = processed_inputs["prompt"]
         img = processed_inputs.get("image")
 
-        if "ti2v" not in self.task:
+        if "ti2v" not in self.mode:
             raise ValueError(
-                f"Wan2p2Synthesis.predict only support ti2v task, got task={self.task!r}"
+                f"Wan2p2Synthesis.predict only support ti2v mode, got mode={self.mode!r}"
             )
 
         video = self.model.generate(

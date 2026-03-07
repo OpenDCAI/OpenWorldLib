@@ -16,18 +16,19 @@ Huggingface token is required to download cosmos-series model
 You can also skip download by specifying local ckpts path
 """
 token = "hf_xxxxxxxxxxxxxx"
-transformer_name_or_path = "nvidia/Cosmos-Predict2.5"
-text_encoder_name_or_path = "nvidia/Cosmos-Reason1-7B"
-vae_name_or_path = "Wan-AI/Wan2.1-T2V-1.3B"
+model_path = "nvidia/Cosmos-Predict2.5-2B"   # nvidia/Cosmos-Predict2.5-14B
+required_components = {
+    "text_encoder_model_path": "nvidia/Cosmos-Reason1-7B",
+    "vae_model_path": "Wan-AI/Wan2.1-T2V-1.3B",
+}
 
 pipeline = CosmosPredict2p5Pipeline.from_pretrained(
-    transformer_name_or_path=transformer_name_or_path,
-    text_encoder_name_or_path=text_encoder_name_or_path,
-    vae_name_or_path=vae_name_or_path,
+    model_path=model_path,
+    required_components=required_components,
     token=token,
-    task="img2world",
+    mode="img2world",
     device="cuda",
-    dtype=torch.bfloat16
+    weight_dtype=torch.bfloat16
 )
 
 # Set default negative prompt
@@ -77,7 +78,7 @@ while True:
 
     video = pipeline.stream(
         prompt=user_prompt,
-        image=last_frame_img,
+        images=last_frame_img,
         image_path=image_path,
         output_type='pt',  # Optional[str] = 'pt', 'pil', 'np' ...
         num_inference_steps=1,
