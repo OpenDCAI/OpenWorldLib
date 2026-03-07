@@ -8,7 +8,7 @@ from sceneflow.pipelines.wan.pipeline_wan_2p2 import Wan2p2Pipeline
 from sceneflow.base_models.diffusion_model.video.wan_2p2.configs import WAN_CONFIGS
 
 
-pretrained_model_path: str = "/home/dataset-local/usr/lh/hdl/sceneflow/Wan2.2/Wan2.2-TI2V-5B"
+pretrained_model_path: str = "Wan-AI/Wan2.2-TI2V-5B"
 
 pipeline = Wan2p2Pipeline.from_pretrained(
     model_path=pretrained_model_path,
@@ -24,7 +24,7 @@ pipeline.memory_module.manage(action="reset")
 
 # 可选：如果需要初始图片，可以在这里设置
 # 如果不设置或设置为 None，第一次调用将进行纯文本生成（t2v）
-initial_image_path: Optional[str] = "/home/dataset-local/usr/lh/hdl/sceneflow/Wan2.2/Wan2.2-TI2V-5B/examples/i2v_input.JPG" # 设置为图片路径，如 "path to image"
+initial_image_path: Optional[str] = "./data/test_case1/ref_image.png" # "path to image"
 if initial_image_path:
     last_frame_img = Image.open(initial_image_path).convert('RGB')
 else:
