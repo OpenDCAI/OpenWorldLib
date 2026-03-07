@@ -44,47 +44,54 @@ def render_point_cloud(
     height: int,
     width: int,
     focal_scale: float = 1.0,
-    splat_radius: int = 2,
+    splat_radius: int = 3,
 ) -> Image.Image:
-    """Render a point cloud from a given camera viewpoint using splatting.
+    """Render a point cloud with strict z-buffer and front-to-back splatting.
 
-    Uses vectorized numpy operations for fast rendering. Points are sorted
-    back-to-front so closer points overwrite farther ones (painter's algorithm).
-    Each point is rendered as a small square splat to reduce holes.
+    Points are sorted front-to-back. Each point is splatted as a disk.
+    Only the closest point at each pixel is kept (strict z-buffer),
+    which eliminates ghosting/layering artifacts.
     """
     c2w = camera_to_world.astype(np.float64)
     w2c = np.linalg.inv(c2w)
-
-    R = w2c[:3, :3]
-    t = w2c[:3, 3]
+    R, t = w2c[:3, :3], w2c[:3, 3]
 
     pts_cam = (R @ points.T).T + t
-
     valid = pts_cam[:, 2] > 1e-4
     pts_cam = pts_cam[valid]
     cols = colors[valid]
+    if cols.dtype == np.float64 or cols.dtype == np.float32:
+        if cols.max() <= 1.0:
+            cols = (cols * 255).clip(0, 255).astype(np.uint8)
+        else:
+            cols = cols.clip(0, 255).astype(np.uint8)
 
     fx = fy = focal_scale * max(height, width)
     cx_img, cy_img = width / 2.0, height / 2.0
 
-    u = (fx * pts_cam[:, 0] / pts_cam[:, 2] + cx_img).astype(np.int32)
-    v = (fy * pts_cam[:, 1] / pts_cam[:, 2] + cy_img).astype(np.int32)
+    u = np.round(fx * pts_cam[:, 0] / pts_cam[:, 2] + cx_img).astype(np.int32)
+    v = np.round(fy * pts_cam[:, 1] / pts_cam[:, 2] + cy_img).astype(np.int32)
     z = pts_cam[:, 2].astype(np.float32)
 
-    sort_idx = np.argsort(-z)
+    sort_idx = np.argsort(z)
     u, v, z, cols = u[sort_idx], v[sort_idx], z[sort_idx], cols[sort_idx]
 
-    in_bounds = (u >= 0) & (u < width) & (v >= 0) & (v < height)
-    u, v, z, cols = u[in_bounds], v[in_bounds], z[in_bounds], cols[in_bounds]
-
     canvas = np.zeros((height, width, 3), dtype=np.uint8)
+    z_buf = np.full((height, width), np.inf, dtype=np.float32)
 
     r = splat_radius
     for dy in range(-r, r + 1):
         for dx in range(-r, r + 1):
-            vv = np.clip(v + dy, 0, height - 1)
-            uu = np.clip(u + dx, 0, width - 1)
-            canvas[vv, uu] = cols
+            if dx * dx + dy * dy > r * r:
+                continue
+            py = v + dy
+            px = u + dx
+            mask = (px >= 0) & (px < width) & (py >= 0) & (py < height)
+            px_m, py_m, z_m, cols_m = px[mask], py[mask], z[mask], cols[mask]
+            closer = z_m < z_buf[py_m, px_m]
+            px_c, py_c = px_m[closer], py_m[closer]
+            z_buf[py_c, px_c] = z_m[closer]
+            canvas[py_c, px_c] = cols_m[closer]
 
     return Image.fromarray(canvas)
 
@@ -236,6 +243,7 @@ class Pi3Pipeline:
     def from_pretrained(
         cls,
         model_path: Optional[str] = None,
+        required_components: Optional[Dict[str, str]] = None,
         mode: str = "pi3x",
         device: Optional[str] = None,
         weight_dtype: Optional[str] = None,
@@ -384,39 +392,91 @@ class Pi3Pipeline:
 
         return render_point_cloud(pts, cols, c2w, h, w)
 
-    def process(
-        self,
-        images: Optional[Union[str, np.ndarray, List[str], List[np.ndarray]]] = None,
-        interactions: Optional[List[str]] = None,
-        camera_view: Optional[List[float]] = None,
-        visualize_ops: bool = True,
-        input_: Optional[Union[str, np.ndarray, List[str], List[np.ndarray]]] = None,
-        interaction: Optional[Union[str, List[str]]] = None,
-        **kwargs,
-    ) -> Pi3Result:
-        img_input = images or input_
-        if img_input is None and self._cached_result is None:
-            raise ValueError("images is required for the first call (inference).")
+    def _render_trajectory(self, n_interp: int = 15, fps: int = 15, **kwargs) -> List[Image.Image]:
+        """Render a trajectory video by interpolating between original camera poses.
+        Returns a list of PIL.Image frames.
+        """
+        res = self._cached_result
+        if res is None:
+            raise RuntimeError("No result available. Run reconstruction first.")
 
-        if img_input is not None:
-            return self._run_inference(img_input, **kwargs)
+        pts_all = res.numpy_data["points"][0]
+        masks = res.numpy_data["masks"][0].astype(bool)
+        colors_all = np.stack(res.input_images, axis=0)
+        pts = pts_all[masks].astype(np.float64)
+        cols = (colors_all[masks] * 255).clip(0, 255).astype(np.uint8)
+        h, w = pts_all.shape[1], pts_all.shape[2]
 
-        return self._cached_result
+        c2ws = [np.array(c["camera_to_world"], dtype=np.float64) for c in res.camera_params]
+        frames = []
+        for vi in range(len(c2ws) - 1):
+            for j in range(n_interp):
+                t = j / n_interp
+                c2w = c2ws[vi] * (1 - t) + c2ws[vi + 1] * t
+                frames.append(render_point_cloud(pts, cols, c2w, h, w))
+        frames.append(render_point_cloud(pts, cols, c2ws[-1], h, w))
+        return frames
 
     def __call__(
         self,
         images: Optional[Union[str, np.ndarray, List[str], List[np.ndarray]]] = None,
+        videos: Optional[Union[str, List[str]]] = None,
+        image_path: Optional[str] = None,
+        video_path: Optional[str] = None,
+        task_type: str = "reconstruction",
         interactions: Optional[List[str]] = None,
         camera_view: Optional[List[float]] = None,
+        view_index: Optional[int] = None,
         visualize_ops: bool = True,
-        input_: Optional[Union[str, np.ndarray, List[str], List[np.ndarray]]] = None,
-        interaction: Optional[Union[str, List[str]]] = None,
         **kwargs,
-    ) -> Pi3Result:
-        return self.process(
-            images=images, interactions=interactions, camera_view=camera_view,
-            visualize_ops=visualize_ops, input_=input_, interaction=interaction, **kwargs,
-        )
+    ):
+        """Unified call interface.
+
+        Args:
+            images: Image input path/list/tensor/array.
+            videos: Video input path/list. If provided, takes precedence over images.
+            image_path: Alias for a single image path.
+            video_path: Alias for a single video path.
+            task_type: One of "reconstruction", "render_view", "render_trajectory".
+            interactions: Navigation signals like ["forward", "left", "camera_r"].
+                When provided with task_type="render_view", applies interactions
+                then renders the resulting viewpoint.
+            camera_view: [dx,dy,dz,theta_x,theta_z] camera delta for render_view.
+            view_index: Camera index for render_view.
+            visualize_ops: Whether to generate visualizations.
+
+        Returns:
+            - task_type="reconstruction": Pi3Result
+            - task_type="render_view": PIL.Image
+            - task_type="render_trajectory": List[PIL.Image]
+        """
+        visual_input = videos or video_path or images or image_path
+
+        if task_type == "reconstruction" and visual_input is None and interactions is not None:
+            task_type = "render_view"
+
+        if task_type == "reconstruction":
+            if visual_input is None:
+                raise ValueError("images is required for task_type='reconstruction'.")
+            return self._run_inference(visual_input, **kwargs)
+
+        elif task_type == "render_view":
+            if interactions is not None:
+                for sig in interactions:
+                    self.stream(interaction_signal=sig)
+                return self.render_view(camera_to_world=self._current_camera)
+            return self.render_view(
+                view_index=view_index, camera_view=camera_view, **kwargs,
+            )
+
+        elif task_type == "render_trajectory":
+            return self._render_trajectory(**kwargs)
+
+        else:
+            raise ValueError(
+                f"Unknown task_type: {task_type}. "
+                "Choose 'reconstruction', 'render_view', or 'render_trajectory'."
+            )
 
     def stream(
         self,
@@ -431,7 +491,7 @@ class Pi3Pipeline:
         """
         res = result or self._cached_result
         if res is None:
-            raise RuntimeError("No result available. Run inference first via __call__().")
+            raise RuntimeError("No result available. Run reconstruction first via __call__().")
 
         if self._current_camera is None:
             if res.camera_params:
@@ -450,4 +510,4 @@ class Pi3Pipeline:
         return self.render_view(result=res, camera_to_world=self._current_camera)
 
 
-__all__ = ["Pi3Pipeline", "Pi3Result", "render_point_cloud"]
+__all__ = ["Pi3Pipeline", "Pi3Result"]
