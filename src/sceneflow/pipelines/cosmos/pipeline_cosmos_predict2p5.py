@@ -34,7 +34,7 @@ class CosmosPredict2p5Pipeline:
         token: Optional[str] = None,
         task: str = 'img2world',
         device: str = "cuda",
-        dtype: Optional[torch.dtype] = torch.bfloat16,
+        weight_dtype: Optional[torch.dtype] = torch.bfloat16,
         **kwargs,
     ) -> "CosmosPredict2p5Pipeline":
         print(transformer_name_or_path)
@@ -45,11 +45,6 @@ class CosmosPredict2p5Pipeline:
         if vae_name_or_path is None:
             vae_name_or_path = "Wan-AI/Wan2.1-T2V-1.3B"
 
-        print(f"Loading Cosmos-Predict2.5 synthesis model ...")
-        print(f"    - Loading transformer from : {transformer_name_or_path}")
-        print(f"    - Loading Text Encoder from : {text_encoder_name_or_path}")
-        print(f"    - Loading VAE from : {vae_name_or_path}")
-
         synthesis_model = CosmosPredict2p5Synthesis.from_pretrained(
             task=task,
             transformer_model_path=transformer_name_or_path,
@@ -57,7 +52,7 @@ class CosmosPredict2p5Pipeline:
             vae_model_path=vae_name_or_path,
             token=token,
             device=torch.device(device),
-            dtype=dtype,
+            weight_dtype=weight_dtype,
         )
         operator = CosmosPredict2p5Operator()
         memory_module = CosmosPredict2p5Memory()
@@ -67,7 +62,7 @@ class CosmosPredict2p5Pipeline:
             synthesis_model=synthesis_model,
             memory_module=memory_module,
             device=device,
-            weight_dtype=dtype
+            weight_dtype=weight_dtype
         )
         return pipeline
 

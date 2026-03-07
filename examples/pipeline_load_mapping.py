@@ -61,11 +61,24 @@ def load_spirit_v1p5_pipeline(model_path: Union[str, Dict], device: str, norm_st
     )
 
 
+def load_cosmos_predict2p5_pipeline(model_path: Union[str, Dict], device: str, token: str = None):
+    from sceneflow.pipelines.cosmos.pipeline_cosmos_predict2p5 import CosmosPredict2p5Pipeline
+    return CosmosPredict2p5Pipeline.from_pretrained(
+        transformer_name_or_path=_resolve_path(model_path, "transformer_name_or_path"),
+        text_encoder_name_or_path=_resolve_path(model_path, "text_encoder_name_or_path"),
+        vae_name_or_path=_resolve_path(model_path, "vae_name_or_path"),
+        token=token,
+        task="img2world",
+        device=device,
+    )
+
+
 ## utilize lazy loader to load different tasks pipeline
 video_gen_pipe = {
     "matrix-game2": load_matrix_game2_pipeline,
     "wan2p2": load_wan2p2_pipeline,
     "hunyuan-game-craft": load_hunyuan_game_craft_pipeline,
+    "cosmos-predict2p5": load_cosmos_predict2p5_pipeline,
 }
 
 reasoning_pipe = {
