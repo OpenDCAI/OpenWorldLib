@@ -40,7 +40,7 @@ class FlashWorldPipeline:
     @classmethod
     def from_pretrained(
         cls,
-        representation_path: str,
+        model_path: str,
         required_components: Optional[Dict[str, str]] = None,
         **kwargs
     ) -> 'FlashWorldPipeline':
@@ -48,7 +48,7 @@ class FlashWorldPipeline:
         Create pipeline instance from pretrained models.
         
         Args:
-            representation_path: HuggingFace repo ID for representation model
+            model_path: HuggingFace repo ID for representation model
             required_components: Optional required component paths. Supports:
                 - 'wan_model_path': Wan model repo ID/path for internal modules
             **kwargs: Additional arguments passed to representation.from_pretrained()
@@ -65,7 +65,7 @@ class FlashWorldPipeline:
             kwargs["wan_model_path"] = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
 
         representation_model = FlashWorldRepresentation.from_pretrained(
-            pretrained_model_path=representation_path,
+            pretrained_model_path=model_path,
             **kwargs
         )
         

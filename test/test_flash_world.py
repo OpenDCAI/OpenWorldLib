@@ -27,7 +27,7 @@ CUSTOM_VIDEO_DIR = "./output/flash_world/custom_video"
 INTERACTIONS = ["camera_l", "forward"]
 
 pipeline = FlashWorldPipeline.from_pretrained(
-    representation_path=MODEL_PATH,
+    model_path=MODEL_PATH,
     required_components={"wan_model_path": WAN_MODEL_PATH},
     offload_t5=OFFLOAD_T5,
     offload_vae=OFFLOAD_VAE,
