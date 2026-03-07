@@ -4,6 +4,7 @@ sys.path.append("..")
 from sceneflow.pipelines.flash_world.pipeline_flash_world import FlashWorldPipeline
 
 MODEL_PATH = "imlixinyang/FlashWorld"
+WAN_MODEL_PATH = "Wan-AI/Wan2.2-TI2V-5B-Diffusers"
 OFFLOAD_T5 = True
 OFFLOAD_VAE = False
 OFFLOAD_TRANSFORMER_DURING_VAE = True
@@ -26,7 +27,8 @@ CUSTOM_VIDEO_DIR = "./output/flash_world/custom_video"
 INTERACTIONS = ["camera_l", "forward"]
 
 pipeline = FlashWorldPipeline.from_pretrained(
-    representation_path=MODEL_PATH,
+    model_path=MODEL_PATH,
+    required_components={"wan_model_path": WAN_MODEL_PATH},
     offload_t5=OFFLOAD_T5,
     offload_vae=OFFLOAD_VAE,
     offload_transformer_during_vae=OFFLOAD_TRANSFORMER_DURING_VAE,
