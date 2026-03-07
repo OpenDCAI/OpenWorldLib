@@ -1,2 +1,2 @@
 from .navigation_video_generation.benchmark_mapping import benchmarks as nav_videogen_benchmarks
-from .text2video_generation.benchmark_mapping import benchmarks as text2video_benchmarks
+from .imagetext2video_generation.benchmark_mapping import benchmarks as imagetext2video_benchmarks

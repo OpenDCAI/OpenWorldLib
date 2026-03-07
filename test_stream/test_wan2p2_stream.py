@@ -11,9 +11,9 @@ from sceneflow.base_models.diffusion_model.video.wan_2p2.configs import WAN_CONF
 pretrained_model_path: str = "Wan-AI/Wan2.2-TI2V-5B"
 
 pipeline = Wan2p2Pipeline.from_pretrained(
-    synthesis_model_path=pretrained_model_path,
+    model_path=pretrained_model_path,
     task="ti2v-5B",
-    device_id=0,
+    device=0,
     rank=0,
 )
 
@@ -56,7 +56,7 @@ while True:
     video = pipeline.stream(
         prompt=user_prompt,
         image_path=image_path,
-        image=last_frame_img,
+        images=last_frame_img,
     )
 
     # 从 memory 中取出当前“最后一帧”，保留在内存中供下一轮使用（如需可选落
