@@ -28,7 +28,7 @@ pipeline = CosmosPredict2p5Pipeline.from_pretrained(
     token=token,
     task="img2world",
     device="cuda",
-    dtype=torch.bfloat16
+    weight_dtype=torch.bfloat16
 )
 
 # Set default negative prompt
