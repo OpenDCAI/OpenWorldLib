@@ -103,10 +103,26 @@ def infer_spirit_v1p5_pipeline(pipe, images, raw_state, task, robot_type="Franka
     return actions
 
 
+def infer_cosmos_predict2p5_pipeline(pipe, prompt, input_image, output_path=None, fps=None):
+    output_video = pipe(
+        prompt=prompt,
+        images=input_image,
+        output_type='np',
+        num_inference_steps=35,
+    )
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fps = fps if fps is not None else 16
+        export_to_video(output_video, str(output_path), fps=fps)
+    return output_video
+
+
 video_gen_pipe_infer = {
     "matrix-game2": infer_matrix_game2_pipeline,
     "wan2p2": infer_wan2p2_pipeline,
     "hunyuan-game-craft": infer_hunyuan_game_craft_pipeline,
+    "cosmos-predict2p5": infer_cosmos_predict2p5_pipeline,
 }
 
 reasoning_pipe_infer = {
