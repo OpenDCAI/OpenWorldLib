@@ -415,8 +415,8 @@ class CUT3RPipeline:
         dists = np.linalg.norm(all_points - center[None, :], axis=1)
         radius = float(dists.max() + 1e-6)
 
-        radius_min = max(radius * 0.5, 1e-3)
-        radius_max = radius * 3.0
+        radius_min = max(radius * 0.2, 1e-3)
+        radius_max = radius * 4.0
 
         camera_range = {
             "center": center.tolist(),
@@ -440,7 +440,21 @@ class CUT3RPipeline:
             "camera_range": camera_range,
             "default_camera": default_camera,
         }
-    
+
+    @staticmethod
+    def _normalize_interaction_sequence(
+        interaction: Optional[Union[str, List[str]]]
+    ) -> List[str]:
+        """
+        Normalize interaction input to a flat list of strings.
+        Supports None, single string, or list of strings.
+        """
+        if interaction is None:
+            return []
+        if isinstance(interaction, str):
+            return [interaction]
+        return [str(sig) for sig in interaction if str(sig).strip()]
+
     @staticmethod
     def _preprocess_point_cloud_for_render(
         points: np.ndarray,
@@ -516,125 +530,19 @@ class CUT3RPipeline:
         far_plane: float = 1000.0,
     ) -> Image.Image:
         """
-        Stage 2: Render a view from the reconstructed PLY using a 3D Gaussian
-        Splatting renderer.
-
-        Args:
-            ply_path: Path to the reconstructed point cloud PLY.
-            camera_config: Dictionary describing the camera, with keys:
-                - 'center': list of 3 floats, scene center
-                - 'radius': float, camera distance to center
-                - 'yaw': float, yaw angle in degrees (around Y axis)
-                - 'pitch': float, pitch angle in degrees (around X axis)
-            image_width: Output image width.
-            image_height: Output image height.
-            device: Torch device to use. Defaults to 'cuda' if available, else 'cpu'.
-            near_plane: Near plane distance for rendering.
-            far_plane: Far plane distance for rendering.
-
-        Returns:
-            A PIL.Image with the rendered view.
+        Thin wrapper: delegate 3DGS rendering to CUT3RRepresentation.
         """
-        from ...base_models.three_dimensions.point_clouds.gaussian_splatting.scene.dataset_readers import (
-            fetchPly,
-        )
-
-        device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-
-        pcd = fetchPly(ply_path)
-        points = np.asarray(pcd.points, dtype=np.float32)
-        colors = np.asarray(pcd.colors, dtype=np.float32)
-
-        if points.size == 0:
-            raise RuntimeError(f"No points loaded from PLY: {ply_path}")
-
-        center = np.asarray(camera_config.get("center", points.mean(axis=0)), dtype=np.float32)
-        points, colors = self._preprocess_point_cloud_for_render(points, colors, center)
-        if points.size == 0:
-            raise RuntimeError("Point cloud is empty after preprocessing for rendering.")
-
-        radius = float(camera_config.get("radius", 1.5 * np.linalg.norm(points - center[None, :], axis=1).max()))
-        yaw_deg = float(camera_config.get("yaw", 0.0))
-        pitch_deg = float(camera_config.get("pitch", 0.0))
-
-        yaw = np.deg2rad(yaw_deg)
-        pitch = np.deg2rad(pitch_deg)
-
-        cam_x = center[0] + radius * np.cos(pitch) * np.sin(yaw)
-        cam_y = center[1] + radius * np.sin(pitch)
-        cam_z = center[2] + radius * np.cos(pitch) * np.cos(yaw)
-        cam_pos = np.array([cam_x, cam_y, cam_z], dtype=np.float32)
-
-        forward = center - cam_pos
-        forward = forward / (np.linalg.norm(forward) + 1e-8)
-        up = np.array([0.0, 1.0, 0.0], dtype=np.float32)
-
-        right = np.cross(forward, up)
-        right = right / (np.linalg.norm(right) + 1e-8)
-        up = np.cross(right, forward)
-        up = up / (np.linalg.norm(up) + 1e-8)
-
-        c2w = np.eye(4, dtype=np.float32)
-        c2w[0, :3] = right
-        c2w[1, :3] = up
-        c2w[2, :3] = forward
-        c2w[:3, 3] = cam_pos
-
-        fx = 0.5 * image_width / np.tan(np.deg2rad(60.0) / 2.0)
-        fy = 0.5 * image_height / np.tan(np.deg2rad(45.0) / 2.0)
-        cx = image_width / 2.0
-        cy = image_height / 2.0
-
-        sh_degree = 0
-
-        xyz = torch.from_numpy(points).to(device=device, dtype=torch.float32)
-        scale_value = self._estimate_gaussian_scale(points, center)
-        scale = torch.full((xyz.shape[0], 3), scale_value, device=device, dtype=torch.float32)
-
-        rotation = torch.zeros((xyz.shape[0], 4), device=device, dtype=torch.float32)
-        rotation[:, 0] = 1.0
-
-        # Align closer to CUT3R's gsplat usage (high opacity, small gaussian scale).
-        opacity = torch.full((xyz.shape[0], 1), 0.95, device=device, dtype=torch.float32)
-
-        color_tensor = torch.from_numpy(np.clip(colors, 0.0, 1.0)).to(device=device, dtype=torch.float32)
-        features = color_tensor
-
-        gaussian_params = torch.cat(
-            [xyz, opacity, scale, rotation, features],
-            dim=-1,
-        ).unsqueeze(0)
-
-        test_c2ws = torch.from_numpy(c2w).unsqueeze(0).unsqueeze(0).to(device=device, dtype=torch.float32)
-        intr = torch.tensor([[fx, fy, cx, cy]], dtype=torch.float32, device=device).unsqueeze(0)
-
-        rgb, _ = gaussian_render(
-            gaussian_params,
-            test_c2ws,
-            intr,
-            image_width,
-            image_height,
+        if self.representation_model is None:
+            raise RuntimeError("Representation model not loaded. Use from_pretrained() first.")
+        return self.representation_model.render_with_3dgs(
+            ply_path=ply_path,
+            camera_config=camera_config,
+            image_width=image_width,
+            image_height=image_height,
+            device=device,
             near_plane=near_plane,
             far_plane=far_plane,
-            use_checkpoint=False,
-            sh_degree=sh_degree,
-            bg_mode='white',
         )
-
-        # gaussian_render returns rgb in shape (B, V, 3, H, W)
-        # Use the first batch and first view to form an RGB frame (H, W, 3).
-        rgb_img = rgb[0, 0]
-        rgb_img = rgb_img.clamp(-1.0, 1.0).add(1.0).div(2.0)
-        rgb_np = (
-            rgb_img.mul(255.0)
-            .permute(1, 2, 0)
-            .detach()
-            .cpu()
-            .numpy()
-            .astype(np.uint8)
-        )
-
-        return Image.fromarray(rgb_np)
     
     def render_orbit_video_with_3dgs(
         self,
@@ -700,29 +608,59 @@ class CUT3RPipeline:
         camera_cfg: Dict[str, Any],
         interaction: str,
         camera_range: Dict[str, Any],
-        yaw_step: float = 10.0,
-        pitch_step: float = 7.5,
-        zoom_factor: float = 0.9,
+        yaw_step: float = 22.0,
+        pitch_step: float = 15.0,
+        zoom_factor: float = 0.6,
     ) -> Dict[str, Any]:
         """
         Update a simple (radius, yaw, pitch) camera configuration according to a
         high-level interaction signal, clamped by camera_range.
+        Only supports the unified 3D interaction schema
+        (forward/backward/left/right, forward_left, camera_l, camera_zoom_in, ...).
         """
         yaw = float(camera_cfg.get("yaw", 0.0))
         pitch = float(camera_cfg.get("pitch", 0.0))
         radius = float(camera_cfg.get("radius", 4.0))
+        sig = interaction.strip().lower()
 
-        if interaction in ["move_left", "rotate_left"]:
+        # Yaw (left/right)
+        if sig in ["left", "camera_l"]:
             yaw -= yaw_step
-        elif interaction in ["move_right", "rotate_right"]:
+        elif sig in ["right", "camera_r"]:
             yaw += yaw_step
-        elif interaction == "move_up":
+        elif sig == "camera_ul":
+            yaw -= yaw_step
             pitch += pitch_step
-        elif interaction == "move_down":
+        elif sig == "camera_ur":
+            yaw += yaw_step
+            pitch += pitch_step
+        elif sig == "camera_dl":
+            yaw -= yaw_step
             pitch -= pitch_step
-        elif interaction == "zoom_in":
+        elif sig == "camera_dr":
+            yaw += yaw_step
+            pitch -= pitch_step
+        # Pitch (up/down)
+        elif sig == "camera_up":
+            pitch += pitch_step
+        elif sig == "camera_down":
+            pitch -= pitch_step
+        # Radius (forward/backward, zoom)
+        elif sig in ["forward", "camera_zoom_in"]:
             radius *= zoom_factor
-        elif interaction == "zoom_out":
+        elif sig in ["backward", "camera_zoom_out"]:
+            radius /= zoom_factor
+        elif sig == "forward_left":
+            yaw -= yaw_step
+            radius *= zoom_factor
+        elif sig == "forward_right":
+            yaw += yaw_step
+            radius *= zoom_factor
+        elif sig == "backward_left":
+            yaw -= yaw_step
+            radius /= zoom_factor
+        elif sig == "backward_right":
+            yaw += yaw_step
             radius /= zoom_factor
 
         yaw = max(camera_range["yaw_min"], min(camera_range["yaw_max"], yaw))
@@ -786,8 +724,9 @@ class CUT3RPipeline:
 
     def run_two_stage_3dgs_video(
         self,
-        data_path: Union[str, Image.Image, np.ndarray, List[str], List[Image.Image], List[np.ndarray]],
-        interaction: Optional[Union[str, List[str]]] = None,
+        image_path: Union[str, Image.Image, np.ndarray, List[str], List[Image.Image], List[np.ndarray]],
+        interactions: Optional[Union[str, List[str]]] = None,
+        frames_per_interaction: int = 10,
         size: Optional[int] = None,
         vis_threshold: float = 1.5,
         output_dir: str = "./cut3r_output",
@@ -825,7 +764,7 @@ class CUT3RPipeline:
         os.makedirs(output_dir, exist_ok=True)
 
         recon_info = self.reconstruct_ply(
-            data_path,
+            image_path,
             ply_path=output_dir,
             size=size,
             vis_threshold=vis_threshold,
@@ -843,12 +782,18 @@ class CUT3RPipeline:
 
         output_video_path = os.path.join(output_dir, output_name)
 
-        if isinstance(interaction, list) and len(interaction) > 0:
+        interaction_sequence = self._normalize_interaction_sequence(interactions)
+        if interaction_sequence and frames_per_interaction > 1:
+            interaction_sequence = [
+                a for a in interaction_sequence for _ in range(frames_per_interaction)
+            ]
+
+        if interaction_sequence:
             self.render_interaction_video_with_3dgs(
                 ply_path=ply_path,
                 camera_range=camera_range,
                 base_camera_config=base_camera_config,
-                interaction_sequence=interaction,
+                interaction_sequence=interaction_sequence,
                 image_width=image_width,
                 image_height=image_height,
                 output_path=output_video_path,
@@ -866,22 +811,33 @@ class CUT3RPipeline:
     
     def __call__(
         self,
-        input_: Union[str, Image.Image, np.ndarray, List[str], List[Image.Image], List[np.ndarray]],
-        interaction: Optional[Union[str, Dict[str, Any]]] = None,
-        **kwargs
-    ) -> CUT3RResult:
+        image_path: Optional[Union[str, List[str]]] = None,
+        images: Any = None,
+        interactions: Optional[Union[str, List[str]]] = None,
+        task_type: Optional[str] = None,
+        **kwargs,
+    ) -> Union[CUT3RResult, str]:
         """
-        Main call interface for the pipeline.
-        
-        Args:
-            input_: Input image(s)
-            interaction: Interaction string or dictionary
-            **kwargs: Additional arguments
-            
-        Returns:
-            CUT3RResult object containing processed results as PIL Images or video frame list
+        Main call interface.
+        - Base mode (task_type is None or "cut3r_base"): direct CUT3R representation/process.
+        - "cut3r_two_stage_3dgs": two-stage reconstruction + 3DGS video (returns output_video_path: str).
         """
-        return self.process(input_, interaction, **kwargs)
+        data = images if images is not None else image_path
+        if data is None:
+            raise ValueError("Provide image_path or images.")
+
+        if task_type == "cut3r_two_stage_3dgs":
+            return self.run_two_stage_3dgs_video(
+                image_path=data,
+                interactions=interactions,
+                **kwargs,
+            )
+
+        return self.process(
+            input_=data,
+            interaction=interactions,
+            **kwargs,
+        )
     
     def stream(
         self,

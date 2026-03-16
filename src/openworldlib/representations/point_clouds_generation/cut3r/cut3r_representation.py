@@ -7,6 +7,14 @@ from PIL import Image
 
 from huggingface_hub import snapshot_download
 
+from ...base_representation import BaseRepresentation
+from ....base_models.three_dimensions.point_clouds.gaussian_splatting.scene.dataset_readers import (
+    fetchPly,
+)
+from ....representations.point_clouds_generation.flash_world.flash_world.render import (
+    gaussian_render,
+)
+
 # Try to import gdown for Google Drive downloads
 try:
     import gdown
@@ -41,7 +49,7 @@ CUT3R_MODEL_REGISTRY = {
 }
 
 
-class CUT3RRepresentation:
+class CUT3RRepresentation(BaseRepresentation):
     """
     Representation for CUT3R 3D scene reconstruction.
     """
@@ -54,6 +62,7 @@ class CUT3RRepresentation:
             model: Pre-loaded ARCroco3DStereo model (optional)
             device: Device to run on ('cuda' or 'cpu')
         """
+        super().__init__()
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.model = model
         
@@ -233,6 +242,12 @@ class CUT3RRepresentation:
                 image_paths.append(temp_file.name)
                 temp_files.append(temp_file.name)
         
+        # CUT3R recurrent inference expects at least two views.
+        # If only one image is provided, duplicate it as a minimal fallback
+        # to avoid invalid position/index errors inside RoPE attention.
+        if len(image_paths) == 1:
+            image_paths.append(image_paths[0])
+        
         # Load images using CUT3R's loader
         loaded_images = load_images(image_paths, size=self.size, verbose=False)
         
@@ -246,6 +261,18 @@ class CUT3RRepresentation:
         # Convert to views format
         views = []
         for i, img_data in enumerate(loaded_images):
+            # Ensure true_shape is in the correct format: (batch_size, 2)
+            # load_images returns (1, 2), we need to expand to (batch_size, 2)
+            batch_size = img_data["img"].shape[0]
+            true_shape_np = img_data["true_shape"]  # Shape: (1, 2)
+            true_shape_tensor = torch.from_numpy(true_shape_np)  # Shape: (1, 2)
+            # Expand to (batch_size, 2) if needed
+            if true_shape_tensor.shape[0] == 1 and batch_size > 1:
+                true_shape_tensor = true_shape_tensor.repeat(batch_size, 1)
+            elif true_shape_tensor.shape[0] != batch_size:
+                # If shape doesn't match, use the first row and repeat
+                true_shape_tensor = true_shape_tensor[0:1].repeat(batch_size, 1)
+            
             view = {
                 "img": img_data["img"],
                 "ray_map": torch.full(
@@ -257,7 +284,7 @@ class CUT3RRepresentation:
                     ),
                     torch.nan,
                 ),
-                "true_shape": torch.from_numpy(img_data["true_shape"]),
+                "true_shape": true_shape_tensor,
                 "idx": i,
                 "instance": str(i),
                 "camera_pose": torch.from_numpy(np.eye(4, dtype=np.float32)).unsqueeze(0),
@@ -380,4 +407,316 @@ class CUT3RRepresentation:
         results['state_args'] = state_args
         
         return results
+
+    @staticmethod
+    def _preprocess_point_cloud_for_render(
+        points: np.ndarray,
+        colors: np.ndarray,
+        scene_center: np.ndarray,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Light-weight cleanup to make rendering closer to CUT3R visualization:
+        1) remove invalid rows
+        2) trim far outliers
+        3) voxel downsample to reduce overdraw blur
+        """
+        valid_mask = np.isfinite(points).all(axis=1) & np.isfinite(colors).all(axis=1)
+        points = points[valid_mask]
+        colors = colors[valid_mask]
+        if len(points) == 0:
+            return points, colors
+
+        # Trim extreme outliers by distance-to-center (keeps dense core).
+        d = np.linalg.norm(points - scene_center[None, :], axis=1)
+        d_thr = np.quantile(d, 0.995)
+        keep = d <= d_thr
+        points = points[keep]
+        colors = colors[keep]
+        if len(points) == 0:
+            return points, colors
+
+        scene_radius = float(np.linalg.norm(points - scene_center[None, :], axis=1).max() + 1e-8)
+        voxel_size = max(scene_radius / 512.0, 1e-4)
+
+        # Voxel downsample (first-point per voxel, deterministic).
+        voxel_coords = np.floor(points / voxel_size).astype(np.int64)
+        _, unique_idx = np.unique(voxel_coords, axis=0, return_index=True)
+        unique_idx = np.sort(unique_idx)
+        points = points[unique_idx]
+        colors = colors[unique_idx]
+
+        return points, colors
+
+    @staticmethod
+    def _estimate_gaussian_scale(points: np.ndarray, scene_center: np.ndarray) -> float:
+        """
+        Estimate a conservative Gaussian scale from local spacing.
+        Large scales are the main reason for "foggy/blurry" outputs.
+        """
+        if len(points) < 4:
+            scene_radius = float(np.linalg.norm(points - scene_center[None, :], axis=1).max() + 1e-8)
+            return max(scene_radius / 2000.0, 1e-4)
+
+        sample_n = min(len(points), 2048)
+        rng = np.random.default_rng(42)
+        idx = rng.choice(len(points), size=sample_n, replace=False)
+        sample = torch.from_numpy(points[idx]).float()
+        # Pairwise distances on a small sample for robust nearest-neighbor spacing.
+        dist = torch.cdist(sample, sample, p=2)
+        dist.fill_diagonal_(1e9)
+        nn = dist.min(dim=1).values
+        nn_med = float(nn.median().item())
+
+        scene_radius = float(np.linalg.norm(points - scene_center[None, :], axis=1).max() + 1e-8)
+        min_scale = max(scene_radius / 5000.0, 1e-4)
+        max_scale = max(scene_radius / 300.0, min_scale)
+        return float(np.clip(nn_med * 0.6, min_scale, max_scale))
+
+    def render_with_3dgs(
+        self,
+        ply_path: str,
+        camera_config: Dict[str, Any],
+        image_width: int = 704,
+        image_height: int = 480,
+        device: Optional[str] = None,
+        near_plane: float = 0.01,
+        far_plane: float = 1000.0,
+    ) -> Image.Image:
+        """
+        Render a single frame from a CUT3R reconstruction using 3D Gaussian Splatting.
+        Follow the same robust rendering strategy as VGGT:
+        - normalize scene for scale invariance
+        - dynamic near/far planes
+        - multiple camera convention probing
+        - deterministic point-projection fallback when gsplat fails
+        """
+        device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+
+        pcd = fetchPly(ply_path)
+        points = np.asarray(pcd.points, dtype=np.float32)
+        colors = np.asarray(pcd.colors, dtype=np.float32)
+
+        if points.size == 0:
+            raise RuntimeError(f"No points loaded from PLY: {ply_path}")
+
+        # Estimate global scene scale and normalize to stabilize rendering.
+        scene_center = points.mean(axis=0)
+        scene_radius = float(np.linalg.norm(points - scene_center[None, :], axis=1).max() + 1e-8)
+        scene_radius = max(scene_radius, 1e-6)
+
+        points_norm = (points - scene_center[None, :]) / scene_radius
+        center = np.asarray(camera_config.get("center", scene_center.tolist()), dtype=np.float32)
+        center_norm = (center - scene_center) / scene_radius
+
+        radius_raw = float(camera_config.get("radius", 1.0 * scene_radius))
+        radius_norm = max(radius_raw / scene_radius, 1e-3)
+        # +180° yaw so camera is on the opposite side (scene faces camera, not back).
+        yaw_deg = float(camera_config.get("yaw", 0.0)) + 180.0
+        pitch_deg = float(camera_config.get("pitch", 0.0))
+
+        yaw = np.deg2rad(yaw_deg)
+        pitch = np.deg2rad(pitch_deg)
+        cam_x = center_norm[0] + radius_norm * np.cos(pitch) * np.sin(yaw)
+        cam_y = center_norm[1] + radius_norm * np.sin(pitch)
+        cam_z = center_norm[2] + radius_norm * np.cos(pitch) * np.cos(yaw)
+        cam_pos = np.array([cam_x, cam_y, cam_z], dtype=np.float32)
+
+        def build_c2w(
+            look_at: np.ndarray,
+            eye: np.ndarray,
+            reverse_forward: bool = False,
+            basis_layout: str = "row",
+        ) -> np.ndarray:
+            forward = (eye - look_at) if reverse_forward else (look_at - eye)
+            forward = forward / (np.linalg.norm(forward) + 1e-8)
+            up = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+            right = np.cross(forward, up)
+            right_norm = np.linalg.norm(right)
+            if right_norm < 1e-6:
+                up = np.array([0.0, 0.0, 1.0], dtype=np.float32)
+                right = np.cross(forward, up)
+                right_norm = np.linalg.norm(right)
+            right = right / (right_norm + 1e-8)
+            up = np.cross(right, forward)
+            up = up / (np.linalg.norm(up) + 1e-8)
+
+            c2w_local = np.eye(4, dtype=np.float32)
+            if basis_layout == "row":
+                c2w_local[0, :3] = right
+                c2w_local[1, :3] = up
+                c2w_local[2, :3] = forward
+            else:
+                c2w_local[:3, 0] = right
+                c2w_local[:3, 1] = up
+                c2w_local[:3, 2] = forward
+            c2w_local[:3, 3] = eye
+            return c2w_local
+
+        fx = 0.5 * image_width / np.tan(np.deg2rad(60.0) / 2.0)
+        fy = 0.5 * image_height / np.tan(np.deg2rad(45.0) / 2.0)
+        cx = image_width / 2.0
+        cy = image_height / 2.0
+
+        xyz = torch.from_numpy(points_norm).to(device=device, dtype=torch.float32)
+        scale_value = self._estimate_gaussian_scale(points_norm, center_norm)
+        scale = torch.full((xyz.shape[0], 3), scale_value, device=device, dtype=torch.float32)
+        rotation = torch.zeros((xyz.shape[0], 4), device=device, dtype=torch.float32)
+        rotation[:, 0] = 1.0
+        opacity = torch.full((xyz.shape[0], 1), 0.95, device=device, dtype=torch.float32)
+        color_tensor = torch.from_numpy(np.clip(colors, 0.0, 1.0)).to(device=device, dtype=torch.float32)
+
+        gaussian_params = torch.cat([xyz, opacity, scale, rotation, color_tensor], dim=-1).unsqueeze(0)
+        intr = torch.tensor([[fx, fy, cx, cy]], dtype=torch.float32, device=device).unsqueeze(0)
+
+        # Dynamic planes are more robust for arbitrary world scales.
+        near_dynamic = max(near_plane, radius_norm * 0.01)
+        far_dynamic = max(far_plane, radius_norm * 20.0)
+
+        if not hasattr(self, "_render_variant_cache"):
+            self._render_variant_cache = {}
+
+        def render_candidate(reverse_forward: bool, basis_layout: str):
+            c2w_local = build_c2w(
+                look_at=center_norm,
+                eye=cam_pos,
+                reverse_forward=reverse_forward,
+                basis_layout=basis_layout,
+            )
+            test_c2ws_local = torch.from_numpy(c2w_local).unsqueeze(0).unsqueeze(0).to(
+                device=device, dtype=torch.float32
+            )
+            rgb_local, _ = gaussian_render(
+                gaussian_params,
+                test_c2ws_local,
+                intr,
+                image_width,
+                image_height,
+                near_plane=near_dynamic,
+                far_plane=far_dynamic,
+                use_checkpoint=False,
+                sh_degree=0,
+                bg_mode="black",
+            )
+            rgb_img_local = rgb_local[0, 0].clamp(-1.0, 1.0).add(1.0).div(2.0)
+            gray = rgb_img_local.mean(dim=0)
+            non_bg_ratio = float((gray > 0.03).float().mean().item())
+            std_v = float(rgb_img_local.std().item())
+            score = non_bg_ratio + 0.5 * std_v
+            return rgb_img_local, score, non_bg_ratio
+
+        cached_variant = self._render_variant_cache.get(
+            ply_path,
+            {"reverse_forward": False, "basis_layout": "row"},
+        )
+        rgb_img, best_score, best_non_bg_ratio = render_candidate(
+            reverse_forward=bool(cached_variant["reverse_forward"]),
+            basis_layout=str(cached_variant["basis_layout"]),
+        )
+
+        # If the cached/default pose is too empty, probe multiple camera conventions once.
+        if best_score < 0.03 or best_non_bg_ratio < 0.001:
+            candidates = [
+                {"reverse_forward": False, "basis_layout": "row"},
+                {"reverse_forward": True, "basis_layout": "row"},
+                {"reverse_forward": False, "basis_layout": "col"},
+                {"reverse_forward": True, "basis_layout": "col"},
+            ]
+            best_variant = cached_variant
+            for cand in candidates:
+                rgb_try, score_try, non_bg_try = render_candidate(
+                    reverse_forward=bool(cand["reverse_forward"]),
+                    basis_layout=str(cand["basis_layout"]),
+                )
+                if score_try > best_score:
+                    rgb_img = rgb_try
+                    best_score = score_try
+                    best_non_bg_ratio = non_bg_try
+                    best_variant = cand
+            self._render_variant_cache[ply_path] = best_variant
+
+        # If gsplat still fails (near-empty), fallback to deterministic point projection.
+        if best_score < 0.03 or best_non_bg_ratio < 0.001:
+            best_variant = self._render_variant_cache.get(
+                ply_path,
+                {"reverse_forward": False, "basis_layout": "row"},
+            )
+            c2w_best = build_c2w(
+                look_at=center_norm,
+                eye=cam_pos,
+                reverse_forward=bool(best_variant["reverse_forward"]),
+                basis_layout=str(best_variant["basis_layout"]),
+            )
+
+            img_fallback = np.zeros((image_height, image_width, 3), dtype=np.float32)
+            depth_buf = np.full((image_height, image_width), np.inf, dtype=np.float32)
+
+            max_points = 300000
+            if points_norm.shape[0] > max_points:
+                rng = np.random.default_rng(42)
+                keep_idx = rng.choice(points_norm.shape[0], size=max_points, replace=False)
+                proj_points = points_norm[keep_idx]
+                proj_colors = colors[keep_idx]
+            else:
+                proj_points = points_norm
+                proj_colors = colors
+
+            w2c = np.linalg.inv(c2w_best).astype(np.float32)
+            pts_h = np.concatenate(
+                [proj_points, np.ones((proj_points.shape[0], 1), dtype=np.float32)],
+                axis=1,
+            )
+            cam_pts = (w2c @ pts_h.T).T[:, :3]
+
+            best_proj_count = -1
+            best_proj_payload = None
+            for depth_sign in [1.0, -1.0]:
+                z = cam_pts[:, 2] * depth_sign
+                valid_z = z > 1e-4
+                cam_pts_s = cam_pts[valid_z]
+                z_s = z[valid_z]
+                c_s = proj_colors[valid_z]
+                if cam_pts_s.shape[0] == 0:
+                    continue
+
+                u = (fx * (cam_pts_s[:, 0] / z_s) + cx).astype(np.int32)
+                v = (fy * (cam_pts_s[:, 1] / z_s) + cy).astype(np.int32)
+                in_view = (u >= 0) & (u < image_width) & (v >= 0) & (v < image_height)
+                view_count = int(in_view.sum())
+                if view_count > best_proj_count:
+                    best_proj_count = view_count
+                    best_proj_payload = (u[in_view], v[in_view], z_s[in_view], c_s[in_view])
+
+            if best_proj_payload is not None and best_proj_count > 0:
+                u, v, z, c_proj = best_proj_payload
+                order = np.argsort(z)
+                u = u[order]
+                v = v[order]
+                z = z[order]
+                c_proj = c_proj[order]
+
+                for uu, vv, zz, cc in zip(u, v, z, c_proj):
+                    if zz < depth_buf[vv, uu]:
+                        depth_buf[vv, uu] = zz
+                        img_fallback[vv, uu] = np.clip(cc, 0.0, 1.0)
+
+                valid_mask = np.isfinite(depth_buf).astype(np.uint8)
+                if valid_mask.any():
+                    kernel = np.ones((3, 3), np.uint8)
+                    dilated = cv2.dilate((img_fallback * 255).astype(np.uint8), kernel, iterations=1)
+                    filled = cv2.dilate(valid_mask, kernel, iterations=1)
+                    img_fallback[filled > 0] = dilated[filled > 0] / 255.0
+
+                rgb_img = torch.from_numpy(img_fallback).permute(2, 0, 1).to(torch.float32)
+
+        rgb_np = (
+            rgb_img.mul(255.0)
+            .permute(1, 2, 0)
+            .detach()
+            .cpu()
+            .numpy()
+            .astype(np.uint8)
+        )
+        # Orientation fix: vertical flip only (correct upside-down).
+        rgb_np = np.flipud(rgb_np)
+        return Image.fromarray(rgb_np)
 
