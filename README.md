@@ -11,7 +11,7 @@
 
 [English](README.md) | [中文](README_zh.md)
 
-Extension repo：[[3D generation]](https://github.com/zengbohan0217/OpenWorldLib-extension-3D) | [[VLA]]() | [[simulator]]()
+Extension repo：[[3D generation]](https://github.com/zengbohan0217/OpenWorldLib-extension-3D) | [[VLA]]() | [[simulator]](https://github.com/YF0224/OpenWorldLib-extension-Simulator)
 
 </div>
 
