@@ -11,7 +11,7 @@
 
 [English](README.md) | [中文](README_zh.md)
 
-扩展仓库：[[三维生成]](https://github.com/zengbohan0217/OpenWorldLib-extension-3D) | [[VLA]]() | [[仿真环境]]()
+扩展仓库：[[三维生成]](https://github.com/zengbohan0217/OpenWorldLib-extension-3D) | [[VLA]]() | [[仿真环境]](https://github.com/YF0224/OpenWorldLib-extension-Simulator)
 
 <!-- Extension code link: -->
 
