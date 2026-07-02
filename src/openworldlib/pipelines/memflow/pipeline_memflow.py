@@ -23,9 +23,9 @@ class MemFlowPipeline:
         cls,
         model_path: str,
         wan_model_path: Optional[str] = None,
-        required_components: Optional[Dict[str, str]] = None,
         python_bin: str = sys.executable,
         device: str = "cuda",
+        required_components: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> "MemFlowPipeline":
         if required_components is not None and wan_model_path is None:

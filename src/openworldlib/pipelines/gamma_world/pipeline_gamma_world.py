@@ -22,11 +22,11 @@ class GammaWorldPipeline:
     def from_pretrained(
         cls,
         model_path: Optional[str] = None,
-        required_components: Optional[Dict[str, str]] = None,
         vae: Optional[str] = None,
         text_encoder: Optional[str] = None,
         python_bin: str = sys.executable,
         device: str = "cuda",
+        required_components: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> "GammaWorldPipeline":
         if required_components is not None:

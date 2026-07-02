@@ -23,9 +23,9 @@ class SolarisPipeline:
         cls,
         model_path: str,
         dataset_dir: Optional[str] = None,
-        required_components: Optional[Dict[str, str]] = None,
         python_bin: str = sys.executable,
         device: str = "cuda",
+        required_components: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> "SolarisPipeline":
         if required_components is not None and dataset_dir is None:

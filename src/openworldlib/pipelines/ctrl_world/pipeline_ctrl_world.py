@@ -24,11 +24,11 @@ class CtrlWorldPipeline:
         model_path: str,
         svd_model_path: Optional[str] = None,
         clip_model_path: Optional[str] = None,
-        required_components: Optional[Dict[str, str]] = None,
         dataset_root_path: Optional[str] = None,
         dataset_meta_info_path: Optional[str] = None,
         python_bin: str = sys.executable,
         device: str = "cuda",
+        required_components: Optional[Dict[str, str]] = None,
         **kwargs,
     ) -> "CtrlWorldPipeline":
         if required_components is not None:
