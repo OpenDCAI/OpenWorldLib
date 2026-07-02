@@ -1,28 +1,20 @@
-import os
-
+from _path_defaults import dataset_path, env_str, model_path, python_bin
 from openworldlib.pipelines.ctrl_world.pipeline_ctrl_world import CtrlWorldPipeline
-
-
-def require_env(name: str) -> str:
-    value = os.environ.get(name)
-    if not value:
-        raise RuntimeError(f"{name} must point to a local checkpoint/model path for this integration test.")
-    return value
 
 
 def main():
     pipe = CtrlWorldPipeline.from_pretrained(
-        model_path=require_env("CTRL_WORLD_CKPT"),
-        svd_model_path=require_env("CTRL_WORLD_SVD_MODEL"),
-        clip_model_path=require_env("CTRL_WORLD_CLIP_MODEL"),
-        dataset_root_path=require_env("CTRL_WORLD_DATASET_ROOT"),
-        dataset_meta_info_path=require_env("CTRL_WORLD_DATASET_META"),
-        python_bin=os.environ.get("CTRL_WORLD_PYTHON", "python"),
+        model_path=model_path("CTRL_WORLD_CKPT", "Ctrl-World/checkpoint-10000.pt"),
+        svd_model_path=model_path("CTRL_WORLD_SVD_MODEL", "stable-video-diffusion-img2vid"),
+        clip_model_path=model_path("CTRL_WORLD_CLIP_MODEL", "clip-vit-base-patch32"),
+        dataset_root_path=dataset_path("CTRL_WORLD_DATASET_ROOT", "ctrl_world/dataset_example"),
+        dataset_meta_info_path=dataset_path("CTRL_WORLD_DATASET_META", "ctrl_world/dataset_meta_info"),
+        python_bin=python_bin("CTRL_WORLD_PYTHON"),
     )
     result = pipe(
-        interactions=os.environ.get("CTRL_WORLD_KEYBOARD", "ddcu"),
-        output_dir=os.environ.get("CTRL_WORLD_OUTPUT", "./output/ctrl_world"),
-        cuda_visible_devices=os.environ.get("CUDA_VISIBLE_DEVICES", "0"),
+        interactions=env_str("CTRL_WORLD_KEYBOARD", "ddcu"),
+        output_dir=env_str("CTRL_WORLD_OUTPUT", "./output/ctrl_world"),
+        cuda_visible_devices=env_str("CUDA_VISIBLE_DEVICES", "0"),
         timeout=None,
     )
     print(result["video_path"])
