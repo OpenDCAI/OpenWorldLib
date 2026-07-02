@@ -22,11 +22,16 @@ class SolarisPipeline:
     def from_pretrained(
         cls,
         model_path: str,
-        dataset_dir: str,
+        dataset_dir: Optional[str] = None,
+        required_components: Optional[Dict[str, str]] = None,
         python_bin: str = sys.executable,
         device: str = "cuda",
         **kwargs,
     ) -> "SolarisPipeline":
+        if required_components is not None and dataset_dir is None:
+            dataset_dir = required_components.get("dataset_dir")
+        if dataset_dir is None:
+            raise ValueError("dataset_dir must be provided directly or through required_components.")
         return cls(
             operators=SolarisOperator(),
             synthesis_model=SolarisSynthesis.from_pretrained(

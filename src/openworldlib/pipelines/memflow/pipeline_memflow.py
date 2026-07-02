@@ -22,11 +22,16 @@ class MemFlowPipeline:
     def from_pretrained(
         cls,
         model_path: str,
-        wan_model_path: str,
+        wan_model_path: Optional[str] = None,
+        required_components: Optional[Dict[str, str]] = None,
         python_bin: str = sys.executable,
         device: str = "cuda",
         **kwargs,
     ) -> "MemFlowPipeline":
+        if required_components is not None and wan_model_path is None:
+            wan_model_path = required_components.get("wan_model_path")
+        if wan_model_path is None:
+            raise ValueError("wan_model_path must be provided directly or through required_components.")
         return cls(
             operators=MemFlowOperator(),
             synthesis_model=MemFlowSynthesis.from_pretrained(

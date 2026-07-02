@@ -22,12 +22,16 @@ class GammaWorldPipeline:
     def from_pretrained(
         cls,
         model_path: Optional[str] = None,
+        required_components: Optional[Dict[str, str]] = None,
         vae: Optional[str] = None,
         text_encoder: Optional[str] = None,
         python_bin: str = sys.executable,
         device: str = "cuda",
         **kwargs,
     ) -> "GammaWorldPipeline":
+        if required_components is not None:
+            vae = required_components.get("vae", vae)
+            text_encoder = required_components.get("text_encoder", text_encoder)
         return cls(
             operators=GammaWorldOperator(),
             synthesis_model=GammaWorldSynthesis.from_pretrained(

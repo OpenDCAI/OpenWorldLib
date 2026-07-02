@@ -22,11 +22,16 @@ class FantasyWorldPipeline:
     def from_pretrained(
         cls,
         model_path: str,
-        wan_ckpt_path: str,
+        wan_ckpt_path: Optional[str] = None,
+        required_components: Optional[Dict[str, str]] = None,
         python_bin: str = sys.executable,
         device: str = "cuda",
         **kwargs,
     ) -> "FantasyWorldPipeline":
+        if required_components is not None and wan_ckpt_path is None:
+            wan_ckpt_path = required_components.get("wan_ckpt_path")
+        if wan_ckpt_path is None:
+            raise ValueError("wan_ckpt_path must be provided directly or through required_components.")
         return cls(
             operators=FantasyWorldOperator(),
             synthesis_model=FantasyWorldSynthesis.from_pretrained(

@@ -1,22 +1,29 @@
-from _path_defaults import env_int, env_str, model_path, python_bin
+import os
+
 from openworldlib.pipelines.memflow.pipeline_memflow import MemFlowPipeline
 
 
-def main():
-    pipe = MemFlowPipeline.from_pretrained(
-        model_path=model_path("MEMFLOW_CKPT_DIR", "MemFlow"),
-        wan_model_path=model_path("MEMFLOW_WAN_MODEL", "Wan2.1-T2V-1.3B"),
-        python_bin=python_bin("MEMFLOW_PYTHON"),
-    )
-    result = pipe(
-        prompt=env_str("MEMFLOW_PROMPT", "A cinematic shot of a red sports car driving along a coastal highway at sunset."),
-        output_dir=env_str("MEMFLOW_OUTPUT", "./output/memflow"),
-        num_output_frames=env_int("MEMFLOW_NUM_OUTPUT_FRAMES", 12),
-        cuda_visible_devices=env_str("CUDA_VISIBLE_DEVICES", "0"),
-        timeout=None,
-    )
-    print(result["video_path"])
+model_path = os.environ.get("MEMFLOW_CKPT_DIR", "./models/MemFlow")
+required_components = {
+    "wan_model_path": os.environ.get("MEMFLOW_WAN_MODEL", "./models/Wan2.1-T2V-1.3B"),
+}
+prompt = os.environ.get(
+    "MEMFLOW_PROMPT",
+    "A cinematic shot of a red sports car driving along a coastal highway at sunset.",
+)
 
+pipeline = MemFlowPipeline.from_pretrained(
+    model_path=model_path,
+    required_components=required_components,
+    python_bin=os.environ.get("MEMFLOW_PYTHON", "python"),
+)
 
-if __name__ == "__main__":
-    main()
+result = pipeline(
+    prompt=prompt,
+    output_dir=os.environ.get("MEMFLOW_OUTPUT", "./output/memflow"),
+    num_output_frames=int(os.environ.get("MEMFLOW_NUM_OUTPUT_FRAMES", "12")),
+    cuda_visible_devices=os.environ.get("CUDA_VISIBLE_DEVICES", "0"),
+    timeout=None,
+)
+
+print(result["video_path"])

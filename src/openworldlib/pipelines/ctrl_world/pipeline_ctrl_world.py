@@ -22,14 +22,22 @@ class CtrlWorldPipeline:
     def from_pretrained(
         cls,
         model_path: str,
-        svd_model_path: str,
-        clip_model_path: str,
+        svd_model_path: Optional[str] = None,
+        clip_model_path: Optional[str] = None,
+        required_components: Optional[Dict[str, str]] = None,
         dataset_root_path: Optional[str] = None,
         dataset_meta_info_path: Optional[str] = None,
         python_bin: str = sys.executable,
         device: str = "cuda",
         **kwargs,
     ) -> "CtrlWorldPipeline":
+        if required_components is not None:
+            svd_model_path = required_components.get("svd_model_path", svd_model_path)
+            clip_model_path = required_components.get("clip_model_path", clip_model_path)
+            dataset_root_path = required_components.get("dataset_root_path", dataset_root_path)
+            dataset_meta_info_path = required_components.get("dataset_meta_info_path", dataset_meta_info_path)
+        if svd_model_path is None or clip_model_path is None:
+            raise ValueError("svd_model_path and clip_model_path must be provided directly or through required_components.")
         return cls(
             operators=CtrlWorldOperator(),
             synthesis_model=CtrlWorldSynthesis.from_pretrained(
