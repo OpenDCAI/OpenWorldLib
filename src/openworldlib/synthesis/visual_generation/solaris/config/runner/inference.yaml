@@ -1,0 +1,8 @@
+defaults:
+  - base_runner
+  - _self_
+num_frames_eval: 257
+
+target: src.runners.inference.Inference
+params:
+  model_weights_path: ${device.pretrained_model_dir}/solaris.pt

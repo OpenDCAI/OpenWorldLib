@@ -1,0 +1,14 @@
+name: "tpu"
+batch_size: 32
+eval_num_samples: 32
+num_workers: 8
+
+data_dir: null
+eval_data_dir: ${device.data_dir}
+pretrained_model_dir: null
+output_dir: null
+checkpoint_dir: null
+jax_cache_dir: null
+
+jax_distributed_config:
+  target: jax.distributed.initialize

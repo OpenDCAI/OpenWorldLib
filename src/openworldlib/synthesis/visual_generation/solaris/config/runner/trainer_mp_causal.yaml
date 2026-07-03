@@ -1,0 +1,12 @@
+defaults:
+  - base_ssl_trainer
+  - _self_
+
+num_frames_eval: 257
+
+target: src.runners.trainer_mp.Trainer
+params:
+  bidirectional: False
+  noise_type: "diffusion_forcing"
+  total_steps: 60000
+  pretrained_model_path: ${device.pretrained_model_dir}/mp_bidirectional_120000.pt

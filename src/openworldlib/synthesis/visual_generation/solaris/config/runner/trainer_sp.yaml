@@ -1,0 +1,10 @@
+defaults:
+  - base_ssl_trainer
+  - _self_
+
+target: src.runners.trainer_sp.Trainer
+params:
+  bidirectional: True
+  noise_type: "standard"
+  total_steps: 120000
+  pretrained_model_path: ${device.pretrained_model_dir}/matrix-game-init.pt

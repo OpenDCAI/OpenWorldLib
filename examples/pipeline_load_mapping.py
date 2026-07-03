@@ -77,7 +77,7 @@ def load_lingbot_world_pipeline(model_path: Union[str, Dict], device: str):
     return LingBotPipeline.from_pretrained(
         model_path=_resolve_path(model_path, "pretrained_model_path"),
         mode="i2v-A14B",
-        device=device,  
+        device=device,
         rank=rank,
         t5_fsdp=False,
         dit_fsdp=False,
@@ -128,6 +128,80 @@ def load_cosmos_predict2p5_pipeline(model_path: Union[str, Dict], device: str, t
     )
 
 
+def load_cosmos3_pipeline(model_path: Union[str, Dict], device: str):
+    from openworldlib.pipelines.cosmos.pipeline_cosmos3 import Cosmos3Pipeline
+    return Cosmos3Pipeline.from_pretrained(
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        torch_dtype=model_path.get("torch_dtype", "bfloat16") if isinstance(model_path, dict) else "bfloat16",
+        device=device,
+    )
+
+
+def load_gamma_world_pipeline(model_path: Union[str, Dict], device: str):
+    from openworldlib.pipelines.gamma_world.pipeline_gamma_world import GammaWorldPipeline
+    checkpoint = model_path.get("pretrained_model_path") if isinstance(model_path, dict) else model_path
+    return GammaWorldPipeline.from_pretrained(
+        model_path=checkpoint,
+        vae=model_path.get("vae") if isinstance(model_path, dict) else None,
+        text_encoder=model_path.get("text_encoder") if isinstance(model_path, dict) else None,
+        python_bin=model_path.get("python_bin", "python") if isinstance(model_path, dict) else "python",
+        device=device,
+    )
+
+
+def load_hunyuan_worldplay2_pipeline(model_path: Union[str, Dict], device: str):
+    from openworldlib.pipelines.hunyuan_world.pipeline_hunyuan_worldplay2 import HunyuanWorldPlay2Pipeline
+    return HunyuanWorldPlay2Pipeline.from_pretrained(
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        subfolder=model_path.get("subfolder", "HY-WorldMirror-2.0") if isinstance(model_path, dict) else "HY-WorldMirror-2.0",
+        python_bin=model_path.get("python_bin", "python") if isinstance(model_path, dict) else "python",
+        device=device,
+    )
+
+
+def load_solaris_pipeline(model_path: Union[str, Dict], device: str):
+    from openworldlib.pipelines.solaris.pipeline_solaris import SolarisPipeline
+    return SolarisPipeline.from_pretrained(
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        dataset_dir=_resolve_path(model_path, "dataset_dir"),
+        python_bin=model_path.get("python_bin", "python") if isinstance(model_path, dict) else "python",
+        device=device,
+    )
+
+
+def load_ctrl_world_pipeline(model_path: Union[str, Dict], device: str):
+    from openworldlib.pipelines.ctrl_world.pipeline_ctrl_world import CtrlWorldPipeline
+    return CtrlWorldPipeline.from_pretrained(
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        svd_model_path=_resolve_path(model_path, "svd_model_path"),
+        clip_model_path=_resolve_path(model_path, "clip_model_path"),
+        dataset_root_path=model_path.get("dataset_root_path") if isinstance(model_path, dict) else None,
+        dataset_meta_info_path=model_path.get("dataset_meta_info_path") if isinstance(model_path, dict) else None,
+        python_bin=model_path.get("python_bin", "python") if isinstance(model_path, dict) else "python",
+        device=device,
+    )
+
+
+def load_fantasy_world_pipeline(model_path: Union[str, Dict], device: str):
+    from openworldlib.pipelines.fantasy_world.pipeline_fantasy_world import FantasyWorldPipeline
+    return FantasyWorldPipeline.from_pretrained(
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        wan_ckpt_path=_resolve_path(model_path, "wan_ckpt_path"),
+        python_bin=model_path.get("python_bin", "python") if isinstance(model_path, dict) else "python",
+        device=device,
+    )
+
+
+def load_memflow_pipeline(model_path: Union[str, Dict], device: str):
+    from openworldlib.pipelines.memflow.pipeline_memflow import MemFlowPipeline
+    return MemFlowPipeline.from_pretrained(
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        wan_model_path=_resolve_path(model_path, "wan_model_path"),
+        python_bin=model_path.get("python_bin", "python") if isinstance(model_path, dict) else "python",
+        device=device,
+    )
+
+
 ## utilize lazy loader to load different tasks pipeline
 video_gen_pipe = {
     "matrix-game2": load_matrix_game2_pipeline,
@@ -138,6 +212,10 @@ video_gen_pipe = {
     "hunyuan-game-craft": load_hunyuan_game_craft_pipeline,
     "lingbot-world": load_lingbot_world_pipeline,
     "cosmos-predict2p5": load_cosmos_predict2p5_pipeline,
+    "cosmos3": load_cosmos3_pipeline,
+    "gamma-world": load_gamma_world_pipeline,
+    "solaris": load_solaris_pipeline,
+    "memflow": load_memflow_pipeline,
 }
 
 reasoning_pipe = {
@@ -145,9 +223,12 @@ reasoning_pipe = {
 }
 
 three_dim_pipe = {
-
+    "fantasy-world": load_fantasy_world_pipeline,
+    "hunyuan-worldplay2": load_hunyuan_worldplay2_pipeline,
+    "hy-world-2": load_hunyuan_worldplay2_pipeline,
 }
 
 vla_pipe = {
     "spirit-v1p5": load_spirit_v1p5_pipeline,
+    "ctrl-world": load_ctrl_world_pipeline,
 }

@@ -1,0 +1,16 @@
+defaults:
+  - base_trainer
+  - _self_
+params:
+  lr_scheduler_config: ${lr_scheduler}
+
+  optimizer_config:
+    enable_grad_accumulation: False
+    grad_accum_steps: 1
+    optimizer:
+      target: optax.adamw
+      params:
+        b1: 0.9
+        b2: 0.95
+        eps: 1e-8
+        weight_decay: 0.0

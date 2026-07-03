@@ -8,6 +8,10 @@ show_help() {
     echo "  - matrix-game-2        : Run test_matrix_game_2.py"
     echo "  - infinite-world       : Run test_infinite_world.py"
     echo "  - matrix-game-3        : Run test_matrix_game_3.py (uses default HF repo id by default)"
+    echo "  - cosmos3             : Run test_cosmos3.py"
+    echo "  - gamma-world         : Run test_gamma_world.py"
+    echo "  - solaris              : Run test_solaris.py"
+    echo "  - memflow              : Run test_memflow.py"
     echo "  - hunyuan-gamecraft    : Run test_hunyuan_gamecraft.py"
     echo "  - hunyuanworld-voyager : Run test_hunyuan_world_voyager.py"
     echo "  - astra                : Run test_astra.py"
@@ -18,6 +22,7 @@ show_help() {
 }
 
 PYTHON_BIN=${PYTHON_BIN:-python}
+CUDA_VISIBLE_DEVICES_VALUE=${CUDA_VISIBLE_DEVICES:-0}
 if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
     if command -v python3 >/dev/null 2>&1; then
         PYTHON_BIN=python3
@@ -45,6 +50,22 @@ case $METHOD_NAME in
     "matrix-game-3"|"matrix-game3")
         echo "Executing: matrix_game_3..."
         CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_matrix_game_3.py
+        ;;
+    "cosmos3")
+        echo "Executing: cosmos3..."
+        CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES_VALUE" "$PYTHON_BIN" test/test_cosmos3.py
+        ;;
+    "gamma-world")
+        echo "Executing: gamma_world..."
+        CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES_VALUE" "$PYTHON_BIN" test/test_gamma_world.py
+        ;;
+    "solaris")
+        echo "Executing: solaris..."
+        CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES_VALUE" "$PYTHON_BIN" test/test_solaris.py
+        ;;
+    "memflow")
+        echo "Executing: memflow..."
+        CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES_VALUE" "$PYTHON_BIN" test/test_memflow.py
         ;;
     "infinite-world")
         echo "Executing: infinite_world..."

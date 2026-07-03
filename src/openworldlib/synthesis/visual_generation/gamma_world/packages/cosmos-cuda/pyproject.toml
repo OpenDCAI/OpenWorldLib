@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cosmos-cuda"
+dynamic = ["version"]
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.hatch.version]
+path = "cosmos_cuda/__about__.py"
+
+[tool.hatch.build.targets.sdist]
+packages = [
+  "cosmos_cuda",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = [
+  "cosmos_cuda",
+]
+exclude = [
+  "*_test.py",
+]

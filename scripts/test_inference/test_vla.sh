@@ -27,6 +27,7 @@ show_help() {
     echo "  pi0-all             : Run both PI0 and PI0.5 tests on all datasets"
     echo "  lingbot-va          : Run LingBot-VA test"
     echo "  giga-brain-0        : Run GigaBrain-0 test"
+    echo "  ctrl-world          : Run Ctrl-World test"
     echo "  spirit-v1p5         : Run Spirit-v1.5 inference test"
     echo "  spirit-v1p5-libero  : Run Spirit-v1.5 inference + LIBERO visualization test"
     echo "  all                 : Run all VLA tests"
@@ -45,6 +46,17 @@ show_help() {
     echo ""
 }
 
+PYTHON_BIN=${PYTHON_BIN:-python}
+CUDA_VISIBLE_DEVICES_VALUE=${CUDA_VISIBLE_DEVICES:-0}
+if ! command -v "$PYTHON_BIN" >/dev/null 2>&1; then
+    if command -v python3 >/dev/null 2>&1; then
+        PYTHON_BIN=python3
+    else
+        echo "Error: neither 'python' nor 'python3' is available in PATH."
+        exit 1
+    fi
+fi
+
 # Check if an argument is provided
 if [ -z "$1" ]; then
     echo "Error: Please provide a method name to execute."
@@ -61,43 +73,49 @@ case $METHOD_NAME in
         echo "============================================================"
         echo "  Executing: PI0 tests"
         echo "============================================================"
-        CUDA_VISIBLE_DEVICES=0 python test/test_pi0.py --model pi0 "$@"
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_pi0.py --model pi0 "$@"
         ;;
     "pi05")
         echo "============================================================"
         echo "  Executing: PI0.5 tests"
         echo "============================================================"
-        CUDA_VISIBLE_DEVICES=0 python test/test_pi0.py --model pi05 "$@"
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_pi0.py --model pi05 "$@"
         ;;
     "pi0-all")
         echo "============================================================"
         echo "  Executing: PI0 + PI0.5 tests (all)"
         echo "============================================================"
-        CUDA_VISIBLE_DEVICES=0 python test/test_pi0.py --model all "$@"
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_pi0.py --model all "$@"
         ;;
     "lingbot-va")
         echo "============================================================"
         echo "  Executing: LingBot-VA test"
         echo "============================================================"
-        CUDA_VISIBLE_DEVICES=0 python test/test_lingbot_va.py
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_lingbot_va.py
         ;;
     "giga-brain-0")
         echo "============================================================"
         echo "  Executing: GigaBrain-0 test"
         echo "============================================================"
-        CUDA_VISIBLE_DEVICES=0 python test/test_giga_brain_0.py
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_giga_brain_0.py
+        ;;
+    "ctrl-world")
+        echo "============================================================"
+        echo "  Executing: Ctrl-World test"
+        echo "============================================================"
+        CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES_VALUE" "$PYTHON_BIN" test/test_ctrl_world.py
         ;;
     "spirit-v1p5")
         echo "============================================================"
         echo "  Executing: Spirit-v1.5 test"
         echo "============================================================"
-        CUDA_VISIBLE_DEVICES=0 python test/test_spirit_v1p5.py
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_spirit_v1p5.py
         ;;
     "spirit-v1p5-libero")
         echo "============================================================"
         echo "  Executing: Spirit-v1.5 + LIBERO visualization test"
         echo "============================================================"
-        CUDA_VISIBLE_DEVICES=0 python test/test_spirit_v1p5_libero.py
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_spirit_v1p5_libero.py
         ;;
     "all")
         echo "============================================================"
@@ -105,28 +123,33 @@ case $METHOD_NAME in
         echo "============================================================"
         echo ""
 
-        echo "[1/5] PI0 + PI0.5 tests..."
-        CUDA_VISIBLE_DEVICES=0 python test/test_pi0.py --model all
+        echo "[1/6] PI0 + PI0.5 tests..."
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_pi0.py --model all
         PI0_EXIT=$?
 
         echo ""
-        echo "[2/5] LingBot-VA test..."
-        CUDA_VISIBLE_DEVICES=0 python test/test_lingbot_va.py
+        echo "[2/6] LingBot-VA test..."
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_lingbot_va.py
         LINGBOT_EXIT=$?
 
         echo ""
-        echo "[3/5] GigaBrain-0 test..."
-        CUDA_VISIBLE_DEVICES=0 python test/test_giga_brain_0.py
+        echo "[3/6] GigaBrain-0 test..."
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_giga_brain_0.py
         GIGA_EXIT=$?
 
         echo ""
-        echo "[4/5] Spirit-v1.5 test..."
-        CUDA_VISIBLE_DEVICES=0 python test/test_spirit_v1p5.py
+        echo "[4/6] Ctrl-World test..."
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_ctrl_world.py
+        CTRL_WORLD_EXIT=$?
+
+        echo ""
+        echo "[5/6] Spirit-v1.5 test..."
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_spirit_v1p5.py
         SPIRIT_EXIT=$?
 
         echo ""
-        echo "[5/5] Spirit-v1.5 + LIBERO visualization test..."
-        CUDA_VISIBLE_DEVICES=0 python test/test_spirit_v1p5_libero.py
+        echo "[6/6] Spirit-v1.5 + LIBERO visualization test..."
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_spirit_v1p5_libero.py
         SPIRIT_LIBERO_EXIT=$?
 
         echo ""
@@ -136,12 +159,13 @@ case $METHOD_NAME in
         echo "  PI0/PI0.5:            $([ $PI0_EXIT -eq 0 ] && echo 'PASS' || echo 'FAIL')"
         echo "  LingBot-VA:           $([ $LINGBOT_EXIT -eq 0 ] && echo 'PASS' || echo 'FAIL')"
         echo "  GigaBrain-0:          $([ $GIGA_EXIT -eq 0 ] && echo 'PASS' || echo 'FAIL')"
+        echo "  Ctrl-World:           $([ $CTRL_WORLD_EXIT -eq 0 ] && echo 'PASS' || echo 'FAIL')"
         echo "  Spirit-v1.5:          $([ $SPIRIT_EXIT -eq 0 ] && echo 'PASS' || echo 'FAIL')"
         echo "  Spirit-v1.5+LIBERO:   $([ $SPIRIT_LIBERO_EXIT -eq 0 ] && echo 'PASS' || echo 'FAIL')"
         echo "============================================================"
 
         # Exit with failure if any test failed
-        if [ $PI0_EXIT -ne 0 ] || [ $LINGBOT_EXIT -ne 0 ] || [ $GIGA_EXIT -ne 0 ] || [ $SPIRIT_EXIT -ne 0 ] || [ $SPIRIT_LIBERO_EXIT -ne 0 ]; then
+        if [ $PI0_EXIT -ne 0 ] || [ $LINGBOT_EXIT -ne 0 ] || [ $GIGA_EXIT -ne 0 ] || [ $CTRL_WORLD_EXIT -ne 0 ] || [ $SPIRIT_EXIT -ne 0 ] || [ $SPIRIT_LIBERO_EXIT -ne 0 ]; then
             exit 1
         fi
         ;;

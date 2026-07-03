@@ -1,0 +1,63 @@
+defaults:
+  - base_runner
+  - _self_
+num_frames_eval: 33
+
+params:
+  use_wandb: True
+  total_steps: 1000000
+  should_train: True
+  restore_step: "latest"
+  train_log_every_steps: 10
+  test_log_every_steps: 200
+  test_num_batches: 16
+  eval_every_steps: 1000
+
+  train_dataset_config:
+    target: ${dataset.class}
+    params:
+      data_dir: ${device.data_dir}/${dataset.train_dataset_name}
+      dataset_name: ${dataset.name}
+      obs_resize: ${obs_resolution}
+      converters: ${model.dataset_converters}
+      additional_params: ${dataset.additional_params}
+
+  test_dataset_config:
+    target: ${dataset.class}
+    params:
+      data_dir: ${device.data_dir}/${dataset.test_dataset_name}
+      dataset_name: ${dataset.name}
+      obs_resize: ${obs_resolution}
+      converters: ${model.dataset_converters}
+      additional_params: ${dataset.additional_params}
+
+  train_dataloader_config:
+    target: src.data.loader.build_data_loader
+    params:
+      batch_size: ${device.batch_size}
+      num_workers: ${device.num_workers}
+      num_frames: ${num_frames_context}
+      seed_data: 32
+      eval: False
+
+  test_dataloader_config:
+    target: src.data.loader.build_data_loader
+    params:
+      batch_size: ${device.batch_size}
+      num_workers: ${device.num_workers}
+      num_frames: ${num_frames_context}
+      seed_data: 8
+      eval: False
+
+  checkpoint_config:
+    target: src.utils.checkpoint.build_checkpoint_manager
+    params:
+      ckpt_dir: ${device.checkpoint_dir}
+      save_interval_steps: 500
+      max_to_keep: 5
+      keep_period: 20000
+      step_prefix: ${experiment_name}
+      enable_async_checkpointing: False
+
+  eval_num_denoising_steps: 50
+  save_model_state_to: null

@@ -89,6 +89,34 @@ In this document, we list the installation requirements and installation scripts
     <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
+    <td align="center">Cosmos3</td>
+    <td align="center">3.11</td>
+    <td align="center">12.8+</td>
+    <td>PyTorch, Diffusers main, Transformers, Cosmos Guardrail</td>
+    <td><code>bash scripts/setup/cosmos3_install.sh</code><br/><code>bash scripts/test_inference/test_nav_video_gen.sh cosmos3</code></td>
+  </tr>
+  <tr>
+    <td align="center">GammaWorld</td>
+    <td align="center">3.10</td>
+    <td align="center">12.8</td>
+    <td>PyTorch, Transformer Engine, Gamma-World package</td>
+    <td><code>bash scripts/setup/gamma_world_install.sh</code><br/><code>bash scripts/test_inference/test_nav_video_gen.sh gamma-world</code></td>
+  </tr>
+  <tr>
+    <td align="center">Solaris</td>
+    <td align="center">3.10</td>
+    <td align="center">12.1+</td>
+    <td>JAX 0.6.2, Flax 0.10.6, PyTorch 2.8.0</td>
+    <td><code>bash scripts/setup/solaris_install.sh</code><br/><code>bash scripts/test_inference/test_nav_video_gen.sh solaris</code></td>
+  </tr>
+  <tr>
+    <td align="center">MemFlow</td>
+    <td align="center">3.10</td>
+    <td align="center">12.8</td>
+    <td>PyTorch 2.8.0, Diffusers 0.31.0, FlashAttention</td>
+    <td><code>bash scripts/setup/memflow_install.sh</code><br/><code>bash scripts/test_inference/test_nav_video_gen.sh memflow</code></td>
+  </tr>
+  <tr>
     <td colspan="5" align="center"><b>🎨 3D Scene Generation</b></td>
   </tr>
   <tr>
@@ -104,6 +132,13 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td><code>bash scripts/setup/hunyuan_mirror_install.sh</code></td>
+  </tr>
+  <tr>
+    <td align="center">Hunyuan-worldplay2 / HY-World-2.0</td>
+    <td align="center">3.11.15</td>
+    <td align="center">12.8</td>
+    <td>PyTorch, WorldMirror 2.0, gsplat</td>
+    <td><code>bash scripts/setup/hunyuan_worldplay2_install.sh</code><br/><code>bash scripts/test_inference/test_3d_scene_gen.sh hunyuan-worldplay2</code></td>
   </tr>
   <tr>
     <td align="center">VGGT</td>
@@ -139,6 +174,13 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td><code>bash scripts/setup/default_3D_install.sh</code></td>
+  </tr>
+  <tr>
+    <td align="center">FantasyWorld</td>
+    <td align="center">3.10</td>
+    <td align="center">12.1+</td>
+    <td>PyTorch 2.4.0+, Diffusers 0.31.0+, Transformers 4.49.0</td>
+    <td><code>bash scripts/setup/fantasy_world_install.sh</code><br/><code>bash scripts/test_inference/test_3d_scene_gen.sh fantasy-world</code></td>
   </tr>
   <tr>
     <td colspan="5" align="center"><b> 🤖 Vision Language Action</b></td>
@@ -178,6 +220,13 @@ In this document, we list the installation requirements and installation scripts
     <td align="center">12.1</td>
     <td>PyTorch 2.5.1</td>
     <td><code>bash scripts/setup/default_lingbot_va.sh</code></td>
+  </tr>
+  <tr>
+    <td align="center">Ctrl-World</td>
+    <td align="center">3.11</td>
+    <td align="center">12.6+</td>
+    <td>PyTorch 2.7.1, Diffusers 0.34.0, Transformers 4.48.1</td>
+    <td><code>bash scripts/setup/ctrl_world_install.sh</code><br/><code>bash scripts/test_inference/test_vla.sh ctrl-world</code></td>
   </tr>
   <tr>
     <td colspan="5" align="center"><b>🎓 Multimodal Reasoning</b></td>

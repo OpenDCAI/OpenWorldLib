@@ -1,0 +1,10 @@
+defaults:
+  - base_ssl_trainer
+  - _self_
+
+target: src.runners.trainer_mp.Trainer
+params:
+  bidirectional: True
+  noise_type: standard
+  total_steps: 120000
+  pretrained_model_path: ${device.pretrained_model_dir}/sp_bidirectional_pretrain_120000.pt

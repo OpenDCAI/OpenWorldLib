@@ -79,6 +79,19 @@ def precompute_freqs_cis_3d(dim: int, end: int = 1024, theta: float = 10000.0):
     return f_freqs_cis, h_freqs_cis, w_freqs_cis
 
 
+def build_freqs_3d_with_extra_cis(freqs_3d, f: int, h: int, w: int, n_extra: int, device=None):
+    t_cis, h_cis, w_cis = freqs_3d
+
+    fp = t_cis[:f].view(f, 1, 1, -1).expand(f, h, w, -1)
+    hp = h_cis[:h].view(1, h, 1, -1).expand(f, h, w, -1)
+    wp = w_cis[:w].view(1, 1, w, -1).expand(f, h, w, -1)
+    patch = torch.cat([fp, hp, wp], dim=-1).reshape(f * h * w, -1)
+
+    extra = torch.zeros((n_extra, patch.size(-1)), dtype=patch.dtype, device=patch.device)
+    full = torch.cat([extra, patch], dim=0).view(n_extra + f * h * w, 1, patch.size(-1))
+    return full.to(device) if device is not None else full
+
+
 def precompute_freqs_cis(dim: int, end: int = 1024, theta: float = 10000.0):
     # 1d rope precompute
     freqs = 1.0 / (theta ** (torch.arange(0, dim, 2)
@@ -146,6 +159,25 @@ class SelfAttention(nn.Module):
         return self.o(x)
 
 
+class CrossAttentionProcessor:
+    def __call__(self, attn, x: torch.Tensor, y: torch.Tensor, **kwargs):
+        if attn.has_image_input:
+            img = y[:, :257]
+            ctx = y[:, 257:]
+        else:
+            ctx = y
+        q = attn.norm_q(attn.q(x))
+        k = attn.norm_k(attn.k(ctx))
+        v = attn.v(ctx)
+        x = attn.attn(q, k, v)
+        if attn.has_image_input:
+            k_img = attn.norm_k_img(attn.k_img(img))
+            v_img = attn.v_img(img)
+            y = flash_attention(q, k_img, v_img, num_heads=attn.num_heads)
+            x = x + y
+        return attn.o(x)
+
+
 class CrossAttention(nn.Module):
     def __init__(self, dim: int, num_heads: int, eps: float = 1e-6, has_image_input: bool = False):
         super().__init__()
@@ -166,23 +198,16 @@ class CrossAttention(nn.Module):
             self.norm_k_img = RMSNorm(dim, eps=eps)
             
         self.attn = AttentionModule(self.num_heads)
+        self.set_processor(CrossAttentionProcessor())
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor):
-        if self.has_image_input:
-            img = y[:, :257]
-            ctx = y[:, 257:]
-        else:
-            ctx = y
-        q = self.norm_q(self.q(x))
-        k = self.norm_k(self.k(ctx))
-        v = self.v(ctx)
-        x = self.attn(q, k, v)
-        if self.has_image_input:
-            k_img = self.norm_k_img(self.k_img(img))
-            v_img = self.v_img(img)
-            y = flash_attention(q, k_img, v_img, num_heads=self.num_heads)
-            x = x + y
-        return self.o(x)
+    def set_processor(self, processor):
+        self.processor = processor
+
+    def get_processor(self):
+        return self.processor
+
+    def forward(self, x: torch.Tensor, y: torch.Tensor, **kwargs):
+        return self.processor(self, x, y, **kwargs)
 
 
 class GateModule(nn.Module):
@@ -210,13 +235,13 @@ class DiTBlock(nn.Module):
         self.modulation = nn.Parameter(torch.randn(1, 6, dim) / dim**0.5)
         self.gate = GateModule()
 
-    def forward(self, x, context, t_mod, freqs):
+    def forward(self, x, context, t_mod, freqs, **kwargs):
         # msa: multi-head self-attention  mlp: multi-layer perceptron
         shift_msa, scale_msa, gate_msa, shift_mlp, scale_mlp, gate_mlp = (
             self.modulation.to(dtype=t_mod.dtype, device=t_mod.device) + t_mod).chunk(6, dim=1)
         input_x = modulate(self.norm1(x), shift_msa, scale_msa)
         x = self.gate(x, gate_msa, self.self_attn(input_x, freqs))
-        x = x + self.cross_attn(self.norm3(x), context)
+        x = x + self.cross_attn(self.norm3(x), context, **kwargs)
         input_x = modulate(self.norm2(x), shift_mlp, scale_mlp)
         x = self.gate(x, gate_mlp, self.ffn(input_x))
         return x
@@ -309,6 +334,33 @@ class WanModel(torch.nn.Module):
         self.has_image_pos_emb = has_image_pos_emb
         self.has_ref_conv = has_ref_conv
 
+    @property
+    def attn_processors(self):
+        processors = {}
+
+        def fn_recursive_add_processors(name: str, module: torch.nn.Module, processors):
+            if hasattr(module, "get_processor"):
+                processors[f"{name}.processor"] = module.get_processor()
+            for sub_name, child in module.named_children():
+                child_name = f"{name}.{sub_name}" if name else sub_name
+                fn_recursive_add_processors(child_name, child, processors)
+
+        fn_recursive_add_processors("", self, processors)
+        return processors
+
+    def set_attn_processor(self, processor):
+        if isinstance(processor, dict):
+            for name, module in self.named_modules():
+                if hasattr(module, "set_processor"):
+                    key = f"{name}.processor"
+                    if key in processor:
+                        module.set_processor(processor[key])
+            return
+
+        for module in self.modules():
+            if hasattr(module, "set_processor"):
+                module.set_processor(processor)
+
     def patchify(self, x: torch.Tensor):
         x = self.patch_embedding(x)
         grid_size = x.shape[2:]
@@ -371,7 +423,7 @@ class WanModel(torch.nn.Module):
                         use_reentrant=False,
                     )
             else:
-                x = block(x, context, t_mod, freqs)
+                x = block(x, context, t_mod, freqs, **kwargs)
 
         x = self.head(x, t)
         x = self.unpatchify(x, (f, h, w))

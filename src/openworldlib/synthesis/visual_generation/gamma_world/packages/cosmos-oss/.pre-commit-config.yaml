@@ -1,0 +1,81 @@
+# SPDX-FileCopyrightText: Copyright (c) 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+exclude: (?x)(
+    ^tests/data/
+  )
+repos:
+  - repo: https://github.com/google/addlicense
+    rev: v1.2.0-rc0
+    hooks:
+      - id: addlicense
+        args: ["-f", "bin/license.txt"]
+  - repo: https://github.com/jsh9/markdown-toc-creator
+    rev: 0.0.11
+    hooks:
+      - id: markdown-toc-creator
+        args: ["-q"]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude_types: [python]
+      - id: end-of-file-fixer
+        exclude_types: [python]
+      - id: check-symlinks
+      # - id: check-executables-have-shebangs
+      # - id: check-shebang-scripts-are-executable
+  - repo: local
+    hooks:
+      - id: uv-lock
+        name: Generate uv lock files for projects
+        entry: ./bin/uv_lock.sh
+        language: script
+        files: pyproject\.toml$
+      - id: uv-lock-script
+        name: Generate uv lock files for scripts
+        entry: ./bin/uv_lock_script.sh
+        language: script
+        types: [python]
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.7
+    hooks:
+      - alias: ruff-check-only
+        id: ruff-check
+        stages: [manual]
+      - alias: ruff-fix
+        name: ruff fix
+        id: ruff-check
+        args: [--fix]
+      - alias: ruff-noqa
+        name: ruff noqa
+        id: ruff-check
+        args: [--add-noqa]
+        stages: [manual]
+      - id: ruff-format
+  - repo: https://github.com/tcort/markdown-link-check
+    rev: v3.14.1
+    hooks:
+      - alias: link-check-relative
+        name: link check relative
+        id: markdown-link-check
+        args: [--config, ".link-check-relative.json", --quiet]
+        exclude: \bATTRIBUTIONS\b
+      - alias: link-check
+        name: link check
+        id: markdown-link-check
+        args: [--config, ".link-check.json", --quiet]
+        stages: [manual]
+        exclude: \bATTRIBUTIONS\b

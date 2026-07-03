@@ -1,0 +1,1 @@
+"""FantasyWorld integration package."""

@@ -1,0 +1,1 @@
+"""FantasyWorld VGGT model definitions."""

@@ -1,0 +1,8 @@
+project-excludes = [
+    "**/internal/",
+    "**/scripts/",
+    "*/_src/",
+    "gamma_world/_src/imaginaire/",
+    "packages/",
+    "projects/",
+]

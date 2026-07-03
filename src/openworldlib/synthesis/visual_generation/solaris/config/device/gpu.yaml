@@ -1,0 +1,18 @@
+name: "gpu"
+batch_size: 1
+eval_num_samples: 1
+num_workers: 8
+
+data_dir: datasets/
+eval_data_dir: ${device.data_dir}
+pretrained_model_dir: pretrained/
+output_dir: output/
+checkpoint_dir: checkpoint/
+jax_cache_dir: jax_cache/
+
+jax_distributed_config:
+  target: jax.distributed.initialize
+  params:
+    coordinator_address: localhost:8000
+    num_processes: 8
+    process_id: 0

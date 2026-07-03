@@ -1,0 +1,49 @@
+defaults:
+  - base_trainer
+  - _self_
+
+num_frames_eval: 257
+
+target: src.runners.trainer_mp_sf.Trainer
+params:
+  use_grad_norm: True
+
+  generator_lr_scheduler_config:
+    target: optax.constant_schedule
+    params:
+      value: 3e-6
+
+  fake_lr_scheduler_config:
+    target: optax.constant_schedule
+    params:
+      value: 3e-7
+
+  generator_optimizer_config:
+    enable_grad_accumulation: False
+    grad_accum_steps: 1
+    optimizer:
+      target: optax.adamw
+      params:
+        b1: 0.9
+        b2: 0.95
+        eps: 1e-8
+        weight_decay: 0.0
+
+  fake_optimizer_config:
+    enable_grad_accumulation: False
+    grad_accum_steps: 1
+    optimizer:
+      target: optax.adamw
+      params:
+        b1: 0.9
+        b2: 0.95
+        eps: 1e-8
+        weight_decay: 0.0
+
+  causal_checkpoint_path: ${device.pretrained_model_dir}/mp_causal_120000.pt
+  bidirectional_checkpoint_path: ${device.pretrained_model_dir}/mp_bidirectional_120000.pt
+  no_kv_backprop_teacher_forcing: False
+
+  eval_num_denoising_steps: null # use the hardcoded
+  total_steps: 1200
+  eval_every_steps: 250

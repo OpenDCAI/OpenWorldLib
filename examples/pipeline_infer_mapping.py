@@ -156,6 +156,40 @@ def infer_cosmos_predict2p5_pipeline(pipe, prompt, input_image, output_path=None
     return output_video
 
 
+def infer_cosmos3_pipeline(pipe, prompt, output_path, **kwargs):
+    return pipe(prompt=prompt, output_path=output_path, **kwargs)
+
+
+def infer_gamma_world_pipeline(pipe, output_dir, **kwargs):
+    return pipe(output_dir=output_dir, **kwargs)
+
+
+def infer_solaris_pipeline(pipe, output_dir, eval_num_samples=1, **kwargs):
+    return pipe(output_dir=output_dir, eval_num_samples=eval_num_samples, **kwargs)
+
+
+def infer_ctrl_world_pipeline(pipe, interaction_signal="ddcu", **kwargs):
+    return pipe(interactions=interaction_signal, **kwargs)
+
+
+def infer_fantasy_world_pipeline(pipe, image_path, camera_json_path, prompt, output_dir, **kwargs):
+    return pipe(
+        image_path=image_path,
+        camera_json_path=camera_json_path,
+        prompt=prompt,
+        output_dir=output_dir,
+        **kwargs,
+    )
+
+
+def infer_hunyuan_worldplay2_pipeline(pipe, input_path, output_dir, **kwargs):
+    return pipe(input_path=input_path, output_dir=output_dir, **kwargs)
+
+
+def infer_memflow_pipeline(pipe, prompt, output_dir, **kwargs):
+    return pipe(prompt=prompt, output_dir=output_dir, **kwargs)
+
+
 video_gen_pipe_infer = {
     "matrix-game2": infer_matrix_game2_pipeline,
     "matrix-game3": infer_matrix_game3_pipeline,
@@ -164,6 +198,10 @@ video_gen_pipe_infer = {
     "hunyuan-game-craft": infer_hunyuan_game_craft_pipeline,
     "lingbot-world": infer_lingbot_world_pipeline,
     "cosmos-predict2p5": infer_cosmos_predict2p5_pipeline,
+    "cosmos3": infer_cosmos3_pipeline,
+    "gamma-world": infer_gamma_world_pipeline,
+    "solaris": infer_solaris_pipeline,
+    "memflow": infer_memflow_pipeline,
 }
 
 reasoning_pipe_infer = {
@@ -171,9 +209,12 @@ reasoning_pipe_infer = {
 }
 
 three_dim_pipe_infer = {
-
+    "fantasy-world": infer_fantasy_world_pipeline,
+    "hunyuan-worldplay2": infer_hunyuan_worldplay2_pipeline,
+    "hy-world-2": infer_hunyuan_worldplay2_pipeline,
 }
 
 vla_pipe_infer = {
     "spirit-v1p5": infer_spirit_v1p5_pipeline,
+    "ctrl-world": infer_ctrl_world_pipeline,
 }

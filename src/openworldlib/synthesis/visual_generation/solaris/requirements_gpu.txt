@@ -1,0 +1,2 @@
+-r requirements.txt
+jax[cuda12]==0.6.2

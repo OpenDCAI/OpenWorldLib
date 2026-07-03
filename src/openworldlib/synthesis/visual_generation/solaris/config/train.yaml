@@ -1,0 +1,16 @@
+defaults:
+  - shared
+  - device: tpu
+  - model: solaris
+  - dataset: duet
+  - lr_scheduler: constant
+  - runner: trainer_mp_bidirectional
+  - dataset@eval_datasets.duet: duet
+  - _self_
+
+num_frames_context: 33
+
+wandb_project_name: solaris
+wandb_entity: null
+wandb_resume_from: null
+wandb_tags: null

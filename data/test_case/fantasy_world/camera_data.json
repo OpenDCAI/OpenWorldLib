@@ -1,0 +1,8 @@
+{
+  "focal_length": 500,
+  "trajectory": {
+    "num_frames": 17,
+    "axis": "z",
+    "step": 0.03
+  }
+}

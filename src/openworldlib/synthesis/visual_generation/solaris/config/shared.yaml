@@ -1,0 +1,11 @@
+#
+# Shared Hydra config settings used by both training and inference.
+#
+
+obs_resolution: [360, 640]
+
+experiment_name: null
+
+enable_jax_cache: False
+
+shuffle_bots: false

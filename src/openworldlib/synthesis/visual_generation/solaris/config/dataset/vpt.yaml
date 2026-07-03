@@ -1,0 +1,7 @@
+train_dataset_name: "vpt/train"
+test_dataset_name: "vpt/test"
+class: src.data.dataset.Dataset
+name: vpt
+multiplayer: false
+
+additional_params: {}

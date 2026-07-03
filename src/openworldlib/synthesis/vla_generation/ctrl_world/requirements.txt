@@ -1,0 +1,13 @@
+diffusers==0.34.0
+transformers==4.48.1
+torch==2.7.1
+mediapy
+wandb
+swanlab
+accelerate
+tqdm
+numpy
+decord
+einops
+scipy
+pandas

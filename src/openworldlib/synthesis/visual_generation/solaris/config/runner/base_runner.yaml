@@ -1,0 +1,35 @@
+num_frames_eval: 33
+
+params:
+  base_seed: 4
+  eval_num_samples: ${device.eval_num_samples}
+  eval_save_dir: ${device.output_dir}/${experiment_name}
+  network_config: ${model.network_config}
+
+  eval_dataloader_config:
+    target: src.data.loader.build_data_loader
+    params:
+      batch_size: ${device.eval_num_samples}
+      num_workers: ${device.num_workers}
+      num_frames: ${runner.num_frames_eval}
+      seed_data: 16
+      eval: True
+      eval_num_samples: ${runner.params.eval_num_samples}
+      eval_pseudo_process_index: null
+      eval_pseudo_process_count: null
+
+  sharding_config:
+    target: src.utils.sharding.build_shardings
+    params:
+      mesh: [["data", -1]]
+      data_axis: data
+      allow_split_physical_axes: False
+
+  eval_datasets: ${eval_datasets}
+  eval_data_dir: ${device.eval_data_dir}
+  obs_resolution: ${obs_resolution}
+  converters: ${model.dataset_converters}
+  clip_checkpoint_path: ${device.pretrained_model_dir}/clip.pt
+  vae_checkpoint_path: ${device.pretrained_model_dir}/vae.pt
+  pretrained_model_dir: ${device.pretrained_model_dir}
+  experiment_name: ${experiment_name}

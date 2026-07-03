@@ -1,0 +1,7 @@
+# These packages require building from source.
+# Install AFTER requirements.txt, with: pip install --no-build-isolation -r requirements_git.txt
+git+https://github.com/nerfstudio-project/nerfview@4538024fe0d15fd1a0e4d760f3695fc44ca72787
+git+https://github.com/rahul-goel/fused-ssim@328dc9836f513d00c4b5bc38fe30478b4435cbb5
+git+https://github.com/nianticlabs/spz.git@v3.0.0
+git+https://github.com/facebookresearch/pytorch3d.git
+git+https://github.com/microsoft/MoGe.git@0286b495230a074aadf1c76cc5c679e943e5d1c6

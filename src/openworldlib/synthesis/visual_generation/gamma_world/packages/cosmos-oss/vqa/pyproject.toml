@@ -1,0 +1,15 @@
+[project]
+name = "cosmos-vqa-tools"
+version = "0.1.0"
+description = "VQA evaluation tools for Cosmos models"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "vllm>=0.9.2",
+    "qwen-vl-utils>=0.0.8",
+    "openai>=1.0.0",
+]
+
+[tool.uv]
+# This is a script-only project, no package to install
+package = false

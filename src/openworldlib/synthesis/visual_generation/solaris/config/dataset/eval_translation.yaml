@@ -1,0 +1,9 @@
+train_dataset_name: ""
+test_dataset_name: "eval/translationEval/test"
+class: src.data.dataset.DatasetMultiplayer
+name: eval_translation
+multiplayer: true
+additional_params:
+  bot1_name: "Alpha"
+  bot2_name: "Bravo"
+  shuffle_bots: ${shuffle_bots}

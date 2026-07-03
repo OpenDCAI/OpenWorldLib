@@ -1,0 +1,9 @@
+train_dataset_name: "duet/train"
+test_dataset_name: "duet/test"
+class: src.data.dataset.DatasetMultiplayer
+name: duet
+multiplayer: true
+additional_params:
+  bot1_name: "Alpha"
+  bot2_name: "Bravo"
+  shuffle_bots: ${shuffle_bots}
