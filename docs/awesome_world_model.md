@@ -54,6 +54,7 @@
 <details>
 <summary><strong>6. Awesome Lists</strong></summary>
 
+- **Awesome-World-Modeling** · [[Paper]](#) [[Code]](https://github.com/OpenEnvision/Awesome-World-Modeling)
 - **Awesome World Model Evolution - Forging the World Model Universe from Unified Multimodal Models** · [[Paper]](#) [[Code]](https://github.com/OpenRaiser/awesome-world-model-evolution)
 - **Awesome-Efficient-Video-Generation** · [[Paper]](#) [[Code]](https://github.com/oahzxl/Awesome-Efficient-Video-Generation)
 - **Awesome-World-Models** · [[Paper]](#) [[Code]](https://github.com/knightnemo/Awesome-World-Models)
@@ -621,11 +622,12 @@
 - **RLVR-World** · [[Paper]](https://arxiv.org/pdf/2505.13934) [[Code]](https://github.com/thuml/RLVR-World)
 </details>
 
-#### World Model System
+#### World Model System / Infrastructure 
 
 <details>
-<summary><strong> world model training system </strong></summary>
+<summary><strong> world model system </strong></summary>
 
+- **WorldFoundry** · [[Paper]](#) [[Code]](https://github.com/OpenEnvision/WorldFoundry)
 - **minWM** · [[Paper]](https://arxiv.org/pdf/2605.30263) [[Code]](https://github.com/shengshu-ai/minWM)
 - **nano-world-model** · [[Paper]](#) [[Code]](https://github.com/simchowitzlabpublic/nano-world-model/tree/main) a great world model training framework
 </details>
