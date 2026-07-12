@@ -10,6 +10,7 @@ show_help() {
     echo "  - cosmos-predict2.5      : Run test_cosmos_predict2p5.py"
     echo "  - recammaster            : Run test_recammaster.py"
     echo "  - lingbot-video          : Run test_lingbot_video.py"
+    echo "  - lingbot-video-stream   : Run LingBot-Video i2v stream test"
     echo ""
 }
 
@@ -43,6 +44,10 @@ case $METHOD_NAME in
     "lingbot-video")
         echo "Executing: lingbot-video..."
         CUDA_VISIBLE_DEVICES=0 python test/test_lingbot_video.py
+        ;;
+    "lingbot-video-stream")
+        echo "Executing: lingbot-video stream..."
+        CUDA_VISIBLE_DEVICES=0 LINGBOT_VIDEO_TEST_MODE=i2v_stream python test/test_lingbot_video.py
         ;;
     *)
         # If the input does not match any method, show an error message

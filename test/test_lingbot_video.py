@@ -64,9 +64,34 @@ def run_i2v() -> None:
     _save_result(result, "i2v", "lingbot_video_i2v.mp4")
 
 
+def run_i2v_stream() -> None:
+    with Image.open(IMAGE_PATH) as source_image:
+        image = source_image.convert("RGB")
+    pipe = LingBotVideoPipeline.from_pretrained(_require_model_path(), mode="i2v")
+    first_result = pipe.stream(
+        prompt=PROMPT,
+        images=image,
+        height=480,
+        width=832,
+        num_frames=81,
+        steps=40,
+        seed=42,
+    )
+    _save_result(first_result, "i2v_stream", "lingbot_video_i2v_stream_1.mp4")
+    second_result = pipe.stream(
+        prompt=os.environ.get("LINGBOT_VIDEO_STREAM_PROMPT", PROMPT),
+        height=480,
+        width=832,
+        num_frames=81,
+        steps=40,
+        seed=43,
+    )
+    _save_result(second_result, "i2v_stream", "lingbot_video_i2v_stream_2.mp4")
+
+
 if __name__ == "__main__":
     mode = os.environ.get("LINGBOT_VIDEO_TEST_MODE", "all").lower()
-    valid_modes = {"all", "t2i", "t2v", "i2v", "ti2v"}
+    valid_modes = {"all", "t2i", "t2v", "i2v", "ti2v", "i2v_stream", "ti2v_stream", "stream"}
     if mode not in valid_modes:
         raise ValueError(f"Unsupported LINGBOT_VIDEO_TEST_MODE: {mode}")
     if mode in {"all", "t2i"}:
@@ -75,3 +100,5 @@ if __name__ == "__main__":
         run_t2v()
     if mode in {"all", "i2v", "ti2v"}:
         run_i2v()
+    if mode in {"all", "i2v_stream", "ti2v_stream", "stream"}:
+        run_i2v_stream()
