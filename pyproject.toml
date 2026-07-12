@@ -55,6 +55,23 @@ audio_generation_default = [
     "colorlog",
 ]
 
+lingbot_video = [
+    "lingbot-video @ git+https://github.com/robbyant/lingbot-video.git",
+    "accelerate>=1.8.0",
+    "decord>=0.6.0",
+    "diffusers>=0.37.1",
+    "imageio>=2.35.0",
+    "imageio-ffmpeg>=0.5.1",
+    "json_repair>=0.30",
+    "numpy>=1.26",
+    "peft>=0.19",
+    "pillow>=10.4.0",
+    "requests>=2.31",
+    "safetensors>=0.4.5",
+    "scipy>=1.11",
+    "transformers>=5.0,<6",
+]
+
 [tool.setuptools]
 package-dir = {"" = "src"}
 packages = { find = { where = ["src"] } }
