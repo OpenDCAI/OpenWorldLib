@@ -10,6 +10,7 @@ from openworldlib.reasoning.visual_reasoning.lingbot_video import LingBotVideoRe
 
 
 model_path = os.environ.get("LINGBOT_VIDEO_MODEL_PATH", "Robbyant/lingbot-video-dense-1.3b")
+backend = os.environ.get("LINGBOT_VIDEO_BACKEND", "diffusers")
 rewriter_base = os.environ.get(
     "LINGBOT_VIDEO_REWRITER_BASE_MODEL",
     "Qwen/Qwen3.6-27B",
@@ -36,7 +37,12 @@ rewritten_prompt = json.dumps(reasoning_result["structured_prompt"], ensure_asci
 reasoning = None
 gc.collect()
 
-pipe = LingBotVideoPipeline.from_pretrained(model_path, mode="t2v")
+pipe = LingBotVideoPipeline.from_pretrained(
+    model_path,
+    mode="t2v",
+    backend=backend,
+    strict_backend=backend == "sglang",
+)
 result = pipe(
     prompt=rewritten_prompt,
     height=height,

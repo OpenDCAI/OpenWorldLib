@@ -26,6 +26,9 @@ class LingBotVideoPipeline:
         self.memory_module = memory_module or LingBotVideoMemory()
         self.reasoning_model = reasoning_model
         self.mode = self.operator.normalize_mode(mode)
+        self.backend = self.synthesis_model.backend
+        self.requested_backend = self.synthesis_model.requested_backend
+        self.engine_name = self.synthesis_model.engine_name
 
     @classmethod
     def from_pretrained(

@@ -16,6 +16,8 @@ class LingBotVideoSynthesis(BaseSynthesis):
         mode: str,
         model_path: str,
         backend: str = "diffusers",
+        requested_backend: Optional[str] = None,
+        engine_name: Optional[str] = None,
         device: Optional[torch.device] = None,
         batch_cfg: bool = False,
     ) -> None:
@@ -24,6 +26,8 @@ class LingBotVideoSynthesis(BaseSynthesis):
         self.mode = mode
         self.model_path = model_path
         self.backend = backend
+        self.requested_backend = requested_backend or backend
+        self.engine_name = engine_name or backend
         self.device = device if device is not None else self._default_device()
         self.batch_cfg = batch_cfg
 
@@ -56,6 +60,7 @@ class LingBotVideoSynthesis(BaseSynthesis):
         diffusers_attn_backend: str = "",
         allow_tf32: bool = True,
         batch_cfg: bool = False,
+        strict_backend: bool = False,
         **kwargs,
     ) -> "LingBotVideoSynthesis":
         from lingbot_video.inference_backend import resolve_backend_engine
@@ -70,8 +75,17 @@ class LingBotVideoSynthesis(BaseSynthesis):
 
         normalized_mode = "ti2v" if mode == "i2v" else mode
         engine = resolve_backend_engine(engine=None, backend=backend)
+        if strict_backend and backend == "sglang" and engine != "sglang-native":
+            raise RuntimeError(
+                "SGLang backend was requested but its native diffusion API is unavailable. "
+                "Run scripts/setup/lingbot_video_install.sh --sglang or disable strict_backend."
+            )
         if diffusers_attn_backend:
             os.environ["DIFFUSERS_ATTN_BACKEND"] = diffusers_attn_backend
+        if not os.environ.get("LINGBOT_MOE_PAD_BACKEND"):
+            os.environ["LINGBOT_MOE_PAD_BACKEND"] = "vectorized"
+        if not os.environ.get("LINGBOT_MOE_EXPERT_BACKEND"):
+            os.environ["LINGBOT_MOE_EXPERT_BACKEND"] = "grouped_mm"
         if allow_tf32 and torch.cuda.is_available():
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.set_float32_matmul_precision("high")
@@ -108,7 +122,7 @@ class LingBotVideoSynthesis(BaseSynthesis):
             allow_tf32=allow_tf32,
         )
         dtype_map = _make_dtype_map(args)
-        model, _engine_name = _load_pipe(args, dtype_map)
+        model, engine_name = _load_pipe(args, dtype_map)
         _configure_pipeline_logs(model)
         component_dtypes = _component_dtypes(model)
         expected_vae_dtype = str(dtype_map["vae"]).replace("torch.", "")
@@ -117,11 +131,14 @@ class LingBotVideoSynthesis(BaseSynthesis):
                 f"VAE dtype mismatch: requested {expected_vae_dtype}, got {component_dtypes}"
             )
 
+        actual_backend = "sglang" if engine_name == "sglang-native" else "diffusers"
         return cls(
             model=model,
             mode=normalized_mode,
             model_path=resolved_model_path,
-            backend=backend,
+            backend=actual_backend,
+            requested_backend=backend,
+            engine_name=engine_name,
             device=cls._default_device(),
             batch_cfg=batch_cfg,
         )
