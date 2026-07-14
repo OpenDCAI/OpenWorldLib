@@ -33,6 +33,15 @@ class LingBotVideoSynthesis(BaseSynthesis):
             return torch.device("cuda", torch.cuda.current_device())
         return torch.device("cpu")
 
+    @staticmethod
+    def _resolve_model_path(model_path: str) -> str:
+        path = Path(model_path).expanduser()
+        if path.exists():
+            return str(path)
+        from huggingface_hub import snapshot_download
+
+        return snapshot_download(repo_id=model_path)
+
     @classmethod
     def from_pretrained(
         cls,
@@ -84,8 +93,9 @@ class LingBotVideoSynthesis(BaseSynthesis):
                 "The OpenWorldLib LingBot-Video wrapper does not support: "
                 + ", ".join(sorted(unsupported))
             )
+        resolved_model_path = cls._resolve_model_path(pretrained_model_path)
         args = argparse.Namespace(
-            model_dir=str(Path(pretrained_model_path).expanduser()),
+            model_dir=resolved_model_path,
             mode=normalized_mode,
             backend=backend,
             engine=engine,
@@ -110,7 +120,7 @@ class LingBotVideoSynthesis(BaseSynthesis):
         return cls(
             model=model,
             mode=normalized_mode,
-            model_path=pretrained_model_path,
+            model_path=resolved_model_path,
             backend=backend,
             device=cls._default_device(),
             batch_cfg=batch_cfg,
