@@ -6,7 +6,7 @@ import numpy as np
 from diffusers.utils import export_to_video
 
 from openworldlib.pipelines.lingbot_video.pipeline_lingbot_video import LingBotVideoPipeline
-from openworldlib.reasoning.visual_reasoning.lingbot_video import LingBotVideoReasoning
+from openworldlib.reasoning.general_reasoning.lingbot_video import LingBotVideoReasoning
 
 
 model_path = os.environ.get("LINGBOT_VIDEO_MODEL_PATH", "Robbyant/lingbot-video-dense-1.3b")

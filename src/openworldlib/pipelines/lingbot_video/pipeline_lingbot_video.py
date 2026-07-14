@@ -6,7 +6,7 @@ from PIL import Image
 
 from ...memories.visual_synthesis.lingbot_video import LingBotVideoMemory
 from ...operators.lingbot_video_operator import LingBotVideoOperator
-from ...reasoning.visual_reasoning.lingbot_video import LingBotVideoReasoning
+from ...reasoning.general_reasoning.lingbot_video import LingBotVideoReasoning
 from ...synthesis.visual_generation.lingbot_video import LingBotVideoSynthesis
 
 
