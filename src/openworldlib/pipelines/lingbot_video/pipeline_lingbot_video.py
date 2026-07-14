@@ -1,3 +1,4 @@
+import json
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -91,7 +92,9 @@ class LingBotVideoPipeline:
                 image=perception["image"],
                 duration=duration,
             )
-            processed_prompt = reasoning["prompt"]
+            if reasoning["json"] is None:
+                raise ValueError("LingBot-Video prompt rewriter did not return a JSON object.")
+            processed_prompt = json.dumps(reasoning["json"], ensure_ascii=False, separators=(",", ":"))
         processed = {
             "mode": interaction["mode"],
             "prompt": processed_prompt,

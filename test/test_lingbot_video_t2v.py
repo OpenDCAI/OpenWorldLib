@@ -33,7 +33,7 @@ os.makedirs(output_dir, exist_ok=True)
 
 reasoning = LingBotVideoReasoning.from_pretrained(rewriter_base, rewriter_adapter)
 reasoning_result = reasoning.inference(prompt, mode="t2v", duration=duration)
-rewritten_prompt = json.dumps(reasoning_result["structured_prompt"], ensure_ascii=False, separators=(",", ":"))
+rewritten_prompt = json.dumps(reasoning_result["json"], ensure_ascii=False, separators=(",", ":"))
 reasoning = None
 gc.collect()
 

@@ -1,6 +1,15 @@
 import contextlib
-import json
+import io
+import re
 from typing import Any, Dict, Optional
+
+import requests
+from PIL import Image
+
+try:
+    from json_repair import repair_json
+except ImportError:
+    repair_json = None
 
 from ...base_reasoning import BaseReasoning
 from .prompt_templates import (
@@ -11,17 +20,61 @@ from .prompt_templates import (
 )
 
 
-_EXPAND_PROMPTS = {
-    "t2i": IMAGE_STEP1_EXPAND,
-    "t2v": VIDEO_STEP1_EXPAND,
-    "ti2v": VIDEO_STEP1_EXPAND,
+MODES = {
+    "t2v": dict(s1=VIDEO_STEP1_EXPAND, s2=VIDEO_STEP2_MAP, image=False, duration=True),
+    "ti2v": dict(s1=VIDEO_STEP1_EXPAND, s2=VIDEO_STEP2_MAP, image=True, duration=True),
+    "t2i": dict(s1=IMAGE_STEP1_EXPAND, s2=IMAGE_STEP2_MAP, image=False, duration=False),
 }
 
-_MAP_PROMPTS = {
-    "t2i": IMAGE_STEP2_MAP,
-    "t2v": VIDEO_STEP2_MAP,
-    "ti2v": VIDEO_STEP2_MAP,
-}
+
+def _has_cjk(text: str) -> bool:
+    return any("一" <= char <= "鿿" for char in text)
+
+
+def load_image(source: Any) -> Image.Image:
+    if isinstance(source, Image.Image):
+        return source.convert("RGB")
+    if isinstance(source, str) and re.match(r"^https?://", source):
+        return Image.open(io.BytesIO(requests.get(source, timeout=30).content)).convert("RGB")
+    return Image.open(source).convert("RGB")
+
+
+def _step1_text(mode: str, prompt: str, duration: int) -> str:
+    system_prompt = MODES[mode]["s1"]
+    if mode == "t2i":
+        return system_prompt + "\n\nUser image prompt:\n" + prompt
+    duration_line = (
+        f"\n\n视频时长：{duration} 秒"
+        if _has_cjk(prompt)
+        else f"\n\nVideo Duration: {duration} seconds"
+    )
+    return system_prompt + "\n\n" + prompt + duration_line
+
+
+def _step2_text(mode: str, detailed: str, duration: int) -> str:
+    system_prompt = MODES[mode]["s2"]
+    if mode == "t2i":
+        return system_prompt + "\n\nDETAILED CAPTION:\n" + detailed
+    return (
+        system_prompt
+        + f"\n\nVideo Duration: {duration} seconds\n\nDETAILED CAPTION:\n"
+        + detailed
+        + "\n\nOutput the JSON now."
+    )
+
+
+def parse_json(raw: str) -> Optional[Dict[str, Any]]:
+    if repair_json is None:
+        raise ImportError("rewriter parsing requires the json_repair package.")
+    text = (raw or "").strip()
+    fenced = re.search(r"```(?:json)?\s*(\{.*\})\s*```", text, re.DOTALL)
+    if fenced:
+        text = fenced.group(1)
+    try:
+        parsed = repair_json(text, return_objects=True)
+        return parsed if isinstance(parsed, dict) else None
+    except Exception:
+        return None
 
 
 class LingBotVideoReasoning(BaseReasoning):
@@ -62,33 +115,31 @@ class LingBotVideoReasoning(BaseReasoning):
         duration: float = 5.0,
         **kwargs,
     ) -> Dict[str, Any]:
-        if mode not in _EXPAND_PROMPTS:
-            raise ValueError(f"Unsupported LingBot-Video reasoning mode: {mode}")
-        if mode == "ti2v" and image is None:
-            raise ValueError("LingBot-Video ti2v prompt rewriting requires an image.")
+        if mode not in MODES:
+            raise ValueError(f"mode must be one of {list(MODES)}")
+        config = MODES[mode]
+        rounded_duration = int(round(duration))
+        resolved_image = None
+        if config["image"]:
+            if image is None:
+                raise ValueError(f"{mode} requires first_frame (path / URL / PIL.Image)")
+            resolved_image = load_image(image)
 
-        duration_line = "" if mode == "t2i" else f"\n\nVideo Duration: {int(round(duration))} seconds"
-        expand_input = f"{_EXPAND_PROMPTS[mode]}\n\n{prompt}{duration_line}"
-        detailed = self.backend.generate(expand_input, image=image, use_lora=False).strip()
-        map_duration = "" if mode == "t2i" else f"Video Duration: {int(round(duration))} seconds\n\n"
+        detailed = self.backend.generate(
+            _step1_text(mode, prompt, rounded_duration),
+            image=resolved_image,
+            use_lora=False,
+        ).strip()
         raw = self.backend.generate(
-            f"{_MAP_PROMPTS[mode]}\n\n{map_duration}DETAILED CAPTION:\n{detailed}",
-            image=image,
+            _step2_text(mode, detailed, rounded_duration),
+            image=resolved_image,
             use_lora=True,
         ).strip()
-        try:
-            structured = json.loads(raw)
-        except json.JSONDecodeError:
-            from json_repair import repair_json
-
-            structured = repair_json(raw, return_objects=True)
-        if not isinstance(structured, dict):
-            raise ValueError("LingBot-Video prompt rewriter did not return a JSON object.")
         return {
             "mode": mode,
-            "detailed_prompt": detailed,
-            "structured_prompt": structured,
-            "prompt": json.dumps(structured, ensure_ascii=False, separators=(",", ":")),
+            "detailed": detailed,
+            "json": parse_json(raw),
+            "json_raw": raw,
         }
 
 
