@@ -12,7 +12,7 @@ except ImportError:
     repair_json = None
 
 from ...base_reasoning import BaseReasoning
-from .prompt_templates import (
+from .lingbot_video.prompt_templates import (
     IMAGE_STEP1_EXPAND,
     IMAGE_STEP2_MAP,
     VIDEO_STEP1_EXPAND,
