@@ -75,6 +75,13 @@ In this document, we list the installation requirements and installation scripts
     <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
+    <td align="center">LingBot-Video</td>
+    <td align="center">3.10+</td>
+    <td align="center">13.0</td>
+    <td>PyTorch 2.12.0 nightly (cu130), Diffusers 0.39.0, Transformers 5.8.1, SGLang 0.5.13 (optional)</td>
+    <td><code>bash scripts/setup/lingbot_video_install.sh</code><br/><code>bash scripts/setup/lingbot_video_install.sh --sglang</code> (SGLang)</td>
+  </tr>
+  <tr>
     <td align="center">Sana-WM</td>
     <td align="center">3.10</td>
     <td align="center">12.1+</td>
