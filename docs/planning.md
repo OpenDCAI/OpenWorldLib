@@ -7,13 +7,9 @@ The representative methods currently being integrated are listed below. We warml
 
 | Method | Paper | Code Repository | Main Direction / Task |
 |---|---|---|---|
-| **Cosmos3** | [paper](https://arxiv.org/abs/2606.02800) | [code](https://github.com/NVIDIA/cosmos) | Embodied AI / Physical AI (omnimodal world model) |
-| **Hunyuan-worldplay2** | [paper](https://arxiv.org/abs/2604.14268) | [code](https://github.com/Tencent-Hunyuan/HY-World-2.0) | Navigation Video Generation (multi-modal 3D world reconstruction and simulation) |
-| **Solaris** | [paper](https://arxiv.org/pdf/2602.22208) | [code](https://github.com/solaris-wm/solaris) | Navigation Video Generation (multiplayer Minecraft world modeling) |
-| **GammaWorld** | [paper](https://arxiv.org/abs/2605.28816) | [code](https://github.com/nv-tlabs/Gamma-World) | Navigation Video Generation (generative multi-agent world modeling) |
-| **Ctrl-World** | [paper](https://arxiv.org/pdf/2510.10125) | [code](https://github.com/Robert-gyj/Ctrl-World) | VLA / Robot Manipulation (controllable generative world model) |
-| **FantasyWorld** | [paper](https://arxiv.org/pdf/2509.21657) | [code](https://github.com/Fantasy-AMAP/fantasy-world) | 3D Scene Generation (unified video and 3D prediction) |
-| **MemFlow** | [paper](https://arxiv.org/pdf/2512.14699) | [code](https://github.com/KlingTeam/MemFlow) | Long video generation |
+| **Qwen-RobotWorld** | [paper](https://arxiv.org/abs/2606.17030) | [code](#) | Embodied AI (language-conditioned video world model for robot manipulation) |
+| **LingbotMap** | [paper](https://arxiv.org/abs/2604.14141) | [code](https://github.com/ironmanizawesome/LingbotMap) | 3D Scene Generation (feed-forward 3D foundation model for streaming reconstruction) |
+| **AlayaWorld** | [paper](https://arxiv.org/abs/2607.06291) | [code](https://github.com/AlayaLab/AlayaWorld) | Navigation Video Generation (long-horizon playable video world generation) |
 
 > If you have methods you’d like to integrate (e.g., new world models, evaluation benchmarks, or inference pipelines), feel free to open an Issue or submit a PR directly.
 
