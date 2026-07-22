@@ -196,6 +196,9 @@
 - **Solaris** · [paper](https://arxiv.org/pdf/2602.22208) [code](https://github.com/solaris-wm/solaris)
 - **Infinite-World** · [[Paper]](https://arxiv.org/abs/2602.02393) [[Code]](https://github.com/MeiGen-AI/Infinite-World)
 - **DreamX-World** · [[Paper]](#) [[Code]](https://github.com/AMAP-ML/DreamX-World)
+- **HandsOnWorld** · [[Paper]](https://arxiv.org/abs/2607.02075) [[Code]](#) unconstrained egocentric video generation with camera-disentangled hand control
+- **MoWorld** · [[Paper]](https://arxiv.org/abs/2607.06216) [[Project]](https://moxin-tech.github.io/moworld/) flash world model running at 50 FPS
+- **AlayaWorld** · [[Paper]](https://arxiv.org/abs/2607.06291) [[Code]](https://github.com/AlayaLab/AlayaWorld) long-horizon and playable video world generation
 - **Hunyuan-worldplay2** · [[Paper]](https://arxiv.org/abs/2604.14268) [[Code]](https://github.com/Tencent-Hunyuan/HY-World-2.0)
 - **MultiWorld** · [[Paper]](https://arxiv.org/abs/2604.18564) [[Code]](https://github.com/CIntellifusion/MultiWorld)
 - **Agora-1** · [[Paper]](#) [[Project]](https://agora.odyssey.ml/)
@@ -328,6 +331,9 @@
 - **WonderZomom** · [[Paper]](https://arxiv.org/pdf/2512.09164) [[Code]](#)
 - **EchoWorld** · [[Paper]](https://arxiv.org/abs/2504.13065) [[Code]](https://github.com/LeapLabTHU/EchoWorld)
 - **LoGeR** · [[Paper]](https://arxiv.org/pdf/2603.03269) [[Code]](https://github.com/Junyi42/LoGeR)
+- **PixWorld** · [[Paper]](https://arxiv.org/abs/2607.05373) [[Code]](#) unifying 3D scene generation and reconstruction in pixel space
+- **Spark** · [[Paper]](#) [[Code]](https://github.com/sparkjsdev/spark) advanced 3D Gaussian Splatting renderer for three.js
+- **LingbotMap** · [[Paper]](https://arxiv.org/abs/2604.14141) [[Code]](https://github.com/ironmanizawesome/LingbotMap) feed-forward 3D foundation model for streaming reconstruction
 - **Utonia** · [[Paper]](https://arxiv.org/pdf/2603.03283) [[Code]](https://github.com/Pointcept/Utopia)
 - **inspatio-world** · [[Paper]](#) [[Code]](https://github.com/inspatio/inspatio-world)
 - **DROID-W** · [[Paper]](https://arxiv.org/pdf/2603.19076) [[Code]](https://github.com/MoyangLi00/DROID-W)
@@ -350,6 +356,7 @@
 - **MorphoSim** · [[Paper]](https://arxiv.org/pdf/2510.04390) [[Code]](https://github.com/eric-ai-lab/Morph4D)
 - **SEE4D** · [[Paper]](https://arxiv.org/pdf/2510.26796) [[Code]](#)
 - **4K4DGen** · [[Paper]](https://arxiv.org/pdf/2406.13527) [[Code]](https://github.com/ShadowIterator/4K4DGen)
+- **RynnWorld-4D** · [[Paper]](https://arxiv.org/abs/2607.06559) [[Code]](https://github.com/alibaba-damo-academy/RynnWorld-4D) 4D embodied world models for robotic manipulation
 </details>
 
 #### Simulator
@@ -440,6 +447,8 @@
 - **LPWM** · [[Paper]](https://arxiv.org/pdf/2603.04553) [[Code]](https://github.com/taldatech/lpwm)
 - **ACoT-VLA** · [[Paper]](https://arxiv.org/pdf/2601.11404) [[Code]](https://github.com/AgibotTech/ACoT-VLA)
 - **GigaWorld-Policy** · [[Paper]](https://arxiv.org/pdf/2603.17240) [[Code]](https://github.com/GigaAI-research/GigaWorld-Policy)
+- **Qwen-RobotWorld** · [[Paper]](https://arxiv.org/abs/2606.17030) [[Code]](#) unifying embodied world modeling through language-conditioned video generation
+- **Being-M0.7** · [[Paper]](https://research.beingbeyond.com/being-m07/being-m07.pdf) [[Code]](https://github.com/BeingBeyond/Being-H) latent world-action model pre-trained on 10K+ hours of human-centric data
 - **LIBERO-Para** · [[Paper]](https://arxiv.org/abs/2603.28301) [[Code]](#)
 - **every-embodied** · [[Paper]](#) [[Code]](https://github.com/datawhalechina/every-embodied) excellent learning framework for VLA
 - **Hunyuan-embodied** · [[Paper]](https://arxiv.org/abs/2604.07430) [[Code]](https://github.com/Tencent-Hunyuan/HY-Embodied)
