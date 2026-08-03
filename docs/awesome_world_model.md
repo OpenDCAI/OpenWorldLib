@@ -144,6 +144,7 @@
 <details>
 <summary><strong> interactive video generation Details</strong></summary>
 
+- **PhiZero** · [[Paper]](https://arxiv.org/pdf/2607.28624) [[Code]](https://phi-zero.github.io/)
 - **WorldCanvas** · [[Paper]](https://arxiv.org/pdf/2512.16924) [[Code]](https://github.com/pPetrichor/WorldCanvas)
 - **RealWonder** · [[Paper]](https://arxiv.org/pdf/2603.05449) [[Code]](https://github.com/liuwei283/RealWonder)
 - **ReactiveGWM** · [[Paper]](https://arxiv.org/abs/2605.15256) [[Code]](https://github.com/INV-WZQ/ReactiveGWM) interactive game world generation
