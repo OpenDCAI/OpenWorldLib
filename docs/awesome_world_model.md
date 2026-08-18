@@ -1,4 +1,4 @@
-# Awesome World Model [![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/sindresorhus/awesome) [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)]() [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
+# Awesome World Model [![Awesome](https://awesome.re/badge.svg)](https://github.com/sindresorhus/awesome) [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)]() [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
 
 ### Awesome World Models Survey
 
@@ -71,6 +71,7 @@
 - **A Path Towards Autonomous Machine Intelligence** · [[Paper]](https://openreview.net/pdf?id=BZ5a1r-kVsf)
 - **Critiques of World Models** · [[Paper]](http://arxiv.org/abs/2507.05169)
 - **Positional Encoding Field** · [[Paper]](https://arxiv.org/pdf/2510.20385) [[Code]](https://github.com/MTLab/PE-Field)
+- **Quo Vadis, World Modeling?** · [[Paper]](https://arxiv.org/abs/2608.02713) [[Code]](https://github.com/worldbench/awesome-agentic-world-model)
 - **Visual Generation Unlocks Human-Like Reasoning through Multimodal World Models** · [[Paper]](https://arxiv.org/abs/2601.19834) [[Code]](https://github.com/thuml/reasoning-visual-world)
 - **Research on World Models Is Not Injecting World Knowledge into Specific Tasks** · [[Paper]](https://arxiv.org/pdf/2602.01630) [[Code]](#)
 </details>
@@ -132,6 +133,7 @@
 - **Diffusion Feedback Helps CLIP See Better (DIVA)** · [[Paper]](https://openreview.net/forum?id=tLFWU6izoA) [[Code]](https://github.com/baaivision/DIVA)
 - **Learning from Videos for 3D World: Enhancing MLLMs with 3D Vision Geometry Priors** · [[Paper]](https://arxiv.org/pdf/2505.24625) [[Code]](https://github.com/LaVi-Lab/VG-LLM)
 - **Thinking by Doing** · [[Paper]](https://arxiv.org/pdf/2511.23476) [[Code]](#)
+- **Tycho: Active Abstraction with Programmatic World Models for ARC-AGI-3** · [[Paper]](https://arxiv.org/abs/2607.28287) [[Code]](https://github.com/NIMI-research/Tycho)
 - **GalaxyWalker** · [[Paper]](https://openaccess.thecvf.com/content/CVPR2025/papers/Chen_Galaxy_Walker_Geometry-aware_VLMs_For_Galaxy-scale_Understanding_CVPR_2025_paper.pdf) [[Code]](#)
 </details>
 
@@ -150,6 +152,7 @@
 - **ReactiveGWM** · [[Paper]](https://arxiv.org/abs/2605.15256) [[Code]](https://github.com/INV-WZQ/ReactiveGWM) interactive game world generation
 - **emu3.5** · [[Paper]](https://arxiv.org/pdf/2510.26583) [[Code]](https://github.com/baaivision/Emu3.5)
 - **MakeAnything** · [[Paper]](https://arxiv.org/pdf/2502.01572) [[Code]](https://github.com/showlab/MakeAnything)
+- **Vidu S1: A Real-Time Interactive Video Generation Model** · [[Paper]](https://arxiv.org/abs/2607.03118) [[Code]](https://github.com/shengshu-ai/Vidu-S1)
 - **WorldCam** · [[Paper]](https://arxiv.org/pdf/2603.16871) [[Code]](https://github.com/cvlab-kaist/WorldCam)
 </details>
 
@@ -189,6 +192,9 @@
 - **Videofrom3D** · [[Paper]](https://arxiv.org/pdf/2509.17985) [[Code]](https://github.com/KIMGEONUNG/VideoFrom3D)
 - **LYRA** · [[Paper]](https://arxiv.org/pdf/2509.19296) [[Code]](https://github.com/nv-tlabs/lyra)
 - **Fantasyworld** · [[Paper]](https://arxiv.org/pdf/2509.21657) [[Code]](https://github.com/Fantasy-AMAP/fantasy-world)
+- **WONDER: Video World Model Done Better** · [[Paper]](https://arxiv.org/abs/2607.26037) [[Code]](https://github.com/wonder-world-model/wonder-world-model.github.io) [[Project]](https://wonder-world-model.github.io)
+- **Lyra 2.0: Explorable Generative 3D Worlds** · [[Paper]](https://arxiv.org/abs/2604.13036) [[Code]](https://github.com/nv-tlabs/lyra/tree/main/Lyra-2)
+- **MiniWorld: Democratizing the Training of Video World Models from Scratch** · [[Paper]](https://arxiv.org/abs/2608.01127) [[Code]](https://github.com/zhao-yian/MiniWorld)
 - **Navigation World Models** · [[Paper]](https://openaccess.thecvf.com/content/CVPR2025/papers/Bar_Navigation_World_Models_CVPR_2025_paper.pdf) [[Code]](https://github.com/facebookresearch/nwm/)
 - **WonderWorld** · [[Paper]](https://openaccess.thecvf.com/content/CVPR2025/papers/Yu_WonderWorld_Interactive_3D_Scene_Generation_from_a_Single_Image_CVPR_2025_paper.pdf) [[Code]](https://kovenyu.com/WonderWorld/)
 - **CLONE DETERMINISTIC 3D WORLDS WITH GEOMETRICALLY-REGULARIZED WORLD MODELS** · [[Paper]](http://arxiv.org/pdf/2510.26782v1) [[Code]](#)
@@ -213,6 +219,7 @@
 <details>
 <summary><strong> general video generation model </strong></summary>
 
+- **FLUX 3** · [[Paper]](https://arxiv.org/abs/2603.06507) [[Code]](https://github.com/black-forest-labs/Self-Flow) [[Project]](https://bfl.ai/models/flux-3)
 - **Helios** · [[Paper]](https://arxiv.org/pdf/2603.04379) [[Code]](https://github.com/PKU-YuanGroup/Helios)
 - **veo-3** · [[Paper]](https://arxiv.org/pdf/2509.20328) [[Code]](#)
 - **wan-2.5** · [[Paper]](https://arxiv.org/pdf/2503.20314) [[Code]](https://github.com/Wan-Video/Wan2.1)
@@ -296,6 +303,7 @@
 - **Matrix-3D** · [[Paper]](https://arxiv.org/pdf/2508.08086) [[Code]](https://github.com/SkyworkAI/Matrix-3D)
 - **GenEx** · [[Paper]](https://arxiv.org/pdf/2412.09624) [[Code]](#)
 - **HunyuanWorld** · [[Paper]](https://arxiv.org/pdf/2507.21809) [[Code]](https://github.com/Tencent-Hunyuan/HunyuanWorld-1.0)
+- **WorldClaw: Agentic 3D Open-World Generation at Scale** · [[Paper]](https://arxiv.org/abs/2608.05248) [[Code]](https://github.com/Tencent-Hunyuan/Hunyuan3D-WorldClaw)
 - **dreamcube** · [[Paper]](https://arxiv.org/pdf/2506.17206v1) [[Code]](https://github.com/yukun-huang/DreamCube)
 - **ViPE** · [[Paper]](https://arxiv.org/pdf/2508.10934) [[Code]](https://github.com/nv-tlabs/vipe)
 - **VGGT** · [[Paper]](https://openaccess.thecvf.com/content/CVPR2025/papers/Wang_VGGT_Visual_Geometry_Grounded_Transformer_CVPR_2025_paper.pdf) [[Code]](https://github.com/facebookresearch/vggt)
@@ -446,6 +454,7 @@
 - **RoboTracer** · [[Paper]](https://arxiv.org/abs/2512.13660) [[Code]](https://github.com/Zhoues/RoboTracer)
 - **OSVI-WM** · [[Paper]](https://arxiv.org/pdf/2505.20425) [[Code]](#)
 - **LPWM** · [[Paper]](https://arxiv.org/pdf/2603.04553) [[Code]](https://github.com/taldatech/lpwm)
+- **ODEWorld: A Continuous Predictive Architecture via Physical-Time Flow** · [[Paper]](https://arxiv.org/abs/2607.27924) [[Code]](https://github.com/Dstate/ODEWorld)
 - **ACoT-VLA** · [[Paper]](https://arxiv.org/pdf/2601.11404) [[Code]](https://github.com/AgibotTech/ACoT-VLA)
 - **GigaWorld-Policy** · [[Paper]](https://arxiv.org/pdf/2603.17240) [[Code]](https://github.com/GigaAI-research/GigaWorld-Policy)
 - **Qwen-RobotWorld** · [[Paper]](https://arxiv.org/abs/2606.17030) [[Code]](#) unifying embodied world modeling through language-conditioned video generation
