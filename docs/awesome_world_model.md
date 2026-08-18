@@ -1,4 +1,4 @@
-# Awesome World Model [![Awesome](https://cdn.rawgit.com/sindresorhus/awesome/d7305f38d29fed78fa85652e3a63e154dd8e8829/media/badge.svg)](https://github.com/sindresorhus/awesome) [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)]() [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
+# Awesome World Model [![Awesome](https://awesome.re/badge.svg)](https://github.com/sindresorhus/awesome) [![Maintained](https://img.shields.io/badge/Maintained%3F-yes-green.svg)]() [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://makeapullrequest.com)
 
 ### Awesome World Models Survey
 
