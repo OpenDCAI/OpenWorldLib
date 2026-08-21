@@ -319,6 +319,20 @@ In this document, we list the installation requirements and installation scripts
     <td><code>bash scripts/setup/default_install.sh</code></td>
   </tr>
   <tr>
+    <td align="center">LongLive</td>
+    <td align="center">3.10</td>
+    <td align="center">12.4</td>
+    <td>PyTorch 2.5.0, flash-attn 2.7.4.post1</td>
+    <td>See <a href="longlive_openworldlib_migration.md">docs/longlive_openworldlib_migration.md</a></td>
+  </tr>
+  <tr>
+    <td align="center">Rolling Forcing</td>
+    <td align="center">3.10</td>
+    <td align="center">12.4</td>
+    <td>PyTorch 2.5.1, flash-attn</td>
+    <td>See <a href="rolling_forcing_openworldlib_migration.md">docs/rolling_forcing_openworldlib_migration.md</a><br/><code>bash scripts/test_inference/test_nav_video_gen.sh rolling-forcing</code></td>
+  </tr>
+  <tr>
     <td colspan="5" align="center"><b>⚙️ Simulation Environment</b></td>
   </tr>
   <tr>

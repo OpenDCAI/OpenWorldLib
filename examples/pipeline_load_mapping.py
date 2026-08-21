@@ -202,6 +202,46 @@ def load_memflow_pipeline(model_path: Union[str, Dict], device: str):
     )
 
 
+def load_longlive_pipeline(model_path: Union[str, Dict], device: str):
+    from openworldlib.pipelines.longlive.pipeline_longlive import LongLivePipeline
+
+    required_components = None
+    if isinstance(model_path, dict):
+        required_components = {}
+        for key in ("wan_model_path", "generator_ckpt", "generator_ckpt_path", "lora_ckpt", "lora_ckpt_path"):
+            value = model_path.get(key)
+            if value is not None:
+                required_components[key] = value
+        if len(required_components) == 0:
+            required_components = None
+
+    return LongLivePipeline.from_pretrained(
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        required_components=required_components,
+        device=device,
+    )
+
+
+def load_rolling_forcing_pipeline(model_path: Union[str, Dict], device: str):
+    from openworldlib.pipelines.rolling_forcing.pipeline_rolling_forcing import RollingForcingPipeline
+
+    required_components = None
+    if isinstance(model_path, dict):
+        required_components = {}
+        for key in ("wan_model_path", "generator_ckpt", "generator_ckpt_path"):
+            value = model_path.get(key)
+            if value is not None:
+                required_components[key] = value
+        if len(required_components) == 0:
+            required_components = None
+
+    return RollingForcingPipeline.from_pretrained(
+        model_path=_resolve_path(model_path, "pretrained_model_path"),
+        required_components=required_components,
+        device=device,
+    )
+
+
 ## utilize lazy loader to load different tasks pipeline
 video_gen_pipe = {
     "matrix-game2": load_matrix_game2_pipeline,
@@ -216,6 +256,9 @@ video_gen_pipe = {
     "gamma-world": load_gamma_world_pipeline,
     "solaris": load_solaris_pipeline,
     "memflow": load_memflow_pipeline,
+    "longlive": load_longlive_pipeline,
+    "rolling-forcing": load_rolling_forcing_pipeline,
+    "rolling_forcing": load_rolling_forcing_pipeline,
 }
 
 reasoning_pipe = {

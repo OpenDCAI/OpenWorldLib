@@ -190,6 +190,62 @@ def infer_memflow_pipeline(pipe, prompt, output_dir, **kwargs):
     return pipe(prompt=prompt, output_dir=output_dir, **kwargs)
 
 
+def infer_longlive_pipeline(
+    pipe,
+    prompt=None,
+    prompts=None,
+    num_frames=120,
+    switch_frame_indices=None,
+    output_path=None,
+    fps=None,
+    seed=None,
+    **kwargs,
+):
+    output_video = pipe(
+        prompt=prompt,
+        prompts=prompts,
+        num_frames=num_frames,
+        switch_frame_indices=switch_frame_indices,
+        seed=seed,
+        **kwargs,
+    )
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fps = fps if fps is not None else 16
+        if hasattr(output_video, "ndim") and output_video.ndim == 5:
+            output_video = output_video[0]
+        export_to_video(output_video, str(output_path), fps=fps)
+    return output_video
+
+
+def infer_rolling_forcing_pipeline(
+    pipe,
+    prompt=None,
+    prompts=None,
+    num_frames=126,
+    output_path=None,
+    fps=None,
+    seed=None,
+    **kwargs,
+):
+    output_video = pipe(
+        prompt=prompt,
+        prompts=prompts,
+        num_frames=num_frames,
+        seed=seed,
+        **kwargs,
+    )
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fps = fps if fps is not None else 16
+        if hasattr(output_video, "ndim") and output_video.ndim == 5:
+            output_video = output_video[0]
+        export_to_video(output_video, str(output_path), fps=fps)
+    return output_video
+
+
 video_gen_pipe_infer = {
     "matrix-game2": infer_matrix_game2_pipeline,
     "matrix-game3": infer_matrix_game3_pipeline,
@@ -202,6 +258,9 @@ video_gen_pipe_infer = {
     "gamma-world": infer_gamma_world_pipeline,
     "solaris": infer_solaris_pipeline,
     "memflow": infer_memflow_pipeline,
+    "longlive": infer_longlive_pipeline,
+    "rolling-forcing": infer_rolling_forcing_pipeline,
+    "rolling_forcing": infer_rolling_forcing_pipeline,
 }
 
 reasoning_pipe_infer = {
