@@ -18,6 +18,7 @@ show_help() {
     echo "  - yume-1p5             : Run test_yume_1p5.py"
     echo "  - yume                 : Run test_yume.py"
     echo "  - lingbot-world        : Run test_lingbot_world.py"
+    echo "  - rolling-forcing      : Run test_rolling_forcing.py"
     echo ""
 }
 
@@ -94,6 +95,10 @@ case $METHOD_NAME in
     "lingbot-world")
         echo "Executing: lingbot_world..."
         torchrun --nproc_per_node=2 test/test_lingbot_world.py
+        ;;
+    "rolling-forcing"|"rolling_forcing")
+        echo "Executing: rolling_forcing..."
+        CUDA_VISIBLE_DEVICES=0 "$PYTHON_BIN" test/test_rolling_forcing.py
         ;;
     *)
         # If the input does not match any method, show an error message
