@@ -20,13 +20,13 @@ from diffusers.utils import (
     scale_lora_layers,
     unscale_lora_layers,
 )
-from diffusers.utils.torch_utils import randn_tensor
 from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 
 from ...constants import PRECISION_TO_TYPE
 from ...text_encoder import TextEncoder
 from einops import rearrange
 from ...modules import HYVideoDiffusionTransformer
+from ...latent_utils import prepare_initial_latents
 
 
 # -----------------------------------------------------------------------------
@@ -169,32 +169,18 @@ class HunyuanVideoGamePipeline(HunyuanVideoPipeline):
                 f"You have passed a list of generators of length {len(generator)}, but requested an effective batch"
                 f" size of {batch_size}. Make sure the batch size matches the length of the generators."
             )
-        noise = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
         timesteps, num_inference_steps = self.get_timesteps(num_inference_steps, denoise_strength, device)
 
-        if gt_latents.shape[2] == 1:
-            gt_latents = gt_latents.repeat(1, 1, frame, 1, 1)
-
-        # TODO: correct
-        x0 = randn_tensor(shape, generator=generator, device=device, dtype=dtype)
-        # print("!!!!!!!!!!!!!! RANDOM NOISE !!!!!!!!!!!!!!!!!!")
-        # x0 = randn_tensor(shape, device=device, dtype=dtype)
-        x1 = gt_latents
-
-        t = torch.tensor([0.999]).to(device=device)
-        latents = x0 * t + x1 * (1 - t)
-        latents = torch.randn_like(x1)
-        # print("!!!randn_like", latents.shape)
-        latents = latents.to(dtype=dtype)
-        
-        if latents is None:
-            latents = noise 
-            original_latents = None
-        else:
-            latents = latents.to(device)
-
-        if hasattr(self.scheduler, "init_noise_sigma"):
-            latents = latents * self.scheduler.init_noise_sigma
+        # ``gt_latents`` is a separate image-conditioning stream in GameCraft;
+        # it must not replace or blend into the initial diffusion state.
+        latents = prepare_initial_latents(
+            shape,
+            dtype=dtype,
+            device=device,
+            generator=generator,
+            latents=latents,
+            init_noise_sigma=getattr(self.scheduler, "init_noise_sigma", None),
+        )
 
         return latents, timesteps
 
