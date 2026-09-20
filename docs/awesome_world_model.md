@@ -146,6 +146,7 @@
 <details>
 <summary><strong> interactive video generation Details</strong></summary>
 
+- **ActionSplice** · [[Paper]](https://arxiv.org/abs/2609.08230) [[Code]](https://github.com/PardisTaghavi/ActionSplice) [[Project]](https://pardistaghavi.github.io/actionsplice-website/)
 - **PhiZero** · [[Paper]](https://arxiv.org/pdf/2607.28624) [[Code]](https://phi-zero.github.io/)
 - **WorldCanvas** · [[Paper]](https://arxiv.org/pdf/2512.16924) [[Code]](https://github.com/pPetrichor/WorldCanvas)
 - **RealWonder** · [[Paper]](https://arxiv.org/pdf/2603.05449) [[Code]](https://github.com/liuwei283/RealWonder)
