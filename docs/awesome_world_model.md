@@ -11,7 +11,6 @@
 - **World Models in AI: Like a Child** · [[Paper]](https://arxiv.org/abs/2503.15168) [[Code]](#)
 - **The Trinity of Consistency as a Defining Principle for General World Models** · [[Paper]](https://arxiv.org/pdf/2602.23152) [[Code]](https://github.com/openraiser/awesome-world-model-evolution)
 - **Learning to Model the World: A Survey of World Models in Artificial Intelligence** · [[Paper]](https://www.preprints.org/frontend/manuscript/5086594a01b6a0b251820cb03ea9a8f6/download_pub)
-- **World-Action Models for Robot Learning and Control: A Survey** · [[Paper]](https://arxiv.org/abs/2609.16074) a taxonomy of predictive world modeling and action generation for robotics
 </details>
 
 <details>
@@ -461,8 +460,6 @@
 - **ACoT-VLA** · [[Paper]](https://arxiv.org/pdf/2601.11404) [[Code]](https://github.com/AgibotTech/ACoT-VLA)
 - **GigaWorld-Policy** · [[Paper]](https://arxiv.org/pdf/2603.17240) [[Code]](https://github.com/GigaAI-research/GigaWorld-Policy)
 - **Qwen-RobotWorld** · [[Paper]](https://arxiv.org/abs/2606.17030) [[Code]](#) unifying embodied world modeling through language-conditioned video generation
-- **World Tokens** · [[Paper]](https://arxiv.org/abs/2608.09730) trains a robot policy with future-video modeling while keeping deployment at policy-level latency
-- **ForeWAM** · [[Paper]](https://arxiv.org/abs/2608.11605) exposes predictive dynamics to action generation without decoding future video at inference
 - **Being-M0.7** · [[Paper]](https://research.beingbeyond.com/being-m07/being-m07.pdf) [[Code]](https://github.com/BeingBeyond/Being-H) latent world-action model pre-trained on 10K+ hours of human-centric data
 - **LIBERO-Para** · [[Paper]](https://arxiv.org/abs/2603.28301) [[Code]](#)
 - **every-embodied** · [[Paper]](#) [[Code]](https://github.com/datawhalechina/every-embodied) excellent learning framework for VLA
@@ -482,7 +479,7 @@
 - **Cosmos** · [[Paper]](https://arxiv.org/pdf/2501.03575) [[Code]](https://github.com/nvidia-cosmos/cosmos-predict1)
 - **Hand2World** · [[Paper]](https://arxiv.org/abs/2602.09600) [[Code]](https://github.com/NTUYWANG103/Hand2World)
 - **OSCAR** · [[Paper]](https://arxiv.org/abs/2606.04463) [[Code]](https://github.com/wuzy2115/oscar-public) cross-embodiment, action-conditioned video world model for robot policy evaluation
-- **Robot-Factored World Models via Robot Rendering** · [[Paper]](https://arxiv.org/abs/2607.22535) separates robot motion from scene response in action-conditioned video prediction
+- **Robot-Factored World Models via Robot Rendering (RoFacto)** · [[Paper]](https://arxiv.org/abs/2607.22535) [[Code]](https://github.com/bjkim95/rofacto) separates robot motion from scene response in action-conditioned video prediction
 </details>
 
 <details>
@@ -656,6 +653,7 @@
 
 - **WorldFoundry** · [[Paper]](#) [[Code]](https://github.com/OpenEnvision/WorldFoundry)
 - **minWM** · [[Paper]](https://arxiv.org/pdf/2605.30263) [[Code]](https://github.com/shengshu-ai/minWM)
+- **OpenWAM** · [[Paper]](https://arxiv.org/abs/2609.07398) [[Code]](https://github.com/OpenWAM-Official/OpenWAM) modular world-action-model training, evaluation, and open checkpoints
 - **nano-world-model** · [[Paper]](#) [[Code]](https://github.com/simchowitzlabpublic/nano-world-model/tree/main) a great world model training framework
 </details>
 
