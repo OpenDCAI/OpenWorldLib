@@ -11,6 +11,7 @@
 - **World Models in AI: Like a Child** · [[Paper]](https://arxiv.org/abs/2503.15168) [[Code]](#)
 - **The Trinity of Consistency as a Defining Principle for General World Models** · [[Paper]](https://arxiv.org/pdf/2602.23152) [[Code]](https://github.com/openraiser/awesome-world-model-evolution)
 - **Learning to Model the World: A Survey of World Models in Artificial Intelligence** · [[Paper]](https://www.preprints.org/frontend/manuscript/5086594a01b6a0b251820cb03ea9a8f6/download_pub)
+- **World-Action Models for Robot Learning and Control: A Survey** · [[Paper]](https://arxiv.org/abs/2609.16074) a taxonomy of predictive world modeling and action generation for robotics
 </details>
 
 <details>
@@ -155,6 +156,7 @@
 - **MakeAnything** · [[Paper]](https://arxiv.org/pdf/2502.01572) [[Code]](https://github.com/showlab/MakeAnything)
 - **Vidu S1: A Real-Time Interactive Video Generation Model** · [[Paper]](https://arxiv.org/abs/2607.03118) [[Code]](https://github.com/shengshu-ai/Vidu-S1)
 - **WorldCam** · [[Paper]](https://arxiv.org/pdf/2603.16871) [[Code]](https://github.com/cvlab-kaist/WorldCam)
+- **Genie 3** · [[Project]](https://deepmind.google/blog/genie-3-a-new-frontier-for-world-models/) real-time interactive worlds navigable for several minutes
 </details>
 
 <details>
@@ -459,6 +461,8 @@
 - **ACoT-VLA** · [[Paper]](https://arxiv.org/pdf/2601.11404) [[Code]](https://github.com/AgibotTech/ACoT-VLA)
 - **GigaWorld-Policy** · [[Paper]](https://arxiv.org/pdf/2603.17240) [[Code]](https://github.com/GigaAI-research/GigaWorld-Policy)
 - **Qwen-RobotWorld** · [[Paper]](https://arxiv.org/abs/2606.17030) [[Code]](#) unifying embodied world modeling through language-conditioned video generation
+- **World Tokens** · [[Paper]](https://arxiv.org/abs/2608.09730) trains a robot policy with future-video modeling while keeping deployment at policy-level latency
+- **ForeWAM** · [[Paper]](https://arxiv.org/abs/2608.11605) exposes predictive dynamics to action generation without decoding future video at inference
 - **Being-M0.7** · [[Paper]](https://research.beingbeyond.com/being-m07/being-m07.pdf) [[Code]](https://github.com/BeingBeyond/Being-H) latent world-action model pre-trained on 10K+ hours of human-centric data
 - **LIBERO-Para** · [[Paper]](https://arxiv.org/abs/2603.28301) [[Code]](#)
 - **every-embodied** · [[Paper]](#) [[Code]](https://github.com/datawhalechina/every-embodied) excellent learning framework for VLA
@@ -477,6 +481,8 @@
 - **WoW** · [[Paper]](https://arxiv.org/pdf/2509.22642) [[Code]](https://github.com/wow-world-model/wow-world-model)
 - **Cosmos** · [[Paper]](https://arxiv.org/pdf/2501.03575) [[Code]](https://github.com/nvidia-cosmos/cosmos-predict1)
 - **Hand2World** · [[Paper]](https://arxiv.org/abs/2602.09600) [[Code]](https://github.com/NTUYWANG103/Hand2World)
+- **OSCAR** · [[Paper]](https://arxiv.org/abs/2606.04463) [[Code]](https://github.com/wuzy2115/oscar-public) cross-embodiment, action-conditioned video world model for robot policy evaluation
+- **Robot-Factored World Models via Robot Rendering** · [[Paper]](https://arxiv.org/abs/2607.22535) separates robot motion from scene response in action-conditioned video prediction
 </details>
 
 <details>
@@ -500,6 +506,7 @@
 - **DrivingDiffusion** · [[Paper]](https://arxiv.org/pdf/2310.07771) [[Code]](https://github.com/shalfun/DrivingDiffusion)
 - **BEVWorld** · [[Paper]](https://arxiv.org/pdf/2407.05679) [[Code]](#)
 - **UnO** · [[Paper]](https://arxiv.org/pdf/2406.08691) [[Code]](#)
+- **Waymo World Model** · [[Project]](https://waymo.com/blog/2026/02/the-waymo-world-model-a-new-frontier-for-autonomous-driving-simulation/) interactive camera and lidar simulation built on Genie 3
 </details>
 
 ---
