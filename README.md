@@ -80,14 +80,14 @@ Extension repo：[[3D generation]](https://github.com/zengbohan0217/OpenWorldLib
 
 We define a world model as: **A model or framework centered on perception, equipped with interaction and long-term memory capabilities, for understanding and predicting the complex world.** Accordingly, 🎓 *Multimodal Understanding*, 🤖 *Visual Action Prediction*, and 🖼️ *Visual Generation* are all sub-tasks that a world model needs to accomplish.
 
-We warmly welcome researchers to share their views on this framework or thoughts on world models in the Issues section. We also hope that you can submit valuable world-model-related methods to our framework via Pull Requests, or document and submit them to [[awesome_world_models]](docs/awesome_world_model.md). Feel free to give our repo a star 🌟 to follow the latest progress of OpenWorldLib!
+We warmly welcome researchers to share their views on this framework or thoughts on world models in the Issues section. We also hope that you can submit valuable world-model-related methods to our framework via Pull Requests, or document and submit them to [[awesome_world_model]](docs/awesome_world_model.md). Feel free to give our repo a star 🌟 to follow the latest progress of OpenWorldLib!
 
 
 ### Important Docs <!-- omit in toc -->
 The following four documents are essential to this project (click to navigate):
 
 - [docs/planning.md](docs/planning.md): This document tracks the short-term optimization goals and future development plans for OpenWorldLib.
-- [docs/awesome_world_models.md](docs/awesome_world_model.md): This document records cutting-edge research, related surveys, and open-source projects on world models.
+- [docs/awesome_world_model.md](docs/awesome_world_model.md): This document records cutting-edge research, related surveys, and open-source projects on world models.
 - [docs/installation.md](docs/installation.md): This document provides installation instructions for different methods in OpenWorldLib.
 - [Development Guide](https://wcny4qa9krto.feishu.cn/wiki/XtPJwf5XQipP7RkeVv0ckyWlnNd?from=from_copylink): This document provides a framework template for OpenWorldLib, intended to serve as a reference for code integration for developers in the world model community.
 
@@ -213,12 +213,12 @@ User Input
 
 ### Planning
 
-- We document the latest cutting-edge world model research in docs/awesome_world_models.md, and welcome contributions of valuable research.
+- We document the latest cutting-edge world model research in docs/awesome_world_model.md, and welcome contributions of valuable research.
 - We document our upcoming training and optimization plans in docs/planning.md.
 
 
 ### For Developers
-We welcome all developers to contribute and help improve **OpenWorldLib** as a unified world model repository. We recommend using **Vibe Coding** for quick code contributions — related prompts can be found under `tools/vibe_code/prompts`. You are also encouraged to add high-quality world model works to [docs/planning.md](docs/planning.md) and [docs/awesome_world_models.md](docs/awesome_world_model.md). We look forward to your contributions!
+We welcome all developers to contribute and help improve **OpenWorldLib** as a unified world model repository. We recommend using **Vibe Coding** for quick code contributions — related prompts can be found under `tools/vibe_code/prompts`. You are also encouraged to add high-quality world model works to [docs/planning.md](docs/planning.md) and [docs/awesome_world_model.md](docs/awesome_world_model.md). We look forward to your contributions!
 
 Related documents: [[Development Guide]](https://wcny4qa9krto.feishu.cn/wiki/XtPJwf5XQipP7RkeVv0ckyWlnNd?from=from_copylink)
 
