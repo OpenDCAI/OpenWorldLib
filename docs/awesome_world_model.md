@@ -155,6 +155,7 @@
 - **MakeAnything** · [[Paper]](https://arxiv.org/pdf/2502.01572) [[Code]](https://github.com/showlab/MakeAnything)
 - **Vidu S1: A Real-Time Interactive Video Generation Model** · [[Paper]](https://arxiv.org/abs/2607.03118) [[Code]](https://github.com/shengshu-ai/Vidu-S1)
 - **WorldCam** · [[Paper]](https://arxiv.org/pdf/2603.16871) [[Code]](https://github.com/cvlab-kaist/WorldCam)
+- **Genie 3** · [[Project]](https://deepmind.google/blog/genie-3-a-new-frontier-for-world-models/) real-time interactive worlds navigable for several minutes
 </details>
 
 <details>
@@ -477,6 +478,8 @@
 - **WoW** · [[Paper]](https://arxiv.org/pdf/2509.22642) [[Code]](https://github.com/wow-world-model/wow-world-model)
 - **Cosmos** · [[Paper]](https://arxiv.org/pdf/2501.03575) [[Code]](https://github.com/nvidia-cosmos/cosmos-predict1)
 - **Hand2World** · [[Paper]](https://arxiv.org/abs/2602.09600) [[Code]](https://github.com/NTUYWANG103/Hand2World)
+- **OSCAR** · [[Paper]](https://arxiv.org/abs/2606.04463) [[Code]](https://github.com/wuzy2115/oscar-public) cross-embodiment, action-conditioned video world model for robot policy evaluation
+- **Robot-Factored World Models via Robot Rendering (RoFacto)** · [[Paper]](https://arxiv.org/abs/2607.22535) [[Code]](https://github.com/bjkim95/rofacto) separates robot motion from scene response in action-conditioned video prediction
 </details>
 
 <details>
@@ -500,6 +503,7 @@
 - **DrivingDiffusion** · [[Paper]](https://arxiv.org/pdf/2310.07771) [[Code]](https://github.com/shalfun/DrivingDiffusion)
 - **BEVWorld** · [[Paper]](https://arxiv.org/pdf/2407.05679) [[Code]](#)
 - **UnO** · [[Paper]](https://arxiv.org/pdf/2406.08691) [[Code]](#)
+- **Waymo World Model** · [[Project]](https://waymo.com/blog/2026/02/the-waymo-world-model-a-new-frontier-for-autonomous-driving-simulation/) interactive camera and lidar simulation built on Genie 3
 </details>
 
 ---
@@ -649,6 +653,7 @@
 
 - **WorldFoundry** · [[Paper]](#) [[Code]](https://github.com/OpenEnvision/WorldFoundry)
 - **minWM** · [[Paper]](https://arxiv.org/pdf/2605.30263) [[Code]](https://github.com/shengshu-ai/minWM)
+- **OpenWAM** · [[Paper]](https://arxiv.org/abs/2609.07398) [[Code]](https://github.com/OpenWAM-Official/OpenWAM) modular world-action-model training, evaluation, and open checkpoints
 - **nano-world-model** · [[Paper]](#) [[Code]](https://github.com/simchowitzlabpublic/nano-world-model/tree/main) a great world model training framework
 </details>
 

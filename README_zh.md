@@ -82,14 +82,14 @@
 
 我们将世界模型定义为：**一种以感知为核心、具备交互与长期记忆能力的模型或框架，用于理解和预测复杂世界。** 因此，🎓 *多模态理解*、🤖 *视觉动作预测* 和 🖼️ *视觉生成* 都是世界模型需要完成的子任务。
 
-我们热烈欢迎研究者在 Issues 区分享对该框架的看法或对世界模型的思考。同时也希望您能通过 Pull Request 将有价值的世界模型相关方法提交到我们的框架中，或将其记录并提交到 [[awesome_world_models]](docs/awesome_world_model.md)。欢迎给我们的仓库点个 🌟 Star，以关注 OpenWorldLib 的最新进展！
+我们热烈欢迎研究者在 Issues 区分享对该框架的看法或对世界模型的思考。同时也希望您能通过 Pull Request 将有价值的世界模型相关方法提交到我们的框架中，或将其记录并提交到 [[awesome_world_model]](docs/awesome_world_model.md)。欢迎给我们的仓库点个 🌟 Star，以关注 OpenWorldLib 的最新进展！
 
 
 ### 重要文档 <!-- omit in toc -->
 以下四份文档对本项目至关重要（点击可跳转）：
 
 - [docs/planning.md](docs/planning.md)：该文档跟踪 OpenWorldLib 的短期优化目标和未来发展计划。
-- [docs/awesome_world_models.md](docs/awesome_world_model.md)：该文档记录了世界模型相关的前沿研究、综述论文和开源项目。
+- [docs/awesome_world_model.md](docs/awesome_world_model.md)：该文档记录了世界模型相关的前沿研究、综述论文和开源项目。
 - [docs/installation.md](docs/installation.md)：该文档提供了 OpenWorldLib 中不同方法的安装说明。
 - [开发流程指南](https://wcny4qa9krto.feishu.cn/wiki/XtPJwf5XQipP7RkeVv0ckyWlnNd?from=from_copylink): 该文档提供了 OpenWorldLib 的框架模板，旨在为世界模型社区的开发者提供代码合并的参考。
 
@@ -216,12 +216,12 @@ User Input
 
 
 ### 规划
-- 我们在 [docs/awesome_world_models.md](docs/awesome_world_model.md) 中记录了最前沿的 world models 相关的研究，同时我们欢迎大家在这里提供一些有价值的研究。
+- 我们在 [docs/awesome_world_model.md](docs/awesome_world_model.md) 中记录了最前沿的 world models 相关的研究，同时我们欢迎大家在这里提供一些有价值的研究。
 - 我们在 [docs/planning.md](docs/planning.md) 中记录了我们后续的**训练**以及**优化**计划。
 
 
 ### 开发者指南
-我们欢迎各位开发者共同参与，帮助完善 **OpenWorldLib** 这一统一世界模型仓库。推荐采用 **Vibe Coding** 方式进行快捷的代码提交，相关提示词可参考 `tools/vibe_code/prompts` 目录下的内容。同时也可以向 [docs/planning.md](docs/planning.md) 以及 [docs/awesome_world_models.md](docs/awesome_world_model.md) 补充高质量的world model相关工作。期待你的贡献！
+我们欢迎各位开发者共同参与，帮助完善 **OpenWorldLib** 这一统一世界模型仓库。推荐采用 **Vibe Coding** 方式进行快捷的代码提交，相关提示词可参考 `tools/vibe_code/prompts` 目录下的内容。同时也可以向 [docs/planning.md](docs/planning.md) 以及 [docs/awesome_world_model.md](docs/awesome_world_model.md) 补充高质量的world model相关工作。期待你的贡献！
 
 相关文档可以查看：[[开发流程指南]](https://wcny4qa9krto.feishu.cn/wiki/XtPJwf5XQipP7RkeVv0ckyWlnNd?from=from_copylink)
 

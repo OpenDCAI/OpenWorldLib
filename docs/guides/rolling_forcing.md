@@ -1,8 +1,8 @@
-# Rolling Forcing OpenWorldLib 迁移说明
+# Rolling Forcing 使用指南
 
-本文档说明 Rolling Forcing 在 OpenWorldLib 中的迁移范围、手动安装依赖、手动下载模型和基本使用方式。下面所有安装和下载命令都需要由使用者自行执行；本次迁移代码不会自动安装 Python 包，也不会自动下载模型。
+本文档说明 Rolling Forcing 在 OpenWorldLib 中的代码位置、手动安装依赖、手动下载模型和基本使用方式。下面所有安装和下载命令都需要由使用者自行执行；OpenWorldLib 不会自动安装 Python 包或下载模型。
 
-## 迁移范围
+## 代码位置
 
 Rolling Forcing 的推理运行时代码已经迁移到 OpenWorldLib 包内：
 
