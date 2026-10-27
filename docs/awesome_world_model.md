@@ -11,6 +11,7 @@
 - **World Models in AI: Like a Child** · [[Paper]](https://arxiv.org/abs/2503.15168) [[Code]](#)
 - **The Trinity of Consistency as a Defining Principle for General World Models** · [[Paper]](https://arxiv.org/pdf/2602.23152) [[Code]](https://github.com/openraiser/awesome-world-model-evolution)
 - **Learning to Model the World: A Survey of World Models in Artificial Intelligence** · [[Paper]](https://www.preprints.org/frontend/manuscript/5086594a01b6a0b251820cb03ea9a8f6/download_pub)
+- **Reading, Writing, Sharing, and Interacting with the World through Video** · [[Paper]](https://arxiv.org/abs/2610.31668) [[Bibliography]](https://github.com/vid-gen/awesome-video-world-model) [[Project]](https://vid-gen.github.io/video-world-model-survey/) survey connecting video understanding, generation, and action-conditioned world evolution
 </details>
 
 <details>
@@ -156,6 +157,7 @@
 - **Vidu S1: A Real-Time Interactive Video Generation Model** · [[Paper]](https://arxiv.org/abs/2607.03118) [[Code]](https://github.com/shengshu-ai/Vidu-S1)
 - **WorldCam** · [[Paper]](https://arxiv.org/pdf/2603.16871) [[Code]](https://github.com/cvlab-kaist/WorldCam)
 - **Genie 3** · [[Project]](https://deepmind.google/blog/genie-3-a-new-frontier-for-world-models/) real-time interactive worlds navigable for several minutes
+- **World-in-Context: Interactive Video World Modeling with In-Context Conditioning** · [[Paper]](https://arxiv.org/abs/2610.33169) [[Repository]](https://github.com/aigc3d/World-in-Context) [[Project]](https://haroldchen19.github.io/WiC-site/) shared token conditioning for view, action, and camera control; code and weights pending release
 </details>
 
 <details>
@@ -168,6 +170,7 @@
 - **DimensionX** · [[Paper]](https://arxiv.org/pdf/2411.04928) [[Code]](https://github.com/wenqsun/DimensionX)
 - **Context-as-Memory** · [[Paper]](https://arxiv.org/pdf/2506.03141) [[Code]](#)
 - **ShotStream** · [[Paper]](https://arxiv.org/pdf/2603.25746) [[Code]](https://github.com/KlingAIResearch/ShotStream)
+- **WorldCast: World-Consistent Character Video Generation with Large-Angle Camera Control** · [[Paper]](https://arxiv.org/abs/2610.33135) [[Code]](https://github.com/PixCtrol/WorldCast) [[Project]](https://pixctrol.github.io/WorldCast/) geometry-guided camera trajectories and character memory across large viewpoint changes
 </details>
 
 #### navigation video generation
@@ -184,6 +187,7 @@
 - **Matrix-Game** · [[Paper]](https://arxiv.org/pdf/2506.18701) [[Code]](https://github.com/SkyworkAI/Matrix-Game/tree/main)
 - **Matrix-Game 2.0** · [[Paper]](https://arxiv.org/pdf/2508.13009) [[Code]](https://github.com/SkyworkAI/Matrix-Game/tree/main/Matrix-Game-2)
 - **Matrix-Game 3.0** · [[Paper]](#) [[Code]](https://github.com/SkyworkAI/Matrix-Game/tree/main/Matrix-Game-3)
+- **Matrix-Game 4.0: Harnessing Video Models for Real-Time Playable Game Worlds** · [[Paper]](https://arxiv.org/abs/2610.27999) [[Project]](https://matrix-game-v4-0.github.io/page/) executable game state and rules guide an autoregressive video renderer
 - **Longvie-2** · [[Paper]](https://arxiv.org/pdf/2512.13604) [[Code]](https://github.com/Vchitect/LongVie)
 - **Hunyuan-Game** · [[Paper]](https://arxiv.org/pdf/2505.14135) [[Code]](#)
 - **Yume1.5** · [[Paper]](https://arxiv.org/pdf/2512.22096) [[Code]](https://github.com/stdstu12/YUME)
@@ -206,7 +210,7 @@
 - **Infinite-World** · [[Paper]](https://arxiv.org/abs/2602.02393) [[Code]](https://github.com/MeiGen-AI/Infinite-World)
 - **DreamX-World** · [[Paper]](#) [[Code]](https://github.com/AMAP-ML/DreamX-World)
 - **HandsOnWorld** · [[Paper]](https://arxiv.org/abs/2607.02075) [[Code]](#) unconstrained egocentric video generation with camera-disentangled hand control
-- **MoWorld** · [[Paper]](https://arxiv.org/abs/2607.06216) [[Project]](https://moxin-tech.github.io/moworld/) flash world model running at 50 FPS
+- **MoWorld** · [[Paper]](https://arxiv.org/abs/2607.06216) [[Code]](https://github.com/Moxin-Tech/moworld_base) [[Project]](https://moxin-tech.github.io/moworld/) NPU-oriented flash world model; code licensed under CC BY-NC 4.0; released checkpoint contains the high-noise expert only
 - **AlayaWorld** · [[Paper]](https://arxiv.org/abs/2607.06291) [[Code]](https://github.com/AlayaLab/AlayaWorld) long-horizon and playable video world generation
 - **Hunyuan-worldplay2** · [[Paper]](https://arxiv.org/abs/2604.14268) [[Code]](https://github.com/Tencent-Hunyuan/HY-World-2.0)
 - **MultiWorld** · [[Paper]](https://arxiv.org/abs/2604.18564) [[Code]](https://github.com/CIntellifusion/MultiWorld)
@@ -238,6 +242,7 @@
 - **Vchain** · [[Paper]](https://arxiv.org/pdf/2510.05094) [[Code]](https://github.com/Eyeline-Labs/Vchain)
 - **Videocanvas** · [[Paper]](https://arxiv.org/pdf/2510.08555) [[Code]](https://github.com/KlingTeam/VideoCanvas)
 - **SANA-video** · [[Paper]](https://arxiv.org/pdf/2509.24695) [[Code]](https://github.com/NVlabs/Sana)
+- **Looking Ahead: Modeling Future Evolution in Autoregressive Video Generation** · [[Paper]](https://arxiv.org/abs/2610.29989) [[Code]](https://github.com/TencentARC/Looking-Ahead) [[Project]](https://hellorpg.github.io/looking-ahead/) future-chunk prediction improves physical plausibility without changing autoregressive inference
 - **SANA** · [[Paper]](https://arxiv.org/abs/2605.15178) [[Code]](https://github.com/NVlabs/Sana) sana-wm is coming
 - **motionbricks** · [[Paper]](https://arxiv.org/pdf/2604.24833) [[Code]](#) human actions generation
 - **Hunyuan-Video** · [[Paper]](#) [[Code]](https://github.com/Tencent-Hunyuan/HunyuanVideo)
@@ -368,6 +373,7 @@
 - **SEE4D** · [[Paper]](https://arxiv.org/pdf/2510.26796) [[Code]](#)
 - **4K4DGen** · [[Paper]](https://arxiv.org/pdf/2406.13527) [[Code]](https://github.com/ShadowIterator/4K4DGen)
 - **RynnWorld-4D** · [[Paper]](https://arxiv.org/abs/2607.06559) [[Code]](https://github.com/alibaba-damo-academy/RynnWorld-4D) 4D embodied world models for robotic manipulation
+- **Learning the 4D World through Point Trajectory Forecasting (VPM)** · [[Paper]](https://arxiv.org/abs/2610.28594) [[Code]](https://github.com/rootyJeon/VPM) [[Project]](https://rootyjeon.github.io/video-point-model/) joint multi-view video and persistent 3D point-trajectory forecasting
 </details>
 
 #### Simulator
@@ -382,6 +388,7 @@
 - **Latticeworld** · [[Paper]](https://arxiv.org/pdf/2509.05263) [[Code]](#)
 - **Worldlab** · [[Paper]](#) [[Code]](https://github.com/Twynzen/worldlab.git)
 - **WorldGrow** · [[Paper]](https://arxiv.org/abs/2510.21682) [[Code]](https://github.com/world-grow/WorldGrow)
+- **InteractiveWorld: A Verifiable Human-Centric Environment for Building Better Interactive MLLM Assistants** · [[Paper]](https://arxiv.org/abs/2610.33966) [[Code]](https://github.com/facebookresearch/InteractiveWorld) closed-loop human-assistant simulation with state-based rewards and InteractiveBench
 </details>
 
 #### Joint-Embedding Predictive Architecture (JEPA)
@@ -401,6 +408,7 @@
 - **Causal-JEPA** · [[Paper]](https://arxiv.org/pdf/2602.11389) [[Code]](https://github.com/galilai-group/cjepa)
 - **LeWorldModel** · [[Paper]](https://arxiv.org/pdf/2603.19312v1) [[Code]](https://github.com/lucas-maes/le-wm)
 - **Think-JEPA** · [[Paper]](https://arxiv.org/pdf/2603.22281) [[Code]](#)
+- **LaLa-World: Scaling Latent World Models with Natural Language Actions** · [[Paper]](https://arxiv.org/abs/2610.27851) [[Code]](https://github.com/junha1125/LaLa-World) [[Project]](https://june-page.github.io/lala-world/) language-conditioned latent prediction across heterogeneous action spaces for planning and policy learning
 </details>
 
 ---
@@ -466,6 +474,7 @@
 - **Hunyuan-embodied** · [[Paper]](https://arxiv.org/abs/2604.07430) [[Code]](https://github.com/Tencent-Hunyuan/HY-Embodied)
 - **beingbeyond (Being-H)** · [[Paper]](https://arxiv.org/abs/2601.12993) [[Code]](https://github.com/BeingBeyond/Being-H)
 - **LaST-R1** · [[Paper]](https://arxiv.org/abs/2604.28192) [[Code]](https://github.com/CHEN-H01/LaST-R1)
+- **RynnVLA-Latent: Scaling Robotic Manipulation Foundation Models with 3D-Grounded Latent Actions** · [[Paper]](https://arxiv.org/abs/2610.34356) [[Code]](https://github.com/alibaba-damo-academy/RynnVLA-Latent) [[Project]](https://alibaba-damo-academy.github.io/RynnVLA-Latent.github.io/) 3D-grounded latent-action supervision from human, robot, and simulation videos; released weights are stage-1 initialization
 </details>
 
 <details>
@@ -480,6 +489,9 @@
 - **Hand2World** · [[Paper]](https://arxiv.org/abs/2602.09600) [[Code]](https://github.com/NTUYWANG103/Hand2World)
 - **OSCAR** · [[Paper]](https://arxiv.org/abs/2606.04463) [[Code]](https://github.com/wuzy2115/oscar-public) cross-embodiment, action-conditioned video world model for robot policy evaluation
 - **Robot-Factored World Models via Robot Rendering (RoFacto)** · [[Paper]](https://arxiv.org/abs/2607.22535) [[Code]](https://github.com/bjkim95/rofacto) separates robot motion from scene response in action-conditioned video prediction
+- **RynnUnify: Towards Unified Embodied Brain** · [[Paper]](https://arxiv.org/abs/2610.32965) [[Code]](https://github.com/alibaba-damo-academy/RynnUnify) [[Project]](https://alibaba-damo-academy.github.io/RynnUnify.github.io/) interleaved video-language reasoning for embodied understanding and visual planning, with a world-action extension
+- **Ropedia W0: Scaling Loco-Manipulation World Models across Embodiments with Human Experience** · [[Paper]](https://arxiv.org/abs/2610.26855) [[Code]](https://github.com/Ropedia/ropedia-w0) [[Project]](https://ropedia.github.io/ropedia-w0/) egocentric action-conditioned prediction spanning human and robot locomotion and manipulation
+- **Self-Distilling Future Video Representations for World Action Models (FRED)** · [[Paper]](https://arxiv.org/abs/2610.30320) [[Code]](https://github.com/suhyeok-jang/FRED) [[Project]](https://huiwon-jang.github.io/FRED/) self-distilled future representations and observation history for efficient robot action prediction
 </details>
 
 <details>
@@ -561,6 +573,8 @@
 - **Envision** · [[Paper]](https://arxiv.org/pdf/2512.01816) [[Code]](https://github.com/opendatalab-raiser/Envision)
 - **WorldOlympiad** · [[Paper]](https://arxiv.org/pdf/2606.11129) [[Code]](https://github.com/alibaba-damo-academy/WorldOlympiad)
 - **Wbench** · [[Paper]](https://arxiv.org/abs/2605.25874) [[Code]](https://github.com/meituan-longcat/WBench) benchmark for multi-turn interactive video generation evaluation
+- **RoboJudge: Multimodal Language Models as Judges for Embodied Video Generation** · [[Paper]](https://arxiv.org/abs/2610.27782) [[Code]](https://github.com/Sphere-AI-Lab/RoboJudge) [[Project]](https://spherelab.ai/RoboJudge/) human-aligned evaluation of physical adherence and instruction alignment in embodied rollouts
+- **StreamEval: Evaluating Interactive Streaming Video Generation Models** · [[Paper]](https://arxiv.org/abs/2610.28402) [[Code]](https://github.com/StreamEval/StreamEval) [[Project]](https://streameval.ai/) streaming interaction benchmark measuring request execution, state consistency, visual fidelity, and audiovisual coordination
 </details>
 
 <details>
