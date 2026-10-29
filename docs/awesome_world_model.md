@@ -157,6 +157,7 @@
 - **Vidu S1: A Real-Time Interactive Video Generation Model** · [[Paper]](https://arxiv.org/abs/2607.03118) [[Code]](https://github.com/shengshu-ai/Vidu-S1)
 - **WorldCam** · [[Paper]](https://arxiv.org/pdf/2603.16871) [[Code]](https://github.com/cvlab-kaist/WorldCam)
 - **Genie 3** · [[Project]](https://deepmind.google/blog/genie-3-a-new-frontier-for-world-models/) real-time interactive worlds navigable for several minutes
+- **Genie 4** · [[Project]](https://deepmind.google/models/genie/) [[Announcement]](https://deepmind.google/blog/genie-4-a-new-generation-of-world-simulation/) real-time world simulation with native audio and natural-language steering; research preview for trusted testers
 - **World-in-Context: Interactive Video World Modeling with In-Context Conditioning** · [[Paper]](https://arxiv.org/abs/2610.33169) [[Repository]](https://github.com/aigc3d/World-in-Context) [[Project]](https://haroldchen19.github.io/WiC-site/) shared token conditioning for view, action, and camera control; code and weights pending release
 </details>
 
